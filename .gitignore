@@ -12,6 +12,18 @@ obj/
 *.user
 *.suo
 
+# MAUI / VS / Rider
+.vs/
+.idea/
+
+# Xcode
+*.xcworkspace
+xcuserdata/
+DerivedData/
+
+# Mac temp
+*.swp
+
 # Logs
 *.log
 
