@@ -21,15 +21,29 @@ public class MapViewModel : BaseViewModel
                 OnPropertyChanged(nameof(ImageUrl));
                 OnPropertyChanged(nameof(DistanceText));
                 OnPropertyChanged(nameof(RatingText));
+                OnPropertyChanged(nameof(Address));
+                OnPropertyChanged(nameof(IsPoiSelected));
+                OnPropertyChanged(nameof(Poi1Border));
+                OnPropertyChanged(nameof(Poi2Border));
             }
         }
     }
 
-    public string Title => SelectedPoi?.Name ?? string.Empty;
-    public string Category => SelectedPoi?.Category?.ToUpper() ?? string.Empty;
-    public string ImageUrl => SelectedPoi?.ImageUrl ?? string.Empty;
-    public string DistanceText => SelectedPoi is null ? string.Empty : $"{(int)(SelectedPoi.DistanceKm * 1000)}m";
+    public bool IsPoiSelected => SelectedPoi != null;
+
+    public string Title => SelectedPoi?.Name ?? "";
+    public string Category => SelectedPoi?.Category?.ToUpper() ?? "";
+    public string ImageUrl => SelectedPoi?.ImageUrl ?? "";
+    public string DistanceText => SelectedPoi is null ? "" : $"{(int)(SelectedPoi.DistanceKm * 1000)}m";
     public string RatingText => "4.8";
+    public string Address => SelectedPoi?.Address ?? "";
+
+    // 👇 chỉ hiện viền khi selected
+    public string Poi1Border =>
+        SelectedPoi?.Id == "1" ? "#0F5BD7" : "#E5E7EB";
+
+    public string Poi2Border =>
+        SelectedPoi?.Id == "3" ? "#0F5BD7" : "#E5E7EB";
 
     public MapViewModel()
     {
@@ -39,13 +53,13 @@ public class MapViewModel : BaseViewModel
         foreach (var poi in pois)
             Pois.Add(poi);
 
-        SelectedPoi = Pois.FirstOrDefault();
+        SelectedPoi = null;
     }
 
     public void SelectPoi(string poiId)
     {
         var poi = Pois.FirstOrDefault(x => x.Id == poiId);
-        if (poi is not null)
+        if (poi != null)
             SelectedPoi = poi;
     }
 }
