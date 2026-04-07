@@ -16,4 +16,6 @@ public class POI
     public bool IsFavorite { get; set; }
     public int ListenedCount { get; set; }
     public List<AudioGuide> Audios { get; set; } = new();
+    public double Latitude { get; set; }
+    public double Longitude { get; set; }
 }

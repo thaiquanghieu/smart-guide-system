@@ -1,209 +1,57 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-             xmlns:viewmodels="clr-namespace:SmartGuideApp.ViewModels"
+             xmlns:maps="http://schemas.microsoft.com/dotnet/2021/maui/maps"
              x:Class="SmartGuideApp.Views.MapPage"
-             BackgroundColor="#E9EEF5">
-
-    <ContentPage.BindingContext>
-        <viewmodels:MapViewModel />
-    </ContentPage.BindingContext>
+             BackgroundColor="#F3F4F6">
 
     <Grid>
 
         <!-- MAP -->
-        <Image Source="https://images.unsplash.com/photo-1524661135-423995f22d0b?auto=format&amp;fit=crop&amp;w=1200&amp;q=80"
-               Aspect="AspectFill"
-               Opacity="0.3">
+        <maps:Map x:Name="MainMap"
+                  MapClicked="OnMapClicked"
+                  IsShowingUser="True" />
 
-            <!-- TAP MAP -->
-            <Image.GestureRecognizers>
-                <TapGestureRecognizer Tapped="OnMapTapped"/>
-            </Image.GestureRecognizers>
-
-        </Image>
-
-        <!-- TITLE -->
-        <Label Text="Smart Guide"
-               FontSize="22"
-               FontAttributes="Bold"
-               TextColor="#0F5BD7"
-               HorizontalOptions="Center"
-               VerticalOptions="Start"
-               Margin="0,12,0,0"/>
-
-        <!-- SEARCH -->
-        <Frame Margin="20,50,20,0"
-               Padding="14,12"
-               CornerRadius="24"
+        <!-- SEARCH BAR -->
+        <Frame Margin="16,50,16,0"
+               CornerRadius="12"
+               Padding="10"
                BackgroundColor="White"
-               VerticalOptions="Start"
-               ZIndex="2">
+               HasShadow="True"
+               VerticalOptions="Start">
 
-            <Grid ColumnDefinitions="Auto,*">
+            <Entry Placeholder="Tìm địa điểm..."
+                   TextColor="Black"/>
 
-                <Image Source="search.png"
-                       WidthRequest="28"
-                       HeightRequest="28"/>
-
-                <Entry Grid.Column="1"
-                       Placeholder="Tìm kiếm địa điểm..."
-                       BackgroundColor="Transparent"
-                       Focused="OnSearchFocused"/>
-            </Grid>
         </Frame>
 
-        <!-- FLOAT BUTTON -->
-        <VerticalStackLayout HorizontalOptions="End"
-                             VerticalOptions="Start"
-                             Margin="0,140,20,0"
-                             Spacing="12"
-                             ZIndex="3">
-
-            <Frame WidthRequest="48"
-                   HeightRequest="48"
-                   CornerRadius="16"
-                   BackgroundColor="White">
-                <Image Source="location.png"
-                       WidthRequest="22"
-                       HeightRequest="22"
-                       HorizontalOptions="Center"
-                       VerticalOptions="Center"/>
-            </Frame>
-
-            <Frame WidthRequest="48"
-                   HeightRequest="48"
-                   CornerRadius="16"
-                   BackgroundColor="White">
-                <Image Source="layers.png"
-                       WidthRequest="22"
-                       HeightRequest="22"
-                       HorizontalOptions="Center"
-                       VerticalOptions="Center"/>
-            </Frame>
-
-        </VerticalStackLayout>
-
-        <!-- POI -->
-        <AbsoluteLayout ZIndex="4">
-
-            <!-- POI 1 -->
-            <Frame x:Name="Poi1"
-                     AbsoluteLayout.LayoutBounds="0.45,0.55,40,40"
-                     AbsoluteLayout.LayoutFlags="PositionProportional"
-                     WidthRequest="40"
-                     HeightRequest="40"
-                     Padding="0"
-                     CornerRadius="20"
-                     IsClippedToBounds="True"
-                     BorderColor="{Binding Poi1Border}"
-                     BackgroundColor="Transparent"
-                     HasShadow="False">
-
-              <Frame.GestureRecognizers>
-                     <TapGestureRecognizer Tapped="OnPoi1Tapped"/>
-              </Frame.GestureRecognizers>
-
-              <Image Source="https://images.unsplash.com/photo-1545569341-9eb8b30979d9?auto=format&amp;fit=crop&amp;w=400&amp;q=80"
-                     Aspect="AspectFill"/>
-              </Frame>
-
-            <!-- POI 2 -->
-            <Frame x:Name="Poi2"
-                     AbsoluteLayout.LayoutBounds="0.7,0.3,40,40"
-                     AbsoluteLayout.LayoutFlags="PositionProportional"
-                     WidthRequest="40"
-                     HeightRequest="40"
-                     Padding="0"
-                     CornerRadius="20"
-                     IsClippedToBounds="True"
-                     BorderColor="{Binding Poi2Border}"
-                     BackgroundColor="Transparent"
-                     HasShadow="False">
-
-              <Frame.GestureRecognizers>
-                     <TapGestureRecognizer Tapped="OnPoi2Tapped"/>
-              </Frame.GestureRecognizers>
-
-              <Image Source="https://images.unsplash.com/photo-1514565131-fce0801e5785?auto=format&amp;fit=crop&amp;w=400&amp;q=80"
-                     Aspect="AspectFill"/>
-              </Frame>
-
-        </AbsoluteLayout>
-
-        <!-- BOTTOM BOX -->
-        <Frame Margin="20,0,20,24"
-               Padding="16"
-               CornerRadius="28"
-               BackgroundColor="White"
+        <!-- BOTTOM INFO -->
+        <Frame IsVisible="{Binding IsPoiSelected}"
                VerticalOptions="End"
-               ZIndex="5"
-               IsVisible="{Binding IsPoiSelected}">
+               Margin="16"
+               CornerRadius="16"
+               Padding="16"
+               BackgroundColor="White"
+               HasShadow="True">
 
-            <Frame.GestureRecognizers>
-                <TapGestureRecognizer Tapped="OnOpenDetailClicked"/>
-            </Frame.GestureRecognizers>
+            <VerticalStackLayout>
 
-            <VerticalStackLayout Spacing="12">
+                <Label Text="{Binding Title}"
+                       FontSize="18"
+                       FontAttributes="Bold"
+                       TextColor="Black"/>
 
-                <Grid ColumnDefinitions="100,*"
-                      ColumnSpacing="14">
+                <Label Text="{Binding Category}"
+                       FontSize="14"
+                       TextColor="#6B7280"/>
 
-                    <Frame Padding="0"
-                           CornerRadius="20"
-                           WidthRequest="100"
-                           HeightRequest="100">
+                <HorizontalStackLayout Spacing="10" Margin="0,10,0,0">
 
-                        <Image Source="{Binding ImageUrl}"
-                               Aspect="AspectFill"/>
-                    </Frame>
-
-                    <VerticalStackLayout Grid.Column="1"
-                                         Spacing="6">
-
-                        <Label Text="{Binding Category}"
-                               FontSize="12"
-                               TextColor="#0F5BD7"/>
-
-                        <Label Text="{Binding Title}"
-                               FontSize="20"
-                               FontAttributes="Bold"
-                               TextColor="#111827"/>
-
-                        <HorizontalStackLayout Spacing="6">
-                            <Image Source="star.png"
-                                   WidthRequest="14"
-                                   HeightRequest="14"/>
-                            <Label Text="{Binding RatingText}"
-                                   FontSize="14"/>
-                        </HorizontalStackLayout>
-
-                        <Label Text="{Binding DistanceText}"
-                               FontSize="13"
-                               TextColor="#0F5BD7"/>
-
-                        <Label Text="{Binding Address}"
-                               FontSize="12"
-                               TextColor="#6B7280"
-                               LineBreakMode="TailTruncation"/>
-                    </VerticalStackLayout>
-
-                </Grid>
-
-                <Grid ColumnDefinitions="*,*"
-                      ColumnSpacing="10">
-
-                    <Button Text="Chỉ đường"
+                    <Button Text="Chi tiết"
+                            Clicked="OnOpenDetailClicked"
                             BackgroundColor="#0F5BD7"
-                            TextColor="White"
-                            CornerRadius="18"/>
+                            TextColor="White"/>
 
-                    <Button Grid.Column="1"
-                            Text="Chi tiết"
-                            BackgroundColor="#EEF4FF"
-                            TextColor="#0F5BD7"
-                            CornerRadius="18"
-                            Clicked="OnOpenDetailClicked"/>
-                </Grid>
+                </HorizontalStackLayout>
 
             </VerticalStackLayout>
 

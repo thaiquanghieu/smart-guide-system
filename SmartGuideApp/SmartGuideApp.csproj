@@ -37,11 +37,23 @@
 		<TargetPlatformMinVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</TargetPlatformMinVersion>
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'tizen'">6.5</SupportedOSPlatformVersion>
 		
-		<RuntimeIdentifier>ios-arm64</RuntimeIdentifier>
+		<!-- Set runtime identifier only for iOS target to avoid invalid ABI errors when building other targets -->
+		<RuntimeIdentifier Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">ios-arm64</RuntimeIdentifier>
 		<CodesignKey>Apple Development</CodesignKey>
 		<CodesignProvision>Automatic</CodesignProvision>
 		<CodesignTeamId>R4WXYJFQ53</CodesignTeamId>
 		<ApplicationId>com.hieuwang.TempApp</ApplicationId>
+		<UseMauiMaps>true</UseMauiMaps>
+	</PropertyGroup>
+
+	<!-- Disable aggressive linking in Debug builds to avoid runtime handler stripping. 
+		 For iOS, set MtouchLink=None instead of PublishTrimmed=false which is disallowed by the SDK. -->
+	<PropertyGroup Condition="'$(Configuration)' == 'Debug'">
+		<!-- Disable the Xamarin/iOS linker for Debug so handlers aren't stripped -->
+		<MtouchLink>None</MtouchLink>
+		<PublishAot>false</PublishAot>
+		<!-- For older toolchains this is safe and will be ignored if unknown -->
+		<EnableLLVM>false</EnableLLVM>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -73,7 +85,7 @@
 		<PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
 		<PackageReference Include="Microsoft.Maui.Controls.Compatibility" Version="$(MauiVersion)" />
 		<PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="8.0.1" />
-		<PackageReference Include="Microsoft.Maui.Controls.Maps" Version="10.0.51" />
+		<PackageReference Include="Microsoft.Maui.Controls.Maps" Version="$(MauiVersion)" />
 	</ItemGroup>
 
 </Project>

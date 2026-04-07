@@ -22,6 +22,8 @@ public class MockDataService
                 PriceText = "Miễn phí",
                 IsFavorite = true,
                 ListenedCount = 5,
+                Latitude = 10.779783,
+                Longitude = 106.699018,
                 Audios = new List<AudioGuide>
                 {
                     new AudioGuide
@@ -49,6 +51,8 @@ public class MockDataService
                 PriceText = "60.000đ",
                 IsFavorite = false,
                 ListenedCount = 2,
+                Latitude = 10.787088,
+                Longitude = 106.705856,
                 Audios = new List<AudioGuide>
                 {
                     new AudioGuide
@@ -76,6 +80,8 @@ public class MockDataService
                 PriceText = "Miễn phí",
                 IsFavorite = false,
                 ListenedCount = 3,
+                Latitude = 10.780509,
+                Longitude = 106.699264,
                 Audios = new List<AudioGuide>
                 {
                     new AudioGuide

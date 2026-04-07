@@ -16,37 +16,33 @@ public class MapViewModel : BaseViewModel
         {
             if (SetProperty(ref _selectedPoi, value))
             {
+                OnPropertyChanged(nameof(IsPoiSelected));
                 OnPropertyChanged(nameof(Title));
                 OnPropertyChanged(nameof(Category));
                 OnPropertyChanged(nameof(ImageUrl));
                 OnPropertyChanged(nameof(DistanceText));
                 OnPropertyChanged(nameof(RatingText));
                 OnPropertyChanged(nameof(Address));
-                OnPropertyChanged(nameof(IsPoiSelected));
-                OnPropertyChanged(nameof(Poi1Border));
-                OnPropertyChanged(nameof(Poi2Border));
+                OnPropertyChanged(nameof(Description));
             }
         }
     }
 
+    // ===== STATE =====
     public bool IsPoiSelected => SelectedPoi != null;
 
+    // ===== UI BINDING =====
     public string Title => SelectedPoi?.Name ?? "";
     public string Category => SelectedPoi?.Category?.ToUpper() ?? "";
     public string ImageUrl => SelectedPoi?.ImageUrl ?? "";
     public string DistanceText => SelectedPoi is null ? "" : $"{(int)(SelectedPoi.DistanceKm * 1000)}m";
     public string RatingText => "4.8";
     public string Address => SelectedPoi?.Address ?? "";
-
-    // 👇 chỉ hiện viền khi selected
-    public string Poi1Border =>
-        SelectedPoi?.Id == "1" ? "#0F5BD7" : "#E5E7EB";
-
-    public string Poi2Border =>
-        SelectedPoi?.Id == "3" ? "#0F5BD7" : "#E5E7EB";
+    public string Description => SelectedPoi?.Description ?? "";
 
     public MapViewModel()
     {
+        // 👉 sau này đổi sang API rất dễ
         var service = new MockDataService();
         var pois = service.GetPois();
 
@@ -56,10 +52,13 @@ public class MapViewModel : BaseViewModel
         SelectedPoi = null;
     }
 
-    public void SelectPoi(string poiId)
+    public void SelectPoi(POI poi)
     {
-        var poi = Pois.FirstOrDefault(x => x.Id == poiId);
-        if (poi != null)
-            SelectedPoi = poi;
+        SelectedPoi = poi;
+    }
+
+    public void ClearSelection()
+    {
+        SelectedPoi = null;
     }
 }
