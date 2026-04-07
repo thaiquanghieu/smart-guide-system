@@ -1,0 +1,156 @@
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:viewmodels="clr-namespace:SmartGuideApp.ViewModels"
+             x:Class="SmartGuideApp.Views.MapPage"
+             BackgroundColor="#E9EEF5">
+
+    <ContentPage.BindingContext>
+        <viewmodels:MapViewModel />
+    </ContentPage.BindingContext>
+
+    <Grid>
+        <Image Source="https://images.unsplash.com/photo-1524661135-423995f22d0b?auto=format&amp;fit=crop&amp;w=1200&amp;q=80"
+              Aspect="AspectFill"
+              Opacity="0.18" />
+
+        <Frame Margin="20,20,20,0"
+               Padding="14,14"
+               CornerRadius="26"
+               BackgroundColor="#F9FBFF"
+               VerticalOptions="Start">
+            <Grid ColumnDefinitions="Auto,*,Auto"
+                  ColumnSpacing="12">
+                <Label Text="☰"
+                       FontSize="24"
+                       TextColor="#0058BC"
+                       VerticalOptions="Center" />
+                <Entry Grid.Column="1"
+                       Placeholder="Tìm kiếm địa điểm..."
+                       PlaceholderColor="#94A3B8"
+                       BackgroundColor="Transparent" />
+                <Image Grid.Column="2"
+                       Source="https://cdn-icons-png.flaticon.com/512/4140/4140048.png"
+                       WidthRequest="38"
+                       HeightRequest="38" />
+            </Grid>
+        </Frame>
+
+        <VerticalStackLayout Margin="0,150,20,0"
+                             Spacing="14"
+                             HorizontalOptions="End"
+                             VerticalOptions="Start">
+            <Frame WidthRequest="58"
+                   HeightRequest="58"
+                   Padding="0"
+                   CornerRadius="20"
+                   BackgroundColor="#F9FBFF">
+                <Label Text="◎"
+                       FontSize="26"
+                       HorizontalOptions="Center"
+                       VerticalOptions="Center"
+                       TextColor="#0058BC" />
+            </Frame>
+
+            <Frame WidthRequest="58"
+                   HeightRequest="58"
+                   Padding="0"
+                   CornerRadius="20"
+                   BackgroundColor="#F9FBFF">
+                <Label Text="▣"
+                       FontSize="24"
+                       HorizontalOptions="Center"
+                       VerticalOptions="Center"
+                       TextColor="#111827" />
+            </Frame>
+        </VerticalStackLayout>
+
+        <AbsoluteLayout Margin="0,110,0,260">
+            <Frame AbsoluteLayout.LayoutBounds="0.44,0.60,84,84"
+                   AbsoluteLayout.LayoutFlags="PositionProportional"
+                   Padding="5"
+                   CornerRadius="42"
+                   BackgroundColor="White"
+                   HasShadow="True">
+                <Frame.GestureRecognizers>
+                    <TapGestureRecognizer Tapped="OnPoi1Tapped" />
+                </Frame.GestureRecognizers>
+                <Image Source="https://images.unsplash.com/photo-1545569341-9eb8b30979d9?auto=format&amp;fit=crop&amp;w=400&amp;q=80"
+                     Aspect="AspectFill" />
+            </Frame>
+
+            <Frame AbsoluteLayout.LayoutBounds="0.66,0.32,56,56"
+                   AbsoluteLayout.LayoutFlags="PositionProportional"
+                   Padding="4"
+                   CornerRadius="28"
+                   BackgroundColor="White"
+                   HasShadow="True">
+                <Frame.GestureRecognizers>
+                    <TapGestureRecognizer Tapped="OnPoi2Tapped" />
+                </Frame.GestureRecognizers>
+                <Image Source="https://images.unsplash.com/photo-1514565131-fce0801e5785?auto=format&amp;fit=crop&amp;w=400&amp;q=80"
+                     Aspect="AspectFill" />
+            </Frame>
+        </AbsoluteLayout>
+
+        <Frame Margin="20,0,20,24"
+               Padding="22"
+               CornerRadius="32"
+               BackgroundColor="#F9FBFF"
+               VerticalOptions="End">
+            <VerticalStackLayout Spacing="18">
+                <Grid ColumnDefinitions="120,*,Auto"
+                      ColumnSpacing="18">
+                    <Frame Padding="0"
+                           CornerRadius="24"
+                           WidthRequest="120"
+                           HeightRequest="120"
+                           BackgroundColor="White">
+                        <Image Source="{Binding ImageUrl}"
+                               Aspect="AspectFill" />
+                    </Frame>
+
+                    <VerticalStackLayout Grid.Column="1"
+                                         Spacing="8">
+                        <Label Text="{Binding Category}"
+                               FontSize="12"
+                               FontAttributes="Bold"
+                               TextColor="#0058BC" />
+
+                        <Label Text="{Binding Title}"
+                               FontSize="24"
+                               FontAttributes="Bold"
+                               TextColor="#111827" />
+
+                        <Label Text="{Binding RatingText}"
+                            FontSize="16"
+                            TextColor="#111827" />
+
+                        <Label Text="{Binding DistanceText}"
+                               FontSize="16"
+                               TextColor="#0058BC" />
+                    </VerticalStackLayout>
+
+                    <Label Grid.Column="2"
+                           Text="🔖"
+                           FontSize="24"
+                           VerticalOptions="Start" />
+                </Grid>
+
+                <Grid ColumnDefinitions="*,*"
+                      ColumnSpacing="16">
+                    <Button Text="Chỉ đường"
+                            BackgroundColor="#EEF4FF"
+                            TextColor="#0058BC"
+                            CornerRadius="22" />
+
+                    <Button Grid.Column="1"
+                            Text="Chi tiết"
+                            BackgroundColor="#0058BC"
+                            TextColor="White"
+                            CornerRadius="22"
+                            Clicked="OnOpenDetailClicked" />
+                </Grid>
+            </VerticalStackLayout>
+        </Frame>
+    </Grid>
+</ContentPage>
