@@ -1,4 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
+using Microsoft.Maui.Controls.Maps;
+using Microsoft.Maui.Maps;
 
 namespace SmartGuideApp;
 
@@ -9,6 +11,7 @@ public static class MauiProgram
 		var builder = MauiApp.CreateBuilder();
 		builder
 			.UseMauiApp<App>()
+			.UseMauiMaps() // 👈 THÊM DÒNG NÀY
 			.ConfigureFonts(fonts =>
 			{
 				fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
