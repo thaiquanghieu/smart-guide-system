@@ -11,10 +11,7 @@ public partial class MapPage : ContentPage
     public MapPage()
     {
         InitializeComponent();
-
-        // Ensure BindingContext is set so ViewModel is not null when Loaded fires
         BindingContext = new MapViewModel();
-
         Loaded += OnLoaded;
     }
 
@@ -40,13 +37,18 @@ public partial class MapPage : ContentPage
             pin.MarkerClicked += (s, e) =>
             {
                 ViewModel.SelectPoi(poi);
-                e.HideInfoWindow = false;
+
+                MainMap.MoveToRegion(MapSpan.FromCenterAndRadius(
+                    new Location(poi.Latitude, poi.Longitude),
+                    Distance.FromMeters(300)
+                ));
+
+                e.HideInfoWindow = true;
             };
 
             MainMap.Pins.Add(pin);
         }
 
-        // focus map vào vị trí đầu
         if (pois.Any())
         {
             var first = pois.First();
@@ -59,7 +61,7 @@ public partial class MapPage : ContentPage
 
     private void OnMapClicked(object sender, MapClickedEventArgs e)
     {
-        ViewModel.SelectedPoi = null;
+        ViewModel.ClearSelection();
     }
 
     private async void OnOpenDetailClicked(object sender, EventArgs e)
@@ -71,5 +73,33 @@ public partial class MapPage : ContentPage
         {
             { "Poi", ViewModel.SelectedPoi }
         });
+    }
+
+    private async void OnMyLocationClicked(object sender, EventArgs e)
+    {
+        var location = await Geolocation.GetLastKnownLocationAsync();
+
+        if (location != null)
+        {
+            MainMap.MoveToRegion(MapSpan.FromCenterAndRadius(
+                new Location(location.Latitude, location.Longitude),
+                Distance.FromMeters(500)
+            ));
+        }
+    }
+
+    private async void OnLayerClicked(object sender, EventArgs e)
+    {
+        var result = await DisplayActionSheet("Chọn chế độ bản đồ", "Huỷ", null,
+            "Bình thường", "Vệ tinh", "Kết hợp");
+
+        if (result == "Bình thường")
+            MainMap.MapType = MapType.Street;
+
+        else if (result == "Vệ tinh")
+            MainMap.MapType = MapType.Satellite;
+
+        else if (result == "Kết hợp")
+            MainMap.MapType = MapType.Hybrid;
     }
 }
