@@ -1,4 +1,5 @@
 using SmartGuideApp.Models;
+using System.Collections.ObjectModel;
 using System.Windows.Input;
 using Microsoft.Maui.Media;
 
@@ -12,6 +13,9 @@ public class DetailViewModel : BaseViewModel
     private bool _isPlaying;
     private double _playbackProgress;
     private int _estimatedDurationSeconds = 0;
+    private int _currentImageIndex;
+
+    public ObservableCollection<string> Images { get; } = new();
 
     public POI? Poi
     {
@@ -21,6 +25,9 @@ public class DetailViewModel : BaseViewModel
             if (SetProperty(ref _poi, value))
             {
                 _estimatedDurationSeconds = ParseDurationToSeconds(Poi?.Audios.FirstOrDefault()?.DurationText);
+
+                LoadImages();
+                CurrentImageIndex = 0;
 
                 OnPropertyChanged(nameof(Title));
                 OnPropertyChanged(nameof(Category));
@@ -110,15 +117,87 @@ public class DetailViewModel : BaseViewModel
 
     public string FavoriteIcon => IsFavorite ? "favorite_active.png" : "favorite.png";
 
+    public int CurrentImageIndex
+    {
+        get => _currentImageIndex;
+        set
+        {
+            if (SetProperty(ref _currentImageIndex, value))
+            {
+                OnPropertyChanged(nameof(IsFirstImage));
+                OnPropertyChanged(nameof(ImageCounterText));
+                OnPropertyChanged(nameof(CanGoPreviousImage));
+                OnPropertyChanged(nameof(CanGoNextImage));
+                OnPropertyChanged(nameof(CurrentShareImageUrl));
+            }
+        }
+    }
+
+    public bool IsFirstImage => CurrentImageIndex == 0;
+
+    public string ImageCounterText
+    {
+        get
+        {
+            var total = Images.Count;
+            if (total == 0) return "0 / 0";
+            return $"{CurrentImageIndex + 1} / {total}";
+        }
+    }
+
+    public bool CanGoPreviousImage => Images.Count > 1 && CurrentImageIndex > 0;
+    public bool CanGoNextImage => Images.Count > 1 && CurrentImageIndex < Images.Count - 1;
+
+    public string CurrentShareImageUrl =>
+        Images.Count > 0 && CurrentImageIndex >= 0 && CurrentImageIndex < Images.Count
+            ? Images[CurrentImageIndex]
+            : ImageUrl;
+
     public ICommand TogglePlayCommand { get; }
     public ICommand SeekCommand { get; }
     public ICommand ToggleFavoriteCommand { get; }
+    public ICommand PreviousImageCommand { get; }
+    public ICommand NextImageCommand { get; }
 
     public DetailViewModel()
     {
         TogglePlayCommand = new Command(async () => await TogglePlayAsync());
         SeekCommand = new Command<double>(OnSeekRequested);
         ToggleFavoriteCommand = new Command(() => IsFavorite = !IsFavorite);
+        PreviousImageCommand = new Command(GoPreviousImage);
+        NextImageCommand = new Command(GoNextImage);
+    }
+
+    private void LoadImages()
+    {
+        Images.Clear();
+
+        if (Poi?.ImageUrls != null && Poi.ImageUrls.Count > 0)
+        {
+            foreach (var image in Poi.ImageUrls)
+                Images.Add(image);
+        }
+        else if (!string.IsNullOrWhiteSpace(Poi?.ImageUrl))
+        {
+            Images.Add(Poi.ImageUrl);
+        }
+
+        OnPropertyChanged(nameof(ImageCounterText));
+        OnPropertyChanged(nameof(CanGoPreviousImage));
+        OnPropertyChanged(nameof(CanGoNextImage));
+        OnPropertyChanged(nameof(CurrentShareImageUrl));
+    }
+
+    private void GoPreviousImage()
+    {
+        if (CanGoPreviousImage)
+            CurrentImageIndex--;
+    }
+
+    private void GoNextImage()
+    {
+        if (CanGoNextImage)
+            CurrentImageIndex++;
     }
 
     private async Task TogglePlayAsync()

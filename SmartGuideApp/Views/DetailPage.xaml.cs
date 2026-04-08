@@ -26,6 +26,20 @@ public partial class DetailPage : ContentPage, IQueryAttributable
         await Shell.Current.GoToAsync("..");
     }
 
+    private async void OnShareTapped(object? sender, TappedEventArgs e)
+    {
+        if (ViewModel.Poi == null)
+            return;
+
+        await Share.Default.RequestAsync(new ShareTextRequest
+        {
+            Title = ViewModel.Title,
+            Subject = ViewModel.Title,
+            Text = $"{ViewModel.Title}\n{ViewModel.Address}",
+            Uri = ViewModel.CurrentShareImageUrl
+        });
+    }
+
     private async void OnShowScriptClicked(object sender, EventArgs e)
     {
         await DisplayAlert("Lời thuyết minh", ViewModel.ScriptText, "Đóng");
@@ -52,28 +66,6 @@ public partial class DetailPage : ContentPage, IQueryAttributable
         {
             await ShowToast("Đã thêm vào yêu thích!");
         }
-    }
-
-    private async Task ShowToast(string message)
-    {
-        ToastText.Text = message;
-        ToastView.IsVisible = true;
-        ToastView.Opacity = 0;
-        ToastView.TranslationY = -20;
-
-        await Task.WhenAll(
-            ToastView.FadeTo(1, 180),
-            ToastView.TranslateTo(0, 0, 180)
-        );
-
-        await Task.Delay(2000);
-
-        await Task.WhenAll(
-            ToastView.FadeTo(0, 250),
-            ToastView.TranslateTo(0, -20, 250)
-        );
-
-        ToastView.IsVisible = false;
     }
 
     private async void OnDirectionClicked(object sender, EventArgs e)
@@ -105,5 +97,27 @@ public partial class DetailPage : ContentPage, IQueryAttributable
                 await Launcher.Default.OpenAsync(webUrl);
             }
         }
+    }
+
+    private async Task ShowToast(string message)
+    {
+        ToastText.Text = message;
+        ToastView.IsVisible = true;
+        ToastView.Opacity = 0;
+        ToastView.TranslationY = -20;
+
+        await Task.WhenAll(
+            ToastView.FadeTo(1, 180),
+            ToastView.TranslateTo(0, 0, 180)
+        );
+
+        await Task.Delay(2000);
+
+        await Task.WhenAll(
+            ToastView.FadeTo(0, 250),
+            ToastView.TranslateTo(0, -20, 250)
+        );
+
+        ToastView.IsVisible = false;
     }
 }

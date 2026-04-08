@@ -19,6 +19,12 @@ public class MockDataService
                 Address = "01 Công xã Paris, Bến Nghé, Quận 1, TP.HCM",
                 DistanceKm = 1.5,
                 ImageUrl = "https://images.unsplash.com/photo-1545569341-9eb8b30979d9?auto=format&fit=crop&w=1200&q=80",
+                ImageUrls = new List<string>
+                {
+                    "https://images.unsplash.com/photo-1545569341-9eb8b30979d9?auto=format&fit=crop&w=1200&q=80",
+                    "https://images.unsplash.com/photo-1528127269322-539801943592?auto=format&fit=crop&w=1200&q=80",
+                    "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1200&q=80"
+                },
                 OpenHours = "08:00 - 17:00",
                 PriceText = "Miễn phí",
                 IsFavorite = false,
@@ -49,6 +55,12 @@ public class MockDataService
                 Address = "02 Nguyễn Bỉnh Khiêm, Bến Nghé, Quận 1, TP.HCM",
                 DistanceKm = 2.8,
                 ImageUrl = "https://images.unsplash.com/photo-1473773508845-188df298d2d1?auto=format&fit=crop&w=1200&q=80",
+                ImageUrls = new List<string>
+                {
+                    "https://images.unsplash.com/photo-1473773508845-188df298d2d1?auto=format&fit=crop&w=1200&q=80",
+                    "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?auto=format&fit=crop&w=1200&q=80",
+                    "https://images.unsplash.com/photo-1448375240586-882707db888b?auto=format&fit=crop&w=1200&q=80"
+                },
                 OpenHours = "07:00 - 18:30",
                 PriceText = "60.000đ",
                 IsFavorite = false,
@@ -79,6 +91,12 @@ public class MockDataService
                 Address = "02 Công xã Paris, Bến Nghé, Quận 1, TP.HCM",
                 DistanceKm = 1.7,
                 ImageUrl = "https://images.unsplash.com/photo-1514565131-fce0801e5785?auto=format&fit=crop&w=1200&q=80",
+                ImageUrls = new List<string>
+                {
+                    "https://images.unsplash.com/photo-1514565131-fce0801e5785?auto=format&fit=crop&w=1200&q=80",
+                    "https://images.unsplash.com/photo-1491553895911-0055eca6402d?auto=format&fit=crop&w=1200&q=80",
+                    "https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?auto=format&fit=crop&w=1200&q=80"
+                },
                 OpenHours = "07:00 - 19:00",
                 PriceText = "Miễn phí",
                 IsFavorite = false,
@@ -105,8 +123,8 @@ public class MockDataService
     {
         return new ProfileSummary
         {
-            UserName = "Nguyễn Minh Tú",
-            Email = "minhtu.traveler@email.com",
+            UserName = "Thái Quang Hiểu",
+            Email = "thaiquanghieu@email.com",
             AvatarUrl = "https://cdn-icons-png.flaticon.com/512/4140/4140048.png",
             FavoriteCount = 12,
             ListenedPoiCount = 24

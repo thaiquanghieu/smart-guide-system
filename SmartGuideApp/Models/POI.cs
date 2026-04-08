@@ -32,6 +32,8 @@ public class POI : INotifyPropertyChanged
             : $"{DistanceKm:0.0}km";
 
     public string ImageUrl { get; set; } = string.Empty;
+    public List<string> ImageUrls { get; set; } = new();
+
     public string OpenHours { get; set; } = string.Empty;
     public string PriceText { get; set; } = string.Empty;
 
