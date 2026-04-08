@@ -145,40 +145,63 @@
                 </Frame>
 
                 <!-- INFO ROW -->
-                <HorizontalStackLayout Padding="20,0,20,0"
-                                       Spacing="14">
-                    <Frame Padding="16,12"
-                           CornerRadius="18"
-                           BackgroundColor="White"
-                           HasShadow="False">
-                        <HorizontalStackLayout Spacing="8">
-                            <Image Source="clock.png"
-                                   WidthRequest="16"
-                                   HeightRequest="16"
-                                   VerticalOptions="Center" />
-                            <Label Text="{Binding OpenHours}"
-                                   FontSize="15"
-                                   FontAttributes="Bold"
-                                   VerticalOptions="Center" />
-                        </HorizontalStackLayout>
-                    </Frame>
+                <HorizontalStackLayout Margin="20,12,20,0"
+                                          Spacing="10"
+                                          VerticalOptions="Center">
 
-                    <Frame Padding="16,12"
-                           CornerRadius="18"
-                           BackgroundColor="White"
-                           HasShadow="False">
-                        <HorizontalStackLayout Spacing="8">
-                            <Image Source="ticket.png"
-                                   WidthRequest="16"
-                                   HeightRequest="16"
-                                   VerticalOptions="Center" />
-                            <Label Text="{Binding PriceText}"
-                                   FontSize="15"
-                                   FontAttributes="Bold"
-                                   VerticalOptions="Center" />
-                        </HorizontalStackLayout>
-                    </Frame>
-                </HorizontalStackLayout>
+                     <!-- TIME -->
+                     <Frame Padding="10,6"
+                            CornerRadius="10"
+                            BackgroundColor="#F3F4F6"
+                            HasShadow="False">
+
+                            <HorizontalStackLayout Spacing="6"
+                                                 VerticalOptions="Center">
+
+                                   <Image Source="clock.png"
+                                          WidthRequest="14"
+                                          HeightRequest="14"
+                                          VerticalOptions="Center"/>
+
+                                   <Label Text="{Binding OpenHours}"
+                                          FontSize="13"
+                                          TextColor="#374151"
+                                          VerticalOptions="Center"/>
+                            </HorizontalStackLayout>
+                     </Frame>
+
+                     <!-- PRICE -->
+                     <Frame Padding="10,6"
+                            CornerRadius="10"
+                            BackgroundColor="#EEF4FF"
+                            HasShadow="False">
+
+                            <HorizontalStackLayout Spacing="6"
+                                                 VerticalOptions="Center">
+
+                                   <Image Source="ticket.png"
+                                          WidthRequest="14"
+                                          HeightRequest="14"
+                                          VerticalOptions="Center"/>
+
+                                   <Label Text="{Binding PriceText}"
+                                          FontSize="13"
+                                          FontAttributes="Bold"
+                                          TextColor="#365FA8"
+                                          VerticalOptions="Center"/>
+                            </HorizontalStackLayout>
+                     </Frame>
+
+                     <!-- DIRECTION BUTTON -->
+                     <Button Text="Chỉ đường"
+                            FontSize="13"
+                            FontAttributes="Bold"
+                            TextColor="White"
+                            BackgroundColor="#0F5BD7"
+                            CornerRadius="12"
+                            Padding="14,6"
+                            Clicked="OnDirectionClicked"/>
+                     </HorizontalStackLayout>
 
                 <!-- AUDIO BOX -->
                 <Frame Margin="20,0,20,0"
