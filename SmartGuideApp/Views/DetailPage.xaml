@@ -8,263 +8,281 @@
         <viewmodels:DetailViewModel />
     </ContentPage.BindingContext>
 
-    <ScrollView>
-        <VerticalStackLayout Padding="0,0,0,24"
-                             Spacing="22">
+    <Grid>
+        <ScrollView>
+            <VerticalStackLayout Padding="0,0,0,24" Spacing="18">
 
-            <Grid Padding="20,16,20,0"
-                  ColumnDefinitions="Auto,*,Auto">
-                <Label Text="←"
-                       FontSize="26">
-                    <Label.GestureRecognizers>
-                        <TapGestureRecognizer Tapped="OnBackTapped" />
-                    </Label.GestureRecognizers>
-                </Label>
+                <!-- HEADER -->
+                <Grid Padding="20,16,20,0" ColumnDefinitions="Auto,*,Auto">
+                    <Image Source="back.png"
+                           WidthRequest="24"
+                           HeightRequest="24">
+                        <Image.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="OnBackTapped" />
+                        </Image.GestureRecognizers>
+                    </Image>
 
-                <Label Grid.Column="1"
-                       Text="Smart Guide"
-                       HorizontalOptions="Center"
-                       FontSize="22"
-                       FontAttributes="Bold"
-                       TextColor="#0058BC" />
+                    <Label Grid.Column="1"
+                           Text="Smart Guide"
+                           HorizontalOptions="Center"
+                           FontSize="22"
+                           FontAttributes="Bold"
+                           TextColor="#0058BC" />
 
-                <Label Grid.Column="2"
-                       Text="⇪"
-                       FontSize="22"
-                       HorizontalOptions="End" />
-            </Grid>
-
-            <Frame Margin="20,0,20,0"
-                   Padding="0"
-                   CornerRadius="30"
-                   BackgroundColor="White"
-                   HasShadow="False">
-                <Grid HeightRequest="420">
-                    <Image Source="{Binding ImageUrl}"
-                           Aspect="AspectFill" />
-
-                    <Grid Padding="18"
-                          RowDefinitions="*,Auto"
-                          BackgroundColor="#33000000">
-
-                        <HorizontalStackLayout Spacing="10">
-                            <Frame Padding="14,8"
-                                   CornerRadius="18"
-                                   BackgroundColor="#0058BC">
-                                <Label Text="{Binding Category}"
-                                       FontSize="12"
-                                       FontAttributes="Bold"
-                                       TextColor="White" />
-                            </Frame>
-
-                            <Frame Padding="14,8"
-                                   CornerRadius="18"
-                                   BackgroundColor="#805F4635">
-                                <Label Text="★ 4.8"
-                                       FontSize="12"
-                                       FontAttributes="Bold"
-                                       TextColor="White" />
-                            </Frame>
-                        </HorizontalStackLayout>
-
-                        <VerticalStackLayout Grid.Row="1"
-                                             Spacing="8">
-                            <Label Text="{Binding Title}"
-                                   FontSize="40"
-                                   FontAttributes="Bold"
-                                   TextColor="White"
-                                   LineBreakMode="WordWrap" />
-
-                            <Label Text="{Binding Address}"
-                                   FontSize="16"
-                                   TextColor="White" />
-                        </VerticalStackLayout>
-                    </Grid>
+                    <Image Grid.Column="2"
+                           Source="share.png"
+                           WidthRequest="28"
+                           HeightRequest="28"
+                           HorizontalOptions="End" />
                 </Grid>
-            </Frame>
 
-            <Frame Margin="20,0,20,0"
-                   Padding="20"
-                   CornerRadius="26"
-                   BackgroundColor="White">
-                <VerticalStackLayout Spacing="16">
-                    <Grid ColumnDefinitions="*,Auto">
-                        <VerticalStackLayout Spacing="4">
-                            <Label Text="Nghe thuyết minh"
-                                   FontSize="18"
+                <!-- IMAGE HERO -->
+                <Frame Margin="20,0,20,0"
+                       Padding="0"
+                       CornerRadius="30"
+                       BackgroundColor="White"
+                       HasShadow="False">
+                    <Grid HeightRequest="420">
+                        <Image Source="{Binding ImageUrl}"
+                               Aspect="AspectFill" />
+
+                        <Grid Padding="18"
+                              RowDefinitions="Auto,*,Auto"
+                              BackgroundColor="#33000000">
+
+                            <!-- TOP BADGES + AUDIO -->
+                            <Grid ColumnDefinitions="Auto,Auto,*,Auto"
+                                  VerticalOptions="Start">
+
+                                <Frame Padding="12,6"
+                                       CornerRadius="12"
+                                       BackgroundColor="#0058BC"
+                                       HasShadow="False"
+                                       VerticalOptions="Start">
+                                    <Label Text="{Binding Category}"
+                                           FontSize="12"
+                                           FontAttributes="Bold"
+                                           TextColor="White"
+                                           LineBreakMode="NoWrap" />
+                                </Frame>
+
+                                <Frame Grid.Column="1"
+                                       Margin="8,0,0,0"
+                                       Padding="12,6"
+                                       CornerRadius="12"
+                                       BackgroundColor="#805F4635"
+                                       HasShadow="False"
+                                       VerticalOptions="Start">
+                                    <Label Text="{Binding DistanceText}"
+                                           FontSize="12"
+                                           FontAttributes="Bold"
+                                           TextColor="White"
+                                           LineBreakMode="NoWrap" />
+                                </Frame>
+
+                                <Image Grid.Column="3"
+                                       Source="{Binding AudioToggleIcon}"
+                                       WidthRequest="30"
+                                       HeightRequest="30"
+                                       HorizontalOptions="End"
+                                       VerticalOptions="Start">
+                                    <Image.Shadow>
+                                        <Shadow Brush="#80000000"
+                                                Offset="2,2"
+                                                Radius="4"
+                                                Opacity="0.9" />
+                                    </Image.Shadow>
+                                    <Image.GestureRecognizers>
+                                        <TapGestureRecognizer Tapped="OnAudioTapped" />
+                                    </Image.GestureRecognizers>
+                                </Image>
+                            </Grid>
+
+                            <!-- BOTTOM CONTENT -->
+                            <Grid Grid.Row="2"
+                                  ColumnDefinitions="*,Auto"
+                                  ColumnSpacing="12"
+                                  VerticalOptions="End">
+
+                                <VerticalStackLayout Spacing="6">
+                                    <Label Text="{Binding Title}"
+                                           FontSize="34"
+                                           FontAttributes="Bold"
+                                           TextColor="White"
+                                           LineBreakMode="TailTruncation"
+                                           MaxLines="1" />
+
+                                    <HorizontalStackLayout Spacing="6">
+                                        <Image Source="star.png"
+                                               WidthRequest="14"
+                                               HeightRequest="14"
+                                               VerticalOptions="Center" />
+                                        <Label Text="{Binding RatingText}"
+                                               FontSize="14"
+                                               TextColor="White"
+                                               VerticalOptions="Center" />
+                                    </HorizontalStackLayout>
+
+                                    <Label Text="{Binding Address}"
+                                           FontSize="14"
+                                           TextColor="White"
+                                           LineBreakMode="TailTruncation" />
+                                </VerticalStackLayout>
+
+                                <Image Grid.Column="1"
+                                       Source="{Binding FavoriteIcon}"
+                                       WidthRequest="28"
+                                       HeightRequest="28"
+                                       HorizontalOptions="End"
+                                       VerticalOptions="End">
+                                    <Image.GestureRecognizers>
+                                        <TapGestureRecognizer Tapped="OnFavoriteTapped" />
+                                    </Image.GestureRecognizers>
+                                </Image>
+                            </Grid>
+                        </Grid>
+                    </Grid>
+                </Frame>
+
+                <!-- INFO ROW -->
+                <HorizontalStackLayout Padding="20,0,20,0"
+                                       Spacing="14">
+                    <Frame Padding="16,12"
+                           CornerRadius="18"
+                           BackgroundColor="White"
+                           HasShadow="False">
+                        <HorizontalStackLayout Spacing="8">
+                            <Image Source="clock.png"
+                                   WidthRequest="16"
+                                   HeightRequest="16"
+                                   VerticalOptions="Center" />
+                            <Label Text="{Binding OpenHours}"
+                                   FontSize="15"
                                    FontAttributes="Bold"
-                                   TextColor="#111827" />
-
-                            <Label Text="{Binding AudioVoice, StringFormat='Giọng đọc: {0} • '}"
-                                   FontSize="14"
-                                   TextColor="#475569" />
-
-                            <Label Text="{Binding AudioDuration}"
-                                   FontSize="14"
-                                   TextColor="#475569" />
-                        </VerticalStackLayout>
-
-                        <Label Grid.Column="1"
-                               Text="▥"
-                               FontSize="20"
-                               TextColor="#0058BC"
-                               VerticalOptions="Center" />
-                    </Grid>
-
-                    <Slider Minimum="0"
-                            Maximum="100"
-                            Value="32"
-                            MinimumTrackColor="#0058BC"
-                            MaximumTrackColor="#D1D5DB" />
-
-                    <Grid ColumnDefinitions="Auto,Auto,Auto,Auto,Auto"
-                          HorizontalOptions="Center"
-                          ColumnSpacing="22">
-                        <Label Text="↺10"
-                               FontSize="20"
-                               VerticalOptions="Center" />
-
-                        <Label Grid.Column="1"
-                               Text="⏮"
-                               FontSize="26"
-                               VerticalOptions="Center" />
-
-                        <Frame Grid.Column="2"
-                               WidthRequest="64"
-                               HeightRequest="64"
-                               Padding="0"
-                               CornerRadius="32"
-                               BackgroundColor="#0058BC">
-                            <Label Text="▶"
-                                   FontSize="26"
-                                   TextColor="White"
-                                   HorizontalOptions="Center"
                                    VerticalOptions="Center" />
-                        </Frame>
+                        </HorizontalStackLayout>
+                    </Frame>
 
-                        <Label Grid.Column="3"
-                               Text="⏭"
-                               FontSize="26"
-                               VerticalOptions="Center" />
-
-                        <Label Grid.Column="4"
-                               Text="10↻"
-                               FontSize="20"
-                               VerticalOptions="Center" />
-                    </Grid>
-
-                    <Button Text="Xem lời thuyết minh"
-                            CornerRadius="18"
-                            BackgroundColor="#EEF4FF"
-                            TextColor="#0058BC"
-                            Clicked="OnShowScriptClicked" />
-                </VerticalStackLayout>
-            </Frame>
-
-            <VerticalStackLayout Padding="20,0,20,0"
-                                 Spacing="14">
-                <Label Text="Giới thiệu"
-                       FontSize="28"
-                       FontAttributes="Bold"
-                       TextColor="#111827" />
-
-                <Label Text="{Binding Description}"
-                       FontSize="17"
-                       TextColor="#111827"
-                       LineHeight="1.4" />
-            </VerticalStackLayout>
-
-            <HorizontalStackLayout Padding="20,0,20,0"
-                                   Spacing="14">
-                <Frame Padding="16,12"
-                       CornerRadius="18"
-                       BackgroundColor="White">
-                    <HorizontalStackLayout Spacing="8">
-                        <Label Text="◔"
-                               TextColor="#0058BC" />
-                        <Label Text="{Binding OpenHours}"
-                               FontSize="15"
-                               FontAttributes="Bold" />
-                    </HorizontalStackLayout>
-                </Frame>
-
-                <Frame Padding="16,12"
-                       CornerRadius="18"
-                       BackgroundColor="White">
-                    <HorizontalStackLayout Spacing="8">
-                        <Label Text="⌘"
-                               TextColor="#0058BC" />
-                        <Label Text="{Binding PriceText}"
-                               FontSize="15"
-                               FontAttributes="Bold" />
-                    </HorizontalStackLayout>
-                </Frame>
-            </HorizontalStackLayout>
-
-            <Grid Padding="20,0,20,0"
-                  ColumnDefinitions="*,*"
-                  ColumnSpacing="14"
-                  RowDefinitions="Auto,Auto"
-                  RowSpacing="14">
-
-                <Frame Padding="18"
-                       CornerRadius="24"
-                       BackgroundColor="#EAF2FF"
-                       Grid.RowSpan="2">
-                    <VerticalStackLayout Spacing="14">
-                        <Frame WidthRequest="54"
-                               HeightRequest="54"
-                               Padding="0"
-                               CornerRadius="18"
-                               BackgroundColor="White">
-                            <Label Text="⌂"
-                                   TextColor="#0058BC"
-                                   FontSize="24"
-                                   HorizontalOptions="Center"
+                    <Frame Padding="16,12"
+                           CornerRadius="18"
+                           BackgroundColor="White"
+                           HasShadow="False">
+                        <HorizontalStackLayout Spacing="8">
+                            <Image Source="ticket.png"
+                                   WidthRequest="16"
+                                   HeightRequest="16"
                                    VerticalOptions="Center" />
-                        </Frame>
+                            <Label Text="{Binding PriceText}"
+                                   FontSize="15"
+                                   FontAttributes="Bold"
+                                   VerticalOptions="Center" />
+                        </HorizontalStackLayout>
+                    </Frame>
+                </HorizontalStackLayout>
+
+                <!-- AUDIO BOX -->
+                <Frame Margin="20,0,20,0"
+                       Padding="20"
+                       CornerRadius="26"
+                       BackgroundColor="White"
+                       HasShadow="False">
+                    <VerticalStackLayout Spacing="16">
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <VerticalStackLayout Spacing="6">
+                                <Label Text="Nghe thuyết minh"
+                                       FontSize="18"
+                                       FontAttributes="Bold"
+                                       TextColor="#111827" />
+
+                                <Label Text="{Binding AudioVoice, StringFormat='Giọng đọc: {0}'}"
+                                       FontSize="14"
+                                       TextColor="#475569" />
+                            </VerticalStackLayout>
+
+                            <Frame Grid.Column="1"
+                                   WidthRequest="36"
+                                   HeightRequest="36"
+                                   CornerRadius="18"
+                                   BackgroundColor="#E5E7EB"
+                                   Padding="0"
+                                   HasShadow="False"
+                                   VerticalOptions="Center">
+
+                                   <Image Source="{Binding AudioToggleIcon}"
+                                          WidthRequest="18"
+                                          HeightRequest="18"
+                                          HorizontalOptions="Center"
+                                          VerticalOptions="Center">
+                                          <Image.GestureRecognizers>
+                                          <TapGestureRecognizer Tapped="OnAudioTapped"/>
+                                          </Image.GestureRecognizers>
+                                   </Image>
+                            </Frame>
+                        </Grid>
 
                         <VerticalStackLayout Spacing="6">
-                            <Label Text="Kiến trúc"
-                                   FontSize="18"
-                                   FontAttributes="Bold" />
-                            <Label Text="Dấu ấn lịch sử và vẻ đẹp cổ điển giữa trung tâm thành phố."
-                                   FontSize="14"
-                                   TextColor="#374151" />
+                            <Slider Minimum="0"
+                                    Maximum="100"
+                                    Value="{Binding PlaybackProgress, Mode=TwoWay}"
+                                    MinimumTrackColor="#0058BC"
+                                    MaximumTrackColor="#D1D5DB"
+                                    DragCompleted="OnTimelineDragCompleted" />
+
+                            <Grid ColumnDefinitions="Auto,*,Auto">
+                                <Label Text="{Binding CurrentTimeText}"
+                                       FontSize="12"
+                                       TextColor="#64748B" />
+
+                                <Label Grid.Column="2"
+                                       Text="{Binding RemainingTimeText}"
+                                       FontSize="12"
+                                       TextColor="#64748B"
+                                       HorizontalOptions="End" />
+                            </Grid>
                         </VerticalStackLayout>
+
+                        <Button Text="Xem lời thuyết minh"
+                                CornerRadius="18"
+                                BackgroundColor="#EEF4FF"
+                                TextColor="#0058BC"
+                                Clicked="OnShowScriptClicked" />
                     </VerticalStackLayout>
                 </Frame>
 
-                <Frame Grid.Column="1"
-                       Padding="18"
-                       CornerRadius="20"
-                       BackgroundColor="White">
-                    <VerticalStackLayout Spacing="6">
-                        <Label Text="144 năm"
-                               FontSize="18"
-                               FontAttributes="Bold" />
-                        <Label Text="Giá trị lịch sử"
-                               FontSize="14"
-                               TextColor="#475569" />
-                    </VerticalStackLayout>
-                </Frame>
+                <!-- DESCRIPTION -->
+                <VerticalStackLayout Padding="20,0,20,0"
+                                     Spacing="14">
+                    <Label Text="Giới thiệu"
+                           FontSize="28"
+                           FontAttributes="Bold"
+                           TextColor="#111827" />
 
-                <Frame Grid.Row="1"
-                       Grid.Column="1"
-                       Padding="18"
-                       CornerRadius="20"
-                       BackgroundColor="White">
-                    <VerticalStackLayout Spacing="6">
-                        <Label Text="Góc chụp"
-                               FontSize="18"
-                               FontAttributes="Bold" />
-                        <Label Text="Check-in đẹp nhất"
-                               FontSize="14"
-                               TextColor="#475569" />
-                    </VerticalStackLayout>
-                </Frame>
-            </Grid>
+                    <Label Text="{Binding Description}"
+                           FontSize="17"
+                           TextColor="#111827"
+                           LineHeight="1.4" />
+                </VerticalStackLayout>
 
-        </VerticalStackLayout>
-    </ScrollView>
+            </VerticalStackLayout>
+        </ScrollView>
+
+        <!-- TOAST -->
+        <Frame x:Name="ToastView"
+               IsVisible="False"
+               VerticalOptions="Start"
+               HorizontalOptions="Center"
+               Margin="0,60,0,0"
+               Padding="16,10"
+               BackgroundColor="#0F5BD7"
+               Opacity="0.95"
+               TranslationY="-20"
+               CornerRadius="12"
+               HasShadow="False"
+               ZIndex="10">
+            <Label x:Name="ToastText"
+                   TextColor="White"
+                   FontSize="14" />
+        </Frame>
+    </Grid>
 </ContentPage>

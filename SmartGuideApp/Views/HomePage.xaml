@@ -341,11 +341,26 @@
                                                                   CommandParameter="{Binding .}" />
                                         </Frame.GestureRecognizers>
 
-                                        <Image Source="favorite.png"
-                                               WidthRequest="20"
-                                               HeightRequest="20"
-                                               HorizontalOptions="Center"
-                                               VerticalOptions="Center" />
+                                        <Image WidthRequest="20"
+                                                 HeightRequest="20"
+                                                 HorizontalOptions="Center"
+                                                 VerticalOptions="Center">
+
+                                                 <Image.Triggers>
+                                                        <DataTrigger TargetType="Image"
+                                                                      Binding="{Binding IsFavorite}"
+                                                                      Value="True">
+                                                        <Setter Property="Source" Value="favorite_active.png"/>
+                                                        </DataTrigger>
+
+                                                        <DataTrigger TargetType="Image"
+                                                                      Binding="{Binding IsFavorite}"
+                                                                      Value="False">
+                                                        <Setter Property="Source" Value="favorite.png"/>
+                                                        </DataTrigger>
+                                                 </Image.Triggers>
+
+                                          </Image>
                                     </Frame>
                                 </Grid>
                             </Grid>

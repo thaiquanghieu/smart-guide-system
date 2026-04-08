@@ -32,11 +32,6 @@ public partial class HomePage : ContentPage
         {
             poi.IsFavorite = !poi.IsFavorite;
 
-            if (sender is Frame frame && frame.Content is Image iconImage)
-            {
-                iconImage.Source = poi.IsFavorite ? "favorite_active.png" : "favorite.png";
-            }
-
             if (poi.IsFavorite)
             {
                 await ShowToast("Đã thêm vào yêu thích!");
@@ -81,31 +76,36 @@ public partial class HomePage : ContentPage
     private async void OnFilterClicked(object sender, EventArgs e)
     {
         var result = await DisplayActionSheet("Chọn tỉnh/thành", "Huỷ", null,
-            "Hà Nội", "TP.HCM", "Đà Nẵng", "Cần Thơ", "Hải Phòng",
-            "An Giang", "Bà Rịa - Vũng Tàu", "Bắc Giang", "Bắc Kạn", "Bạc Liêu",
-            "Bắc Ninh", "Bến Tre", "Bình Định", "Bình Dương", "Bình Phước",
-            "Bình Thuận", "Cà Mau", "Cao Bằng", "Đắk Lắk", "Đắk Nông",
-            "Điện Biên", "Đồng Nai", "Đồng Tháp", "Gia Lai", "Hà Giang",
-            "Hà Nam", "Hà Tĩnh", "Hải Dương", "Hậu Giang", "Hòa Bình",
-            "Hưng Yên", "Khánh Hòa", "Kiên Giang", "Kon Tum", "Lai Châu",
-            "Lâm Đồng", "Lạng Sơn", "Lào Cai", "Long An", "Nam Định",
-            "Nghệ An", "Ninh Bình", "Ninh Thuận", "Phú Thọ", "Phú Yên",
-            "Quảng Bình", "Quảng Nam", "Quảng Ngãi", "Quảng Ninh", "Quảng Trị",
-            "Sóc Trăng", "Sơn La", "Tây Ninh", "Thái Bình", "Thái Nguyên",
-            "Thanh Hóa", "Thừa Thiên Huế", "Tiền Giang", "Trà Vinh", "Tuyên Quang",
-            "Vĩnh Long", "Vĩnh Phúc", "Yên Bái");
+            "Tất cả",
+            "TP.HCM",
+            "Hà Nội",
+            "Đà Nẵng",
+            "Hải Phòng",
+            "Cần Thơ",
+
+            "An Giang","Bà Rịa - Vũng Tàu","Bắc Giang","Bắc Kạn","Bạc Liêu",
+            "Bắc Ninh","Bến Tre","Bình Định","Bình Dương","Bình Phước",
+            "Bình Thuận","Cà Mau","Cao Bằng","Đắk Lắk","Đắk Nông",
+            "Điện Biên","Đồng Nai","Đồng Tháp","Gia Lai","Hà Giang",
+            "Hà Nam","Hà Tĩnh","Hải Dương","Hậu Giang","Hòa Bình",
+            "Hưng Yên","Khánh Hòa","Kiên Giang","Kon Tum","Lai Châu",
+            "Lâm Đồng","Lạng Sơn","Lào Cai","Long An","Nam Định",
+            "Nghệ An","Ninh Bình","Ninh Thuận","Phú Thọ","Phú Yên",
+            "Quảng Bình","Quảng Nam","Quảng Ngãi","Quảng Ninh","Quảng Trị",
+            "Sóc Trăng","Sơn La","Tây Ninh","Thái Bình","Thái Nguyên",
+            "Thanh Hóa","Thừa Thiên Huế","Tiền Giang","Trà Vinh","Tuyên Quang",
+            "Vĩnh Long","Vĩnh Phúc","Yên Bái"
+        );
 
         if (!string.IsNullOrWhiteSpace(result) && result != "Huỷ")
         {
-            isFilterActive = true;
-            FilterIcon.Source = "filter_active.png";
-            FilterText.TextColor = Color.FromArgb("#0F5BD7");
-        }
-        else
-        {
-            isFilterActive = false;
-            FilterIcon.Source = "filter.png";
-            FilterText.TextColor = Color.FromArgb("#9CA3AF");
+            isFilterActive = result != "Tất cả";
+
+            FilterIcon.Source = isFilterActive ? "filter_active.png" : "filter.png";
+            FilterText.TextColor = isFilterActive ? Color.FromArgb("#0F5BD7") : Color.FromArgb("#9CA3AF");
+
+            // (OPTIONAL - nếu bạn muốn filter thật)
+            // ViewModel.SetLocationFilter(result);
         }
     }
 
@@ -115,17 +115,20 @@ public partial class HomePage : ContentPage
             "Gần nhất",
             "Xa nhất",
             "Phổ biến",
-            "Đánh giá cao");
+            "Đã nghe nhiều",
+            "Miễn phí");
 
         if (!string.IsNullOrWhiteSpace(result) && result != "Huỷ")
         {
             isSortActive = true;
+
             SortIcon.Source = "sort_active.png";
             SortText.TextColor = Color.FromArgb("#0F5BD7");
         }
         else
         {
             isSortActive = false;
+
             SortIcon.Source = "sort.png";
             SortText.TextColor = Color.FromArgb("#9CA3AF");
         }

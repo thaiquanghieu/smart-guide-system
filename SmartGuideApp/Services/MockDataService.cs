@@ -21,7 +21,7 @@ public class MockDataService
                 ImageUrl = "https://images.unsplash.com/photo-1545569341-9eb8b30979d9?auto=format&fit=crop&w=1200&q=80",
                 OpenHours = "08:00 - 17:00",
                 PriceText = "Miễn phí",
-                IsFavorite = true,
+                IsFavorite = false,
                 ListenedCount = 5,
                 Latitude = 10.779783,
                 Longitude = 106.699018,
