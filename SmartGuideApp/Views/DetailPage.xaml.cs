@@ -1,11 +1,39 @@
 using SmartGuideApp.Models;
 using SmartGuideApp.ViewModels;
+using SmartGuideApp.Services;
 
 namespace SmartGuideApp.Views;
+
+[QueryProperty(nameof(PoiId), "poiId")]
 
 public partial class DetailPage : ContentPage, IQueryAttributable
 {
     private DetailViewModel ViewModel => (DetailViewModel)BindingContext;
+
+    private string? _poiId;
+    public string? PoiId
+    {
+        get => _poiId;
+        set
+        {
+            _poiId = value;
+            LoadPoiById(value);
+        }
+    }
+
+    private void LoadPoiById(string? id)
+    {
+        if (string.IsNullOrEmpty(id))
+            return;
+
+        var service = new MockDataService();
+        var poi = service.GetPois().FirstOrDefault(x => x.Id == id);
+
+        if (poi != null)
+        {
+            ViewModel.Poi = poi;
+        }
+    }
 
     public DetailPage()
     {
