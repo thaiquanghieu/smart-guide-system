@@ -120,4 +120,26 @@ public partial class DetailPage : ContentPage, IQueryAttributable
 
         ToastView.IsVisible = false;
     }
+
+    protected override void OnAppearing()
+    {
+        base.OnAppearing();
+
+        var isAutoPlay = Preferences.Get("auto_play", false);
+
+        if (isAutoPlay && ViewModel.TogglePlayCommand.CanExecute(null))
+        {
+            ViewModel.TogglePlayCommand.Execute(null);
+        }
+    }
+
+    protected override void OnDisappearing()
+    {
+        if (ViewModel.IsPlaying && ViewModel.TogglePlayCommand.CanExecute(null))
+        {
+            ViewModel.TogglePlayCommand.Execute(null);
+        }
+
+        base.OnDisappearing();
+    }
 }

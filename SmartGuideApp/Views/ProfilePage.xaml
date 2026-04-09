@@ -7,7 +7,8 @@
     <ContentPage.BindingContext>
         <viewmodels:ProfileViewModel />
     </ContentPage.BindingContext>
-
+    
+    <Grid>
     <ScrollView>
         <VerticalStackLayout Padding="20" Spacing="20">
 
@@ -161,6 +162,10 @@
                     <BoxView HeightRequest="1" BackgroundColor="#E5E7EB"/>
 
                     <Grid Padding="16" ColumnDefinitions="60,* ,Auto">
+                        <Grid.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="OnOpenSettingsTapped" />
+                        </Grid.GestureRecognizers>
+
                         <Frame WidthRequest="40" HeightRequest="40" CornerRadius="12" BackgroundColor="#F9FAFB">
                             <Image Source="settings.png"
                                    WidthRequest="20"
@@ -254,5 +259,44 @@
             </VerticalStackLayout>
 
         </VerticalStackLayout>
-    </ScrollView>
+        </ScrollView>
+
+    <!-- SETTINGS POPUP -->
+    <Grid x:Name="SettingsPopup"
+          ZIndex="10"
+          IsVisible="False"
+          BackgroundColor="#80000000">
+
+          <Grid.GestureRecognizers>
+                <TapGestureRecognizer Tapped="OnCloseSettingsClicked"/>
+            </Grid.GestureRecognizers>
+
+        <Frame VerticalOptions="End"
+            CornerRadius="20"
+            Padding="20"
+            BackgroundColor="White"
+            Margin="0,0,0,0">
+
+            <VerticalStackLayout Spacing="20">
+
+                <Label Text="Cài đặt"
+                    FontSize="18"
+                    FontAttributes="Bold"/>
+
+                <!-- AUTO PLAY -->
+                <Grid ColumnDefinitions="*,Auto">
+                    <Label Text="Tự động phát audio"
+                        VerticalOptions="Center"/>
+
+                    <Switch x:Name="AutoPlaySwitch"
+                            Grid.Column="1"
+                            Toggled="OnAutoPlayToggled"/>
+                </Grid>
+
+                <Button Text="Đóng"
+                        Clicked="OnCloseSettingsClicked"/>
+            </VerticalStackLayout>
+        </Frame>
+     </Grid>
+</Grid>
 </ContentPage>
