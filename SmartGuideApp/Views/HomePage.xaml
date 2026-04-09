@@ -325,10 +325,12 @@
                                BackgroundColor="White"
                                HasShadow="False">
 
-                            <Grid RowDefinitions="145,Auto">
+                            <Grid RowDefinitions="145,Auto"
+                                InputTransparent="False">
                                 <Grid.GestureRecognizers>
                                     <TapGestureRecognizer Tapped="OnOpenDetailTapped"
-                                                          CommandParameter="{Binding .}" />
+                                                        CommandParameter="{Binding .}"
+                                                        NumberOfTapsRequired="1" />
                                 </Grid.GestureRecognizers>
 
                                 <!-- Image -->
@@ -338,31 +340,65 @@
 
                                     <!-- Category -->
                                     <Frame Margin="14,14,0,0"
-                                           Padding="12,6"
-                                           CornerRadius="12"
-                                           BackgroundColor="#FFF4E5"
-                                           HorizontalOptions="Start"
-                                           VerticalOptions="Start"
-                                           HasShadow="False">
-                                        <Label Text="{Binding Category}"
-                                               FontSize="11"
-                                               FontAttributes="Bold"
-                                               TextColor="#B45309" />
+                                        Padding="12,6"
+                                        CornerRadius="12"
+                                        BackgroundColor="#FFF4E5"
+                                        HorizontalOptions="Start"
+                                        VerticalOptions="Start"
+                                        HasShadow="False">
+
+                                        <HorizontalStackLayout Spacing="6">
+
+                                            <Label Text="{Binding Category}"
+                                                FontSize="11"
+                                                FontAttributes="Bold"
+                                                TextColor="#B45309" />
+
+                                            <Label Text="•"
+                                                FontSize="11"
+                                                TextColor="#B45309" />
+
+                                            <Label Text="{Binding DistanceKm, StringFormat='{}{0:0.0} km'}"
+                                                FontSize="11"
+                                                FontAttributes="Bold"
+                                                TextColor="#B45309" />
+
+                                        </HorizontalStackLayout>
                                     </Frame>
 
-                                    <!-- Distance -->
-                                    <Frame Margin="0,14,14,0"
-                                           Padding="12,6"
-                                           CornerRadius="12"
-                                           BackgroundColor="#EEF4FF"
-                                           HorizontalOptions="End"
-                                           VerticalOptions="Start"
-                                           HasShadow="False">
-                                        <Label Text="{Binding DistanceKm, StringFormat='{}{0:0.0} km'}"
-                                               FontSize="13"
-                                               FontAttributes="Bold"
-                                               TextColor="#365FA8" />
-                                    </Frame>
+                                    <!-- Audio button -->
+                                    <Image WidthRequest="22"
+                                        HeightRequest="22"
+                                        HorizontalOptions="End"
+                                        VerticalOptions="Start"
+                                        Margin="0,14,14,0"
+                                        InputTransparent="False">
+
+                                        <Image.GestureRecognizers>
+                                            <TapGestureRecognizer Tapped="OnHomeAudioTapped"
+                                                                CommandParameter="{Binding .}" />
+                                        </Image.GestureRecognizers>
+
+                                        <Image.Triggers>
+                                            <DataTrigger TargetType="Image"
+                                                        Binding="{Binding IsAudioPlaying}"
+                                                        Value="True">
+                                                <Setter Property="Source" Value="audio.png" />
+                                            </DataTrigger>
+
+                                            <DataTrigger TargetType="Image"
+                                                        Binding="{Binding IsAudioPlaying}"
+                                                        Value="False">
+                                                <Setter Property="Source" Value="audio2.png" />
+                                            </DataTrigger>
+                                        </Image.Triggers>
+
+                                        <Image.Shadow>
+                                            <Shadow Brush="#80000000"
+                                                    Offset="0,2"
+                                                    Radius="6" />
+                                        </Image.Shadow>
+                                    </Image>
 
                                     <!-- Rating -->
                                     <HorizontalStackLayout HorizontalOptions="End"

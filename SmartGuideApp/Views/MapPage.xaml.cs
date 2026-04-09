@@ -3,6 +3,7 @@ using Microsoft.Maui.Maps;
 using SmartGuideApp.Models;
 using SmartGuideApp.ViewModels;
 using System.Globalization;
+using Microsoft.Maui.Media;
 
 namespace SmartGuideApp.Views;
 
@@ -25,6 +26,9 @@ public partial class MapPage : ContentPage
 
     private bool _isMapReady;
     private string? _pendingPoiId;
+
+    private CancellationTokenSource? _mapAudioCts;
+    private POI? _mapPlayingPoi;
 
     public MapPage()
     {
@@ -131,6 +135,7 @@ public partial class MapPage : ContentPage
 
     private void OnMapClicked(object sender, MapClickedEventArgs e)
     {
+        StopMapAudio();
         ViewModel.ClearSelection();
         ViewModel.HideSuggestions();
         ViewModel.IsSearchActive = false;
@@ -157,6 +162,7 @@ public partial class MapPage : ContentPage
 
     private async void OnCancelSearch(object sender, EventArgs e)
     {
+        StopMapAudio();
         ViewModel.SearchText = "";
         ViewModel.HideSuggestions();
         ViewModel.IsSearchActive = false;
@@ -261,5 +267,70 @@ public partial class MapPage : ContentPage
                 Distance.FromMeters(800)
             ));
         }
+    }
+
+    private void StopMapAudio()
+    {
+        _mapAudioCts?.Cancel();
+
+        if (_mapPlayingPoi != null)
+            _mapPlayingPoi.IsAudioPlaying = false;
+
+        _mapPlayingPoi = null;
+        _mapAudioCts = null;
+    }
+
+    private async void OnMapAudioTapped(object? sender, TappedEventArgs e)
+    {
+        var poi = ViewModel.SelectedPoi;
+        if (poi == null)
+            return;
+
+        var script = poi.Audios.FirstOrDefault()?.ScriptText;
+        if (string.IsNullOrWhiteSpace(script))
+            return;
+
+        if (_mapPlayingPoi == poi && poi.IsAudioPlaying)
+        {
+            StopMapAudio();
+            return;
+        }
+
+        StopMapAudio();
+
+        var cts = new CancellationTokenSource();
+        _mapAudioCts = cts;
+        _mapPlayingPoi = poi;
+        poi.IsAudioPlaying = true;
+
+        try
+        {
+            await TextToSpeech.SpeakAsync(
+                script,
+                new SpeechOptions
+                {
+                    Volume = 1.0f,
+                    Pitch = 1.0f
+                },
+                cts.Token);
+        }
+        catch
+        {
+        }
+        finally
+        {
+            if (_mapAudioCts == cts)
+            {
+                poi.IsAudioPlaying = false;
+                _mapPlayingPoi = null;
+                _mapAudioCts = null;
+            }
+        }
+    }
+
+    protected override void OnDisappearing()
+    {
+        StopMapAudio();
+        base.OnDisappearing();
     }
 }

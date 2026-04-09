@@ -31,6 +31,18 @@ public class POI : INotifyPropertyChanged
             ? $"{(int)(DistanceKm * 1000)}m"
             : $"{DistanceKm:0.0}km";
 
+    private bool _isAudioPlaying;
+    public bool IsAudioPlaying
+    {
+        get => _isAudioPlaying;
+        set
+        {   
+            if (_isAudioPlaying == value) return;
+            _isAudioPlaying = value;
+            OnPropertyChanged();
+        }
+    }
+
     public string ImageUrl { get; set; } = string.Empty;
     public List<string> ImageUrls { get; set; } = new();
 
