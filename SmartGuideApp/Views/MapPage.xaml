@@ -161,6 +161,45 @@
                    VerticalOptions="Center"/>
         </Frame>
 
+        <!-- TRACKING BUTTON -->
+        <Frame WidthRequest="80"
+            HeightRequest="80"
+            CornerRadius="40"
+            BackgroundColor="#374151"
+            HorizontalOptions="End"
+            VerticalOptions="End"
+            Margin="0,0,16,100"
+            ZIndex="5"
+            Padding="6">
+
+            <Frame.Shadow>
+                <Shadow Brush="#000000"
+                        Opacity="0.2"
+                        Radius="10"
+                        Offset="2,3"/>
+            </Frame.Shadow>
+
+            <VerticalStackLayout Spacing="2"
+                                HorizontalOptions="Center"
+                                VerticalOptions="Center">
+
+                <Image x:Name="TrackingIcon"
+                    WidthRequest="20"
+                    HeightRequest="20"
+                    HorizontalOptions="Center"/>
+
+                <Label x:Name="TrackingText"
+                    FontSize="10"
+                    TextColor="White"
+                    HorizontalTextAlignment="Center"/>
+            </VerticalStackLayout>
+
+            <Frame.GestureRecognizers>
+                <TapGestureRecognizer Tapped="OnTrackingTapped"/>
+            </Frame.GestureRecognizers>
+
+        </Frame>
+
         <!-- CARD -->
         <Frame x:Name="BottomCard"
                IsVisible="{Binding IsPoiSelected}"

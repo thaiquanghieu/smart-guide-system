@@ -13,6 +13,7 @@ public partial class MapPage : ContentPage
 {
     private MapViewModel ViewModel => (MapViewModel)BindingContext;
     private TrackingService _trackingService = new();
+    private bool _isTrackingEnabled;
 
     private string? _poiId;
     public string? PoiId
@@ -342,9 +343,43 @@ public partial class MapPage : ContentPage
     {
         base.OnAppearing();
 
-        if (BindingContext is MapViewModel vm)
+        _isTrackingEnabled = Preferences.Get("tracking_enabled", false);
+        UpdateTrackingUI();
+
+        if (_isTrackingEnabled && BindingContext is MapViewModel vm)
         {
             await _trackingService.StartTrackingAsync(vm.Pois.ToList());
+        }
+    }
+
+    private void UpdateTrackingUI()
+    {
+        TrackingIcon.Source = _isTrackingEnabled
+            ? "tracking_active.png"
+            : "tracking.png";
+
+        TrackingText.Text = _isTrackingEnabled
+            ? "Tracking: ON"
+            : "Tracking: OFF";
+    }
+
+    private async void OnTrackingTapped(object sender, EventArgs e)
+    {
+        _isTrackingEnabled = !_isTrackingEnabled;
+
+        Preferences.Set("tracking_enabled", _isTrackingEnabled);
+        UpdateTrackingUI();
+
+        if (BindingContext is not MapViewModel vm)
+            return;
+
+        if (_isTrackingEnabled)
+        {
+            await _trackingService.StartTrackingAsync(vm.Pois.ToList());
+        }
+        else
+        {
+            _trackingService.Stop();
         }
     }
 

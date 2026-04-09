@@ -8,6 +8,9 @@ public class TrackingService
     private bool _isRunning = false;
     private HashSet<string> _triggeredPois = new();
 
+    private Queue<POI> _poiQueue = new();
+    private bool _isProcessing = false;
+
     public async Task StartTrackingAsync(List<POI> pois)
     {
         if (_isRunning) return;
@@ -48,25 +51,37 @@ public class TrackingService
                 DistanceUnits.Kilometers
             );
 
-            if (distance < 4) // Khoảng cách tracking (đơn vị: km)
+            if (distance < 4) // Khoảng cách tracking (đơn vị km)
             {
                 _triggeredPois.Add(poi.Id);
-
-                TriggerPoi(poi);
-                break;
+                _poiQueue.Enqueue(poi);
             }
         }
+        ProcessQueue();
     }
 
-    private async void TriggerPoi(POI poi)
+    private async void ProcessQueue()
     {
-        try
+        if (_isProcessing || _poiQueue.Count == 0)
+            return;
+
+        _isProcessing = true;
+
+        while (_poiQueue.Count > 0)
         {
+            var poi = _poiQueue.Dequeue();
+
             await MainThread.InvokeOnMainThreadAsync(async () =>
             {
+                await Shell.Current.GoToAsync($"//map");
                 await Shell.Current.GoToAsync($"DetailPage?poiId={poi.Id}");
             });
+
+            // đợi đọc xong (tạm)
+            await Task.Delay(8000);
         }
-        catch { }
+
+        _isProcessing = false;
     }
+
 }
