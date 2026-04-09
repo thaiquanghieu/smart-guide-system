@@ -59,6 +59,7 @@ public partial class MapPage : ContentPage
             return;
 
         ViewModel.SelectPoi(poi);
+        SearchEntry.Text = poi.Name;
 
         MainMap.MoveToRegion(MapSpan.FromCenterAndRadius(
             new Location(poi.Latitude, poi.Longitude),

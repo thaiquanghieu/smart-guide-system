@@ -195,4 +195,44 @@ public partial class HomePage : ContentPage
             SortText.TextColor = Color.FromArgb("#9CA3AF");
         }
     }
+
+    private void OnSearchFocused(object sender, FocusEventArgs e)
+    {
+        ViewModel.IsSearchActive = true;
+    }
+
+    private async void OnSearchUnfocused(object sender, FocusEventArgs e)
+    {
+        // Tăng delay lên một chút để đảm bảo các thao tác click vào suggestion kịp ghi nhận
+        await Task.Delay(200); 
+        
+        // Kiểm tra nếu thực sự không còn focus vào ô nhập liệu thì mới ẩn
+        if (!SearchEntry.IsFocused)
+        {
+            ViewModel.HideSuggestions();
+            // Không nên set IsSearchActive = false ở đây vì user có thể chỉ đang xem kết quả filter
+        }
+    }
+
+    private void OnCancelSearch(object sender, EventArgs e)
+    {
+        ViewModel.SearchText = "";
+        // Chỉ set IsSearchActive = false khi thực sự cancel
+        ViewModel.IsSearchActive = false;
+        ViewModel.HideSuggestions();
+        SearchEntry.Unfocus();
+    }
+
+    private async void OnSuggestionTapped(object sender, TappedEventArgs e)
+    {
+        if (e.Parameter is not POI poi)
+            return;
+
+        // Chỉ set IsSearchActive = false khi user chọn suggestion
+        ViewModel.IsSearchActive = false;
+        ViewModel.HideSuggestions();
+        SearchEntry.Unfocus();
+        // chuyển sang map + truyền poiId
+        await Shell.Current.GoToAsync($"///map?poiId={poi.Id}");
+    }
 }

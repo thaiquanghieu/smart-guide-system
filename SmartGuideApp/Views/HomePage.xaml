@@ -92,7 +92,7 @@
                            HasShadow="False">
 
                         <Grid Padding="12,0,12,0"
-                              ColumnDefinitions="48,*"
+                              ColumnDefinitions="48,*,Auto"
                               HeightRequest="60"
                               ColumnSpacing="6">
 
@@ -103,15 +103,83 @@
                                    VerticalOptions="Center" />
 
                             <Entry Grid.Column="1"
+                                   x:Name="SearchEntry"
                                    Text="{Binding SearchText}"
+                                   Focused="OnSearchFocused"
+                                   Unfocused="OnSearchUnfocused"
                                    Placeholder="Tìm kiếm địa điểm..."
                                    PlaceholderColor="#6C8FD8"
                                    TextColor="#0F5BD7"
                                    BackgroundColor="Transparent"
                                    ClearButtonVisibility="WhileEditing"
                                    VerticalOptions="Center" />
+
+                            <Label Grid.Column="2"
+                                   Text="Huỷ"
+                                   FontSize="14"
+                                   TextColor="#0F5BD7"
+                                   VerticalOptions="Center"
+                                   HorizontalOptions="Center"
+                                   IsVisible="{Binding IsSearchActive}">
+
+                                <Label.GestureRecognizers>
+                                    <TapGestureRecognizer Tapped="OnCancelSearch" />
+                                </Label.GestureRecognizers>
+                            </Label>
                         </Grid>
                     </Frame>
+
+                    <!-- Suggestions box: động, nằm ngay dưới search bar -->
+                    <Border Margin="0,-15,0,0"
+                            Padding="0"
+                            BackgroundColor="White"
+                            Stroke="#E5E7EB"
+                            StrokeThickness="1"
+                            IsVisible="{Binding IsSuggestionVisible}"
+                            VerticalOptions="Start"
+                            ZIndex="10">
+                        <Border.StrokeShape>
+                            <RoundRectangle CornerRadius="12" />
+                        </Border.StrokeShape>
+                        <CollectionView ItemsSource="{Binding Suggestions}"
+                                        SelectionMode="None"
+                                        BackgroundColor="Transparent"
+                                        MaximumHeightRequest="220">
+                            <CollectionView.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid Padding="12,10"
+                                          ColumnDefinitions="*,Auto"
+                                          RowDefinitions="Auto,Auto">
+                                        <Label Text="{Binding Name}"
+                                               MaxLines="1"
+                                               FontSize="15"
+                                               FontAttributes="Bold"
+                                               Grid.Row="0"
+                                               Grid.Column="0"
+                                               LineBreakMode="TailTruncation" />
+                                        <Label Text="{Binding SuggestionDistanceText}"
+                                               FontSize="12"
+                                               TextColor="#6B7280"
+                                               HorizontalTextAlignment="End"
+                                               Grid.Row="0"
+                                               Grid.Column="1" />
+                                        <Label Text="{Binding Address}"
+                                               FontSize="12"
+                                               TextColor="#6B7280"
+                                               Grid.Row="1"
+                                               Grid.Column="0"
+                                               Grid.ColumnSpan="2"
+                                               LineBreakMode="TailTruncation"
+                                               MaxLines="1" />
+                                        <Grid.GestureRecognizers>
+                                            <TapGestureRecognizer Tapped="OnSuggestionTapped"
+                                                                  CommandParameter="{Binding .}" />
+                                        </Grid.GestureRecognizers>
+                                    </Grid>
+                                </DataTemplate>
+                            </CollectionView.ItemTemplate>
+                        </CollectionView>
+                    </Border>
 
                     <!-- Current location -->
                     <VerticalStackLayout Spacing="12">
@@ -121,48 +189,48 @@
                                TextColor="#111827" />
 
                         <Frame CornerRadius="20"
-                                   Padding="0"
-                                   HasShadow="False"
-                                   BackgroundColor="#0E9EC2"
-                                   HeightRequest="200">
+                               Padding="0"
+                               HasShadow="False"
+                               BackgroundColor="#0E9EC2"
+                               HeightRequest="200">
                             <Frame CornerRadius="20"
                                    Padding="0"
                                    HasShadow="False"
                                    BackgroundColor="White"
                                    HeightRequest="200">
 
-                                   <Grid>
-                                   <maps:Map x:Name="PreviewMap"
-                                                 IsShowingUser="True"
-                                                 MapClicked="OnMapClicked" />
+                                <Grid>
+                                    <maps:Map x:Name="PreviewMap"
+                                              IsShowingUser="True"
+                                              MapClicked="OnMapClicked" />
 
-                                   <Frame WidthRequest="54"
-                                          HeightRequest="54"
-                                          CornerRadius="18"
-                                          BackgroundColor="White"
-                                          HorizontalOptions="End"
-                                          VerticalOptions="Start"
-                                          Margin="0,12,12,0"
-                                          ZIndex="2">
+                                    <Frame WidthRequest="54"
+                                           HeightRequest="54"
+                                           CornerRadius="18"
+                                           BackgroundColor="White"
+                                           HorizontalOptions="End"
+                                           VerticalOptions="Start"
+                                           Margin="0,12,12,0"
+                                           ZIndex="2">
 
-                                          <Frame.Shadow>
-                                          <Shadow Brush="#000000"
-                                                        Opacity="0.10"
-                                                        Radius="10"
-                                                        Offset="3,4"/>
-                                          </Frame.Shadow>
+                                        <Frame.Shadow>
+                                            <Shadow Brush="#000000"
+                                                    Opacity="0.10"
+                                                    Radius="10"
+                                                    Offset="3,4" />
+                                        </Frame.Shadow>
 
-                                          <Frame.GestureRecognizers>
-                                          <TapGestureRecognizer Tapped="OnMyLocationClicked"/>
-                                          </Frame.GestureRecognizers>
+                                        <Frame.GestureRecognizers>
+                                            <TapGestureRecognizer Tapped="OnMyLocationClicked" />
+                                        </Frame.GestureRecognizers>
 
-                                          <Image Source="location.png"
-                                                 WidthRequest="26"
-                                                 HeightRequest="26"
-                                                 HorizontalOptions="Center"
-                                                 VerticalOptions="Center"/>
-                                   </Frame>
-                                   </Grid>
+                                        <Image Source="location.png"
+                                               WidthRequest="26"
+                                               HeightRequest="26"
+                                               HorizontalOptions="Center"
+                                               VerticalOptions="Center" />
+                                    </Frame>
+                                </Grid>
                             </Frame>
                         </Frame>
                     </VerticalStackLayout>
@@ -352,25 +420,25 @@
                                         </Frame.GestureRecognizers>
 
                                         <Image WidthRequest="20"
-                                                 HeightRequest="20"
-                                                 HorizontalOptions="Center"
-                                                 VerticalOptions="Center">
+                                               HeightRequest="20"
+                                               HorizontalOptions="Center"
+                                               VerticalOptions="Center">
 
-                                                 <Image.Triggers>
-                                                        <DataTrigger TargetType="Image"
-                                                                      Binding="{Binding IsFavorite}"
-                                                                      Value="True">
-                                                        <Setter Property="Source" Value="favorite_active.png"/>
-                                                        </DataTrigger>
+                                            <Image.Triggers>
+                                                <DataTrigger TargetType="Image"
+                                                             Binding="{Binding IsFavorite}"
+                                                             Value="True">
+                                                    <Setter Property="Source" Value="favorite_active.png" />
+                                                </DataTrigger>
 
-                                                        <DataTrigger TargetType="Image"
-                                                                      Binding="{Binding IsFavorite}"
-                                                                      Value="False">
-                                                        <Setter Property="Source" Value="favorite.png"/>
-                                                        </DataTrigger>
-                                                 </Image.Triggers>
+                                                <DataTrigger TargetType="Image"
+                                                             Binding="{Binding IsFavorite}"
+                                                             Value="False">
+                                                    <Setter Property="Source" Value="favorite.png" />
+                                                </DataTrigger>
+                                            </Image.Triggers>
 
-                                          </Image>
+                                        </Image>
                                     </Frame>
                                 </Grid>
                             </Grid>
@@ -384,6 +452,7 @@
                          Color="Transparent" />
             </CollectionView.Footer>
         </CollectionView>
+
 
         <!-- Toast overlay -->
         <Frame x:Name="ToastView"
