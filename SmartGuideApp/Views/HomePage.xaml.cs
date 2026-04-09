@@ -291,4 +291,17 @@ public partial class HomePage : ContentPage
             }
         }
     }
+
+    protected override void OnDisappearing()
+    {
+        _homeAudioCts?.Cancel();
+
+        if (_homePlayingPoi != null)
+            _homePlayingPoi.IsAudioPlaying = false;
+
+        _homeAudioCts = null;
+        _homePlayingPoi = null;
+
+        base.OnDisappearing();
+    }
 }
