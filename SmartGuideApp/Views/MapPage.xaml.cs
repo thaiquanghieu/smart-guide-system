@@ -4,6 +4,7 @@ using SmartGuideApp.Models;
 using SmartGuideApp.ViewModels;
 using System.Globalization;
 using Microsoft.Maui.Media;
+using SmartGuideApp.Services;
 
 namespace SmartGuideApp.Views;
 
@@ -11,6 +12,7 @@ namespace SmartGuideApp.Views;
 public partial class MapPage : ContentPage
 {
     private MapViewModel ViewModel => (MapViewModel)BindingContext;
+    private TrackingService _trackingService = new();
 
     private string? _poiId;
     public string? PoiId
@@ -330,7 +332,20 @@ public partial class MapPage : ContentPage
 
     protected override void OnDisappearing()
     {
-        StopMapAudio();
+        StopMapAudio();         
+        _trackingService.Stop(); // thêm tracking
+
         base.OnDisappearing();
     }
+
+    protected override async void OnAppearing()
+    {
+        base.OnAppearing();
+
+        if (BindingContext is MapViewModel vm)
+        {
+            await _trackingService.StartTrackingAsync(vm.Pois.ToList());
+        }
+    }
+
 }
