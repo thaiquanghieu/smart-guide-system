@@ -6,11 +6,13 @@
 
     <!-- Note: For Android please see also Platforms\Android\Resources\values\colors.xml -->
 
-    <Color x:Key="Primary">#512BD4</Color>
-    <Color x:Key="PrimaryDark">#ac99ea</Color>
+    <!-- Primary brand color updated to app primary blue -->
+    <Color x:Key="Primary">#0F5BD7</Color>
+    <Color x:Key="PrimaryDark">#0A4CAF</Color>
     <Color x:Key="PrimaryDarkText">#242424</Color>
-    <Color x:Key="Secondary">#DFD8F7</Color>
-    <Color x:Key="SecondaryDarkText">#9880e5</Color>
+    <!-- Secondary (light accent) changed from light purple to light blue -->
+    <Color x:Key="Secondary">#EAF2FF</Color>
+    <Color x:Key="SecondaryDarkText">#88B8FF</Color>
     <Color x:Key="Tertiary">#2B0B98</Color>
 
     <Color x:Key="White">White</Color>

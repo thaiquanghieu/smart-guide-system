@@ -288,13 +288,19 @@
                     <Label Text="Tự động phát audio"
                         VerticalOptions="Center"/>
 
+                    <!-- Switch: use primary blue for On state and white thumb -->
                     <Switch x:Name="AutoPlaySwitch"
                             Grid.Column="1"
-                            Toggled="OnAutoPlayToggled"/>
+                            Toggled="OnAutoPlayToggled"
+                            OnColor="#0F5BD7"
+                            ThumbColor="White" />
                 </Grid>
 
-                <Button Text="Đóng"
-                        Clicked="OnCloseSettingsClicked"/>
+        <Button Text="Đóng"
+            Clicked="OnCloseSettingsClicked"
+            BackgroundColor="#0F5BD7"
+            TextColor="White"
+            CornerRadius="12" />
             </VerticalStackLayout>
         </Frame>
      </Grid>
