@@ -154,13 +154,15 @@ public partial class MapPage : ContentPage
         ViewModel.HideSuggestions();
     }
 
-    private void OnCancelSearch(object sender, EventArgs e)
+    private async void OnCancelSearch(object sender, EventArgs e)
     {
         ViewModel.SearchText = "";
         ViewModel.HideSuggestions();
         ViewModel.IsSearchActive = false;
+        ViewModel.ClearSelection();
         SearchEntry.Unfocus();
         LoadMap();
+        await FocusUserLocation();
     }
 
     private async void OnSuggestionTapped(object sender, TappedEventArgs e)

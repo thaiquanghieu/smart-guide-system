@@ -64,6 +64,19 @@ public partial class HomePage : ContentPage
         await Shell.Current.GoToAsync("//map");
     }
 
+    private async void OnMyLocationClicked(object sender, EventArgs e)
+    {
+        var location = await Geolocation.GetLastKnownLocationAsync();
+
+        if (location != null)
+        {
+            PreviewMap.MoveToRegion(MapSpan.FromCenterAndRadius(
+                new Location(location.Latitude, location.Longitude),
+                Distance.FromMeters(800)
+            ));
+        }
+    }
+
     private async void OnOpenDetailTapped(object? sender, TappedEventArgs e)
     {
         if (e.Parameter is POI poi)
