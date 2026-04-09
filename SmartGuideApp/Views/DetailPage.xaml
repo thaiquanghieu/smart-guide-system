@@ -204,8 +204,8 @@
 
                 <!-- INFO ROW -->
                 <Grid Margin="20,12,20,0"
-                     ColumnDefinitions="*,*,*"
-                     ColumnSpacing="10">
+                    ColumnDefinitions="*,*,*"
+                    ColumnSpacing="10">
 
                      <!-- GIỜ -->
                      <Frame Grid.Column="0"
@@ -248,16 +248,15 @@
                             </Grid>
                      </Frame>
 
-                     <!-- CHỈ ĐƯỜNG -->
                      <Button Grid.Column="2"
-                            Text="Chỉ đường"
+                            Text="Hiện vị trí"
                             FontSize="13"
                             FontAttributes="Bold"
                             TextColor="White"
                             BackgroundColor="#0F5BD7"
                             CornerRadius="12"
-                            Clicked="OnDirectionClicked"/>
-                     </Grid>
+                            Clicked="OnShowOnMapClicked"/>
+                </Grid>
 
                 <!-- AUDIO BOX -->
                 <Frame Margin="20,0,20,0"

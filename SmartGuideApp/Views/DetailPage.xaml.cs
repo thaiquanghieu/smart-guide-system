@@ -68,34 +68,27 @@ public partial class DetailPage : ContentPage, IQueryAttributable
         }
     }
 
-    private async void OnDirectionClicked(object sender, EventArgs e)
+    private async void OnShowOnMapClicked(object sender, EventArgs e)
     {
-        if (ViewModel.Poi == null)
+        if (ViewModel.Poi == null || string.IsNullOrEmpty(ViewModel.Poi.Id))
             return;
 
-        var lat = ViewModel.Poi.Latitude.ToString(System.Globalization.CultureInfo.InvariantCulture);
-        var lng = ViewModel.Poi.Longitude.ToString(System.Globalization.CultureInfo.InvariantCulture);
-
-        var result = await DisplayActionSheet("Mở chỉ đường bằng", "Huỷ", null, "Apple Maps", "Google Maps");
-
-        if (result == "Apple Maps")
+        // Sử dụng Dictionary để truyền dữ liệu an toàn
+        var navigationParameters = new Dictionary<string, object>
         {
-            var appleUrl = $"http://maps.apple.com/?daddr={lat},{lng}";
-            await Launcher.Default.OpenAsync(appleUrl);
+            { "poiId", ViewModel.Poi.Id }
+        };
+
+        try
+        {
+            // Trỏ chính xác về Route="map" đã khai báo trong AppShell.xaml
+            await Shell.Current.GoToAsync("//map", navigationParameters);
         }
-        else if (result == "Google Maps")
+        catch (Exception ex)
         {
-            var googleUrl = $"comgooglemaps://?daddr={lat},{lng}&directionsmode=driving";
-
-            if (await Launcher.Default.CanOpenAsync(googleUrl))
-            {
-                await Launcher.Default.OpenAsync(googleUrl);
-            }
-            else
-            {
-                var webUrl = $"https://www.google.com/maps/dir/?api=1&destination={lat},{lng}";
-                await Launcher.Default.OpenAsync(webUrl);
-            }
+            // Bắt lỗi để app không bị crash (văng app) nếu có sự cố về routing
+            System.Diagnostics.Debug.WriteLine($"Lỗi Navigation: {ex.Message}");
+            await DisplayAlert("Lỗi", "Không thể chuyển sang bản đồ lúc này.", "OK");
         }
     }
 

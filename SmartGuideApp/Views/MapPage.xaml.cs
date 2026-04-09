@@ -55,7 +55,7 @@ public partial class MapPage : ContentPage
 
     private async Task TryHandlePendingPoiAsync()
     {
-        if (!_isMapReady || string.IsNullOrWhiteSpace(_pendingPoiId))
+        if (!_isMapReady || MainMap == null || string.IsNullOrWhiteSpace(_pendingPoiId))
             return;
 
         var poi = ViewModel.Pois.FirstOrDefault(x => x.Id == _pendingPoiId);
