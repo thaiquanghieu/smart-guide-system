@@ -5,6 +5,8 @@ namespace SmartGuideApp.Services;
 
 public class AudioService
 {
+    public static AudioService Instance { get; } = new();
+
     private CancellationTokenSource? _cts;
     private POI? _currentPoi;
 

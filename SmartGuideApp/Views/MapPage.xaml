@@ -162,15 +162,16 @@
         </Frame>
 
         <!-- TRACKING BUTTON -->
-        <Frame WidthRequest="80"
-            HeightRequest="80"
-            CornerRadius="40"
-            BackgroundColor="#374151"
-            HorizontalOptions="End"
-            VerticalOptions="End"
-            Margin="0,0,16,100"
-            ZIndex="5"
-            Padding="6">
+        <Frame x:Name="TrackingButton"
+                WidthRequest="80"
+                HeightRequest="80"
+                CornerRadius="40"
+                BackgroundColor="#374151"
+                HorizontalOptions="End"
+                VerticalOptions="End"
+                Margin="0,0,16,100"
+                ZIndex="5"
+                Padding="6">
 
             <Frame.Shadow>
                 <Shadow Brush="#000000"

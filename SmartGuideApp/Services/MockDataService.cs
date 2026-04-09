@@ -115,6 +115,43 @@ public class MockDataService
                         ScriptText = "Bưu điện Thành phố là một trong những biểu tượng kiến trúc đặc sắc của khu trung tâm Sài Gòn. Không gian bên trong mang vẻ đẹp cổ điển với mái vòm cao và sàn gạch họa tiết."
                     }
                 }
+            },
+            new POI
+            {
+                Id = "4",
+                Name = "Trường Đại học Sài Gòn (Cơ sở 1)",
+                Category = "Giáo dục",
+                Categories = new List<string> { "Giáo dục", "Đại học", "Kiến trúc", "Sinh viên" },
+                ShortDescription = "Cơ sở 1 của Đại học Sài Gòn tại Quận 3.",
+                Description = "Trường Đại học Sài Gòn, cơ sở 1 nằm trên đường Bà Huyện Thanh Quan, Quận 3. Đây là khuôn viên chính của trường với không gian rộng rãi, nhiều tòa nhà học tập và khu sinh hoạt dành cho sinh viên.",
+                Address = "105 Bà Huyện Thanh Quan, Quận 3, TP.HCM",
+                DistanceKm = 0.5,
+                ImageUrl = "https://images.unsplash.com/photo-1580587771525-78b9dba3b914?auto=format&fit=crop&w=1200&q=80",
+                ImageUrls = new List<string>
+                {
+                    "https://images.unsplash.com/photo-1580587771525-78b9dba3b914?auto=format&fit=crop&w=1200&q=80",
+                    "https://images.unsplash.com/photo-1562774053-701939374585?auto=format&fit=crop&w=1200&q=80"
+                },
+                OpenHours = "07:00 - 17:00",
+                PriceText = "Miễn phí",
+                IsFavorite = false,
+                ListenedCount = 0,
+
+                Latitude = 10.782815,
+                Longitude = 106.690757,
+
+                Audios = new List<AudioGuide>
+                {
+                    new AudioGuide
+                    {
+                        Id = "a4",
+                        LanguageCode = "vi",
+                        LanguageName = "Tiếng Việt",
+                        VoiceName = "Minh Anh",
+                        DurationText = "03:30",
+                        ScriptText = "Đây là cơ sở 1 của Trường Đại học Sài Gòn, tọa lạc trên đường Bà Huyện Thanh Quan, Quận 3, một trong những khu vực trung tâm của Thành phố Hồ Chí Minh. Khuôn viên này được xem là nơi học tập và sinh hoạt chính của nhiều thế hệ sinh viên, với không gian rộng rãi, nhiều cây xanh và các dãy giảng đường được bố trí hợp lý. Tại đây, sinh viên không chỉ tham gia các hoạt động học thuật mà còn có cơ hội trải nghiệm nhiều hoạt động ngoại khóa, câu lạc bộ và sự kiện văn hóa đa dạng.Với môi trường học tập năng động, đội ngũ giảng viên giàu kinh nghiệm và tinh thần đổi mới, Trường Đại học Sài Gòn đã và đang trở thành một trong những lựa chọn quen thuộc của nhiều bạn trẻ tại khu vực phía Nam."
+                    }
+                }
             }
         };
     }

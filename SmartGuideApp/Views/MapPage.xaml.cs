@@ -5,6 +5,7 @@ using SmartGuideApp.ViewModels;
 using System.Globalization;
 using Microsoft.Maui.Media;
 using SmartGuideApp.Services;
+using System.ComponentModel;
 
 namespace SmartGuideApp.Views;
 
@@ -38,6 +39,9 @@ public partial class MapPage : ContentPage
         InitializeComponent();
         BindingContext = new MapViewModel();
         Loaded += OnLoaded;
+
+        TrackingIcon.Source = "tracking.png";
+        TrackingText.Text = "Tracking: OFF";
     }
 
     private async void OnLoaded(object? sender, EventArgs e)
@@ -333,8 +337,13 @@ public partial class MapPage : ContentPage
 
     protected override void OnDisappearing()
     {
-        StopMapAudio();         
-        _trackingService.Stop(); // thêm tracking
+        StopMapAudio();
+        _trackingService.Stop();
+
+        if (BindingContext is MapViewModel vm)
+        {
+            vm.PropertyChanged -= OnViewModelPropertyChanged;
+        }
 
         base.OnDisappearing();
     }
@@ -344,11 +353,20 @@ public partial class MapPage : ContentPage
         base.OnAppearing();
 
         _isTrackingEnabled = Preferences.Get("tracking_enabled", false);
+
         UpdateTrackingUI();
 
-        if (_isTrackingEnabled && BindingContext is MapViewModel vm)
+        if (BindingContext is MapViewModel vm)
         {
-            await _trackingService.StartTrackingAsync(vm.Pois.ToList());
+            vm.PropertyChanged -= OnViewModelPropertyChanged;
+            vm.PropertyChanged += OnViewModelPropertyChanged;
+
+            await UpdateTrackingPosition();
+
+            if (_isTrackingEnabled)
+            {
+                await _trackingService.StartTrackingAsync(vm.Pois.ToList());
+            }
         }
     }
 
@@ -383,4 +401,28 @@ public partial class MapPage : ContentPage
         }
     }
 
+    private async void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(MapViewModel.SelectedPoi))
+        {
+            await UpdateTrackingPosition();
+        }
+    }
+
+    private async Task UpdateTrackingPosition()
+    {
+        if (TrackingButton == null)
+            return;
+
+        if (ViewModel.SelectedPoi != null)
+        {
+            // Có card hiện -> đẩy nút lên trên
+            await TrackingButton.TranslateTo(0, -160, 200, Easing.CubicOut);
+        }
+        else
+        {
+            // Không có card -> trả về vị trí cũ
+            await TrackingButton.TranslateTo(0, 50, 200, Easing.CubicOut);
+        }
+    }
 }

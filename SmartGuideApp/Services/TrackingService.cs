@@ -11,6 +11,8 @@ public class TrackingService
     private Queue<POI> _poiQueue = new();
     private bool _isProcessing = false;
 
+    private readonly AudioService _audioService = new();
+
     public async Task StartTrackingAsync(List<POI> pois)
     {
         if (_isRunning) return;
@@ -40,6 +42,9 @@ public class TrackingService
 
     private void CheckNearby(Location userLocation, List<POI> pois)
     {
+        if (_isProcessing)
+            return;
+
         foreach (var poi in pois)
         {
             if (_triggeredPois.Contains(poi.Id))
@@ -51,12 +56,13 @@ public class TrackingService
                 DistanceUnits.Kilometers
             );
 
-            if (distance < 4) // Khoảng cách tracking (đơn vị km)
+            if (distance < 0.5) // Khoảng cách tracking (đơn vị km)
             {
                 _triggeredPois.Add(poi.Id);
                 _poiQueue.Enqueue(poi);
             }
         }
+
         ProcessQueue();
     }
 
@@ -67,21 +73,50 @@ public class TrackingService
 
         _isProcessing = true;
 
+        var batch = new List<POI>();
         while (_poiQueue.Count > 0)
         {
-            var poi = _poiQueue.Dequeue();
+            batch.Add(_poiQueue.Dequeue());
+        }
 
+        foreach (var poi in batch)
+        {
             await MainThread.InvokeOnMainThreadAsync(async () =>
             {
                 await Shell.Current.GoToAsync($"//map");
                 await Shell.Current.GoToAsync($"DetailPage?poiId={poi.Id}");
             });
 
-            // đợi đọc xong (tạm)
-            await Task.Delay(8000);
+            await Task.Delay(500);
+            await WaitForAudioFinished();
+            await Task.Delay(800);
         }
 
         _isProcessing = false;
+    }
+
+    private async Task WaitForAudioFinished()
+    {
+        // đợi audio start
+        int waitStart = 0;
+        while (!AudioService.Instance.IsPlaying && waitStart < 30)
+        {
+            await Task.Delay(100);
+            waitStart++;
+        }
+
+        // nếu chưa start được → bỏ qua luôn
+        if (!AudioService.Instance.IsPlaying)
+            return;
+
+        // đợi audio chạy ổn định ít nhất 1s
+        await Task.Delay(1000);
+
+        // đợi kết thúc
+        while (AudioService.Instance.IsPlaying)
+        {
+            await Task.Delay(300);
+        }
     }
 
 }
