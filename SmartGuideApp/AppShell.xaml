@@ -17,6 +17,7 @@
         <ShellContent
             Title="Bản đồ"
             Icon="map.png"
+            Route="map"
             ContentTemplate="{DataTemplate views:MapPage}" />
 
         <ShellContent

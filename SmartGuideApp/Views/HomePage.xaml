@@ -1,6 +1,7 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:viewmodels="clr-namespace:SmartGuideApp.ViewModels"
+             xmlns:maps="clr-namespace:Microsoft.Maui.Controls.Maps;assembly=Microsoft.Maui.Controls.Maps"
              x:Class="SmartGuideApp.Views.HomePage"
              BackgroundColor="#F4F7FB">
 
@@ -124,36 +125,16 @@
                                HasShadow="False"
                                BackgroundColor="#0E9EC2"
                                HeightRequest="200">
-                            <Grid>
-                                <Image Source="https://images.unsplash.com/photo-1551641506-ee5bf4cb45f1?auto=format&amp;fit=crop&amp;w=1200&amp;q=80"
-                                       Aspect="AspectFill"
-                                       Opacity="0.30" />
+                            <Frame CornerRadius="20"
+                                   Padding="0"
+                                   HasShadow="False"
+                                   BackgroundColor="White"
+                                   HeightRequest="200">
 
-                                <Frame WidthRequest="64"
-                                       HeightRequest="64"
-                                       Padding="4"
-                                       CornerRadius="32"
-                                       BackgroundColor="White"
-                                       HasShadow="False"
-                                       HorizontalOptions="Center"
-                                       VerticalOptions="Center">
-                                    <Image Source="https://images.unsplash.com/photo-1545569341-9eb8b30979d9?auto=format&amp;fit=crop&amp;w=400&amp;q=80"
-                                           Aspect="AspectFill" />
-                                </Frame>
-
-                                <Frame WidthRequest="52"
-                                       HeightRequest="52"
-                                       Padding="4"
-                                       CornerRadius="26"
-                                       BackgroundColor="White"
-                                       HasShadow="False"
-                                       Margin="0,0,42,28"
-                                       HorizontalOptions="End"
-                                       VerticalOptions="End">
-                                    <Image Source="https://images.unsplash.com/photo-1514565131-fce0801e5785?auto=format&amp;fit=crop&amp;w=400&amp;q=80"
-                                           Aspect="AspectFill" />
-                                </Frame>
-                            </Grid>
+                                   <maps:Map x:Name="PreviewMap"
+                                   IsShowingUser="True"
+                                   MapClicked="OnMapClicked" />
+                            </Frame>
                         </Frame>
                     </VerticalStackLayout>
 

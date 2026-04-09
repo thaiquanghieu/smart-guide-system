@@ -198,4 +198,13 @@ public class MapViewModel : BaseViewModel
         Suggestions.Clear();
         IsSuggestionVisible = false;
     }
+
+    public void FocusToPoi(string poiId)
+    {
+        var poi = Pois.FirstOrDefault(p => p.Id == poiId);
+        if (poi == null) return;
+
+        SelectedPoi = poi;
+
+    }
 }

@@ -1,5 +1,7 @@
 using SmartGuideApp.Models;
 using SmartGuideApp.ViewModels;
+using Microsoft.Maui.Controls.Maps;
+using Microsoft.Maui.Maps;
 
 namespace SmartGuideApp.Views;
 
@@ -13,6 +15,53 @@ public partial class HomePage : ContentPage
     public HomePage()
     {
         InitializeComponent();
+        Loaded += OnLoaded;
+    }
+
+    private async void OnLoaded(object? sender, EventArgs e)
+    {
+        await LoadMapPreview();
+    }
+
+    private async Task LoadMapPreview()
+    {
+        if (PreviewMap == null) return;
+
+        PreviewMap.Pins.Clear();
+
+        foreach (var poi in ViewModel.Pois)
+        {
+            var pin = new Pin
+            {
+                Label = poi.Name,
+                Location = new Location(poi.Latitude, poi.Longitude),
+                Type = PinType.Place
+            };
+
+            pin.MarkerClicked += async (s, e) =>
+            {
+                e.HideInfoWindow = true;
+                // Use absolute route to avoid Shell relative routing crash
+                await Shell.Current.GoToAsync($"///map?poiId={poi.Id}");
+            };
+
+            PreviewMap.Pins.Add(pin);
+        }
+
+        var location = await Geolocation.GetLastKnownLocationAsync();
+
+        if (location != null)
+        {
+            PreviewMap.MoveToRegion(MapSpan.FromCenterAndRadius(
+                new Location(location.Latitude, location.Longitude),
+                Distance.FromMeters(800)
+            ));
+        }
+    }
+
+    private async void OnMapClicked(object sender, MapClickedEventArgs e)
+    {
+        await Shell.Current.GoToAsync("//map");
     }
 
     private async void OnOpenDetailTapped(object? sender, TappedEventArgs e)
@@ -83,18 +132,18 @@ public partial class HomePage : ContentPage
             "Hải Phòng",
             "Cần Thơ",
 
-            "An Giang","Bà Rịa - Vũng Tàu","Bắc Giang","Bắc Kạn","Bạc Liêu",
-            "Bắc Ninh","Bến Tre","Bình Định","Bình Dương","Bình Phước",
-            "Bình Thuận","Cà Mau","Cao Bằng","Đắk Lắk","Đắk Nông",
-            "Điện Biên","Đồng Nai","Đồng Tháp","Gia Lai","Hà Giang",
-            "Hà Nam","Hà Tĩnh","Hải Dương","Hậu Giang","Hòa Bình",
-            "Hưng Yên","Khánh Hòa","Kiên Giang","Kon Tum","Lai Châu",
-            "Lâm Đồng","Lạng Sơn","Lào Cai","Long An","Nam Định",
-            "Nghệ An","Ninh Bình","Ninh Thuận","Phú Thọ","Phú Yên",
-            "Quảng Bình","Quảng Nam","Quảng Ngãi","Quảng Ninh","Quảng Trị",
-            "Sóc Trăng","Sơn La","Tây Ninh","Thái Bình","Thái Nguyên",
-            "Thanh Hóa","Thừa Thiên Huế","Tiền Giang","Trà Vinh","Tuyên Quang",
-            "Vĩnh Long","Vĩnh Phúc","Yên Bái"
+            "An Giang", "Bà Rịa - Vũng Tàu", "Bắc Giang", "Bắc Kạn", "Bạc Liêu",
+            "Bắc Ninh", "Bến Tre", "Bình Định", "Bình Dương", "Bình Phước",
+            "Bình Thuận", "Cà Mau", "Cao Bằng", "Đắk Lắk", "Đắk Nông",
+            "Điện Biên", "Đồng Nai", "Đồng Tháp", "Gia Lai", "Hà Giang",
+            "Hà Nam", "Hà Tĩnh", "Hải Dương", "Hậu Giang", "Hòa Bình",
+            "Hưng Yên", "Khánh Hòa", "Kiên Giang", "Kon Tum", "Lai Châu",
+            "Lâm Đồng", "Lạng Sơn", "Lào Cai", "Long An", "Nam Định",
+            "Nghệ An", "Ninh Bình", "Ninh Thuận", "Phú Thọ", "Phú Yên",
+            "Quảng Bình", "Quảng Nam", "Quảng Ngãi", "Quảng Ninh", "Quảng Trị",
+            "Sóc Trăng", "Sơn La", "Tây Ninh", "Thái Bình", "Thái Nguyên",
+            "Thanh Hóa", "Thừa Thiên Huế", "Tiền Giang", "Trà Vinh", "Tuyên Quang",
+            "Vĩnh Long", "Vĩnh Phúc", "Yên Bái"
         );
 
         if (!string.IsNullOrWhiteSpace(result) && result != "Huỷ")

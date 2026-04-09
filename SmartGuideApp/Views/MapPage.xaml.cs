@@ -6,9 +6,25 @@ using System.Globalization;
 
 namespace SmartGuideApp.Views;
 
+[QueryProperty(nameof(PoiId), "poiId")]
 public partial class MapPage : ContentPage
 {
     private MapViewModel ViewModel => (MapViewModel)BindingContext;
+
+    private string? _poiId;
+    public string? PoiId
+    {
+        get => _poiId;
+        set
+        {
+            _poiId = value;
+            _pendingPoiId = value;
+            _ = TryHandlePendingPoiAsync();
+        }
+    }
+
+    private bool _isMapReady;
+    private string? _pendingPoiId;
 
     public MapPage()
     {
@@ -21,7 +37,37 @@ public partial class MapPage : ContentPage
     {
         await UpdateDistances();
         LoadMap();
-        await FocusUserLocation();
+        _isMapReady = true;
+
+        if (!string.IsNullOrWhiteSpace(_pendingPoiId))
+        {
+            await TryHandlePendingPoiAsync();
+        }
+        else
+        {
+            await FocusUserLocation();
+        }
+    }
+
+    private async Task TryHandlePendingPoiAsync()
+    {
+        if (!_isMapReady || string.IsNullOrWhiteSpace(_pendingPoiId))
+            return;
+
+        var poi = ViewModel.Pois.FirstOrDefault(x => x.Id == _pendingPoiId);
+        if (poi == null)
+            return;
+
+        ViewModel.SelectPoi(poi);
+
+        MainMap.MoveToRegion(MapSpan.FromCenterAndRadius(
+            new Location(poi.Latitude, poi.Longitude),
+            Distance.FromMeters(300)
+        ));
+
+        await AnimateCard();
+
+        _pendingPoiId = null;
     }
 
     private async Task UpdateDistances()
@@ -62,6 +108,8 @@ public partial class MapPage : ContentPage
 
             pin.MarkerClicked += async (s, e) =>
             {
+                if (poi == null) return;
+
                 ViewModel.SelectPoi(poi);
 
                 MainMap.MoveToRegion(MapSpan.FromCenterAndRadius(
@@ -69,16 +117,15 @@ public partial class MapPage : ContentPage
                     Distance.FromMeters(300)
                 ));
 
-                SearchEntry.Unfocus();
+                SearchEntry?.Unfocus();
 
                 await AnimateCard();
+
                 e.HideInfoWindow = true;
             };
 
             MainMap.Pins.Add(pin);
         }
-
-        _ = FocusUserLocation();
     }
 
     private void OnMapClicked(object sender, MapClickedEventArgs e)
@@ -139,7 +186,6 @@ public partial class MapPage : ContentPage
     {
         if (ViewModel.SelectedPoi == null)
             return;
-
 
         var lat = ViewModel.SelectedPoi.Latitude.ToString(CultureInfo.InvariantCulture);
         var lng = ViewModel.SelectedPoi.Longitude.ToString(CultureInfo.InvariantCulture);
