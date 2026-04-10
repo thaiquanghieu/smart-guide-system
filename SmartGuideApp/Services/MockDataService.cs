@@ -137,8 +137,8 @@ public class MockDataService
                 IsFavorite = false,
                 ListenedCount = 0,
 
-                Latitude = 10.782815,
-                Longitude = 106.690757,
+                Latitude = 10.779504540227252,
+                Longitude = 106.68422142388327,
 
                 Audios = new List<AudioGuide>
                 {
