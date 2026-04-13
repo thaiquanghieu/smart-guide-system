@@ -43,7 +43,6 @@ public partial class DetailPage : ContentPage, IQueryAttributable
 
     public void ApplyQueryAttributes(IDictionary<string, object> query)
     {
-        // 👉 nhận từ deep link (QR)
         if (query.TryGetValue("poiId", out var idObj))
         {
             var id = idObj?.ToString();
@@ -176,37 +175,5 @@ public partial class DetailPage : ContentPage, IQueryAttributable
         }
 
         base.OnDisappearing();
-    }
-
-    private string _qrLink = "";
-    private void OnShowQrTapped(object sender, EventArgs e)
-    {
-        if (ViewModel.Poi == null)
-            return;
-
-        _qrLink = $"smartguide://poi?id={ViewModel.Poi.Id}";
-
-        QrLinkLabel.Text = "Link: " + _qrLink;
-
-        // 👉 tạm thời dùng ảnh QR online (demo nhanh)
-        QrImage.Source = $"https://api.qrserver.com/v1/create-qr-code/?size=300x300&data={Uri.EscapeDataString(_qrLink)}";
-
-        QrPopup.IsVisible = true;
-    }
-
-    private async void OnCopyLinkTapped(object sender, EventArgs e)
-    {
-        await Clipboard.Default.SetTextAsync(_qrLink);
-        await DisplayAlert("OK", "Đã sao chép link", "OK");
-    }
-
-    private async void OnSaveQrTapped(object sender, EventArgs e)
-    {
-        await DisplayAlert("Info", "Tính năng lưu sẽ làm sau (cần xử lý file)", "OK");
-    }
-
-    private void OnCloseQrClicked(object sender, EventArgs e)
-    {
-        QrPopup.IsVisible = false;
     }
 }

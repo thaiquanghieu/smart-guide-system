@@ -29,18 +29,6 @@
                            FontAttributes="Bold"
                            TextColor="#0058BC" />
 
-
-                    <!-- QR CODE -->
-                    <Image Grid.Column="2"
-                        Source="qr.png"
-                        WidthRequest="26"
-                        HeightRequest="26"
-                        Margin="0,0,12,0">  
-                        <Image.GestureRecognizers>
-                            <TapGestureRecognizer Tapped="OnShowQrTapped" />
-                        </Image.GestureRecognizers>
-                    </Image>
-
                     <!-- SHARE -->
                     <Image Grid.Column="3"
                         Source="share.png"
@@ -376,69 +364,5 @@
                    FontSize="14"
                    FontAttributes="Bold" />
         </Frame>
-
-        <Grid x:Name="QrPopup"
-            IsVisible="False"
-            BackgroundColor="#80000000">
-
-            <Frame VerticalOptions="Center"
-                Margin="30"
-                Padding="20"
-                CornerRadius="20"
-                BackgroundColor="White">
-
-                <VerticalStackLayout Spacing="16">
-
-                    <Label Text="QR CODE"
-                        FontSize="18"
-                        FontAttributes="Bold"
-                        TextColor="#0F5BD7"
-                        HorizontalOptions="Center"
-                        HorizontalTextAlignment="Center"/>
-
-                    <!-- QR -->
-                    <Image x:Name="QrImage"
-                        HeightRequest="200"
-                        HorizontalOptions="Center"/>
-
-                    <!-- LINK -->
-                    <Label x:Name="QrLinkLabel"
-                        FontSize="13"
-                        TextColor="#374151"
-                        LineBreakMode="CharacterWrap"
-                        HorizontalOptions="Center"
-                        HorizontalTextAlignment="Center"/>
-
-                    <!-- BUTTON -->
-                    <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
-
-                        <VerticalStackLayout>
-                            <Image Source="copy.png" HeightRequest="24"/>
-                            <Label Text="Sao chép"
-                                FontSize="12"
-                                HorizontalOptions="Center"/>
-                            <VerticalStackLayout.GestureRecognizers>
-                                <TapGestureRecognizer Tapped="OnCopyLinkTapped"/>
-                            </VerticalStackLayout.GestureRecognizers>
-                        </VerticalStackLayout>
-
-                        <VerticalStackLayout Grid.Column="1">
-                            <Image Source="save.png" HeightRequest="24"/>
-                            <Label Text="Lưu"
-                                FontSize="12"
-                                HorizontalOptions="Center"/>
-                            <VerticalStackLayout.GestureRecognizers>
-                                <TapGestureRecognizer Tapped="OnSaveQrTapped"/>
-                            </VerticalStackLayout.GestureRecognizers>
-                        </VerticalStackLayout>
-
-                    </Grid>
-
-                    <Button Text="Đóng"
-                            Clicked="OnCloseQrClicked"/>
-
-                </VerticalStackLayout>
-            </Frame>
-        </Grid>
     </Grid>
 </ContentPage>
