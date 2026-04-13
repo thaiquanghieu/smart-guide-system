@@ -74,13 +74,28 @@ public class MapViewModel : BaseViewModel
 
     public MapViewModel()
     {
-        var service = new MockDataService();
-        var pois = service.GetPois();
+        _ = LoadPoisFromApi();
+    }
 
-        foreach (var poi in pois)
+    private async Task LoadPoisFromApi()
+    {
+        try
         {
-            Pois.Add(poi);
-            FilteredPois.Add(poi);
+            var api = new ApiService();
+            var data = await api.GetPoisAsync();
+
+            Pois.Clear();
+            FilteredPois.Clear();
+
+            foreach (var poi in data)
+            {
+                Pois.Add(poi);
+                FilteredPois.Add(poi);
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ API ERROR: {ex.Message}");
         }
     }
 

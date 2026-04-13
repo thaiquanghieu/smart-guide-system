@@ -37,9 +37,30 @@ public class HomeViewModel : BaseViewModel
 
     public HomeViewModel()
     {
-        var service = new MockDataService();
-        _allPois = service.GetPois();
-        ApplyFilter();
+        _allPois = new List<POI>();
+        _ = LoadPoisFromApi();
+    }
+
+    private async Task LoadPoisFromApi()
+    {
+        try
+        {
+            Console.WriteLine("🚀 CALL API");
+
+            var api = new ApiService();
+            var data = await api.GetPoisAsync();
+
+            Console.WriteLine($"✅ API COUNT: {data.Count}");
+
+            _allPois.Clear();
+            _allPois.AddRange(data);
+
+            ApplyFilter();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ API ERROR: {ex.Message}");
+        }
     }
 
     public void SetFilter(string filter)

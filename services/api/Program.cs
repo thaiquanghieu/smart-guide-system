@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using SmartGuideAPI.Data;
 var builder = WebApplication.CreateBuilder(args);
+builder.WebHost.UseUrls("http://192.168.22.4:5022");
 builder.Services.AddControllers();
 
 // Add services to the container.
@@ -22,7 +23,6 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseHttpsRedirection();
 
 app.MapControllers();
 

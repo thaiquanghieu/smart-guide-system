@@ -19,11 +19,19 @@ public class PoisController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetPois()
     {
-        Console.WriteLine("🔥 API HIT");
-
-        var pois = await _db.Pois.ToListAsync();
-
-        Console.WriteLine($"👉 EF COUNT: {pois.Count}");
+        var pois = await _db.Pois
+            .Select(x => new Poi
+            {
+                Id = x.Id,
+                Name = x.Name,
+                Category = x.Category ?? "",
+                Description = x.Description ?? "",
+                Address = x.Address ?? "",
+                PriceText = x.PriceText ?? "",
+                Latitude = x.Latitude,
+                Longitude = x.Longitude
+            })
+            .ToListAsync();
 
         return Ok(pois);
     }
