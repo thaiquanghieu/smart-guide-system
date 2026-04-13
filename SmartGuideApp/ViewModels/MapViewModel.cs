@@ -74,15 +74,18 @@ public class MapViewModel : BaseViewModel
 
     public MapViewModel()
     {
-        _ = LoadPoisFromApi();
     }
 
     private async Task LoadPoisFromApi()
     {
         try
         {
+            Console.WriteLine("🚀 MAP CALL API");
+
             var api = new ApiService();
             var data = await api.GetPoisAsync();
+
+            Console.WriteLine($"✅ MAP COUNT: {data.Count}");
 
             Pois.Clear();
             FilteredPois.Clear();
@@ -90,12 +93,16 @@ public class MapViewModel : BaseViewModel
             foreach (var poi in data)
             {
                 Pois.Add(poi);
-                FilteredPois.Add(poi);
             }
+
+            FilterPois();
+
+            // 🔥 QUAN TRỌNG: trigger lại UI để Map reload pin
+            OnPropertyChanged(nameof(FilteredPois));
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"❌ API ERROR: {ex.Message}");
+            Console.WriteLine($"❌ MAP API ERROR: {ex.Message}");
         }
     }
 
@@ -123,6 +130,9 @@ public class MapViewModel : BaseViewModel
 
         foreach (var poi in result)
             FilteredPois.Add(poi);
+
+        // 🔥 QUAN TRỌNG: để Map biết data đã thay đổi
+        OnPropertyChanged(nameof(FilteredPois));
     }
 
     private void UpdateSuggestions()
@@ -220,6 +230,10 @@ public class MapViewModel : BaseViewModel
         if (poi == null) return;
 
         SelectedPoi = poi;
+    }
 
+    public async Task InitializeAsync()
+    {
+        await LoadPoisFromApi();
     }
 }

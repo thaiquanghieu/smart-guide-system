@@ -24,7 +24,24 @@ public partial class HomePage : ContentPage
 
     private async void OnLoaded(object? sender, EventArgs e)
     {
+        // Subscribe to ViewModel changes so we can refresh the mini-map when Pois are loaded
+        if (BindingContext is HomeViewModel vm)
+        {
+            vm.PropertyChanged -= OnViewModelPropertyChanged;
+            vm.PropertyChanged += OnViewModelPropertyChanged;
+        }
+
         await LoadMapPreview();
+    }
+
+    private void OnViewModelPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        // When the Pois collection is replaced/updated, refresh the preview map
+        if (e.PropertyName == nameof(HomeViewModel.Pois))
+        {
+            // Fire-and-forget safe call to update UI
+            _ = MainThread.InvokeOnMainThreadAsync(async () => await LoadMapPreview());
+        }
     }
 
     private async Task LoadMapPreview()
@@ -208,8 +225,8 @@ public partial class HomePage : ContentPage
     private async void OnSearchUnfocused(object sender, FocusEventArgs e)
     {
         // Tăng delay lên một chút để đảm bảo các thao tác click vào suggestion kịp ghi nhận
-        await Task.Delay(200); 
-        
+        await Task.Delay(200);
+
         // Kiểm tra nếu thực sự không còn focus vào ô nhập liệu thì mới ẩn
         if (!SearchEntry.IsFocused)
         {
@@ -240,7 +257,7 @@ public partial class HomePage : ContentPage
         await Shell.Current.GoToAsync($"///map?poiId={poi.Id}");
     }
 
-    
+
 
     private async void OnHomeAudioTapped(object sender, TappedEventArgs e)
     {
@@ -301,6 +318,11 @@ public partial class HomePage : ContentPage
 
         _homeAudioCts = null;
         _homePlayingPoi = null;
+
+        if (BindingContext is HomeViewModel vm)
+        {
+            vm.PropertyChanged -= OnViewModelPropertyChanged;
+        }
 
         base.OnDisappearing();
     }

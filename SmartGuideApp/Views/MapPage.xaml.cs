@@ -46,8 +46,10 @@ public partial class MapPage : ContentPage
 
     private async void OnLoaded(object? sender, EventArgs e)
     {
+        // If the map was already initialized in OnAppearing, skip Loaded handler
+        if (_isMapReady)
+            return;
         await UpdateDistances();
-        LoadMap();
         _isMapReady = true;
 
         if (!string.IsNullOrWhiteSpace(_pendingPoiId))
@@ -352,14 +354,36 @@ public partial class MapPage : ContentPage
     {
         base.OnAppearing();
 
-        _isTrackingEnabled = Preferences.Get("tracking_enabled", false);
-
-        UpdateTrackingUI();
-
         if (BindingContext is MapViewModel vm)
         {
+            // ✅ LOAD API
+            await vm.InitializeAsync();
+
+            // ===== phần tracking cũ =====
+            _isTrackingEnabled = Preferences.Get("tracking_enabled", false);
+
+            UpdateTrackingUI();
+
             vm.PropertyChanged -= OnViewModelPropertyChanged;
             vm.PropertyChanged += OnViewModelPropertyChanged;
+
+            // Ensure the map is populated after initialization. InitializeAsync may have
+            // set FilteredPois already, so subscribe above then explicitly load the map
+            // and update distances so pins appear immediately.
+            LoadMap();
+
+            await UpdateDistances();
+
+            _isMapReady = true;
+
+            if (!string.IsNullOrWhiteSpace(_pendingPoiId))
+            {
+                await TryHandlePendingPoiAsync();
+            }
+            else
+            {
+                await FocusUserLocation();
+            }
 
             await UpdateTrackingPosition();
 
@@ -407,6 +431,11 @@ public partial class MapPage : ContentPage
         {
             await UpdateTrackingPosition();
         }
+
+        if (e.PropertyName == nameof(MapViewModel.FilteredPois))
+        {
+            LoadMap();
+        }
     }
 
     private async Task UpdateTrackingPosition()
@@ -425,4 +454,5 @@ public partial class MapPage : ContentPage
             await TrackingButton.TranslateTo(0, 50, 200, Easing.CubicOut);
         }
     }
+
 }
