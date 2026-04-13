@@ -17,21 +17,11 @@ public partial class DetailPage : ContentPage, IQueryAttributable
         set
         {
             _poiId = value;
-            LoadPoiById(value);
-        }
-    }
 
-    private void LoadPoiById(string? id)
-    {
-        if (string.IsNullOrEmpty(id))
-            return;
-
-        var service = new MockDataService();
-        var poi = service.GetPois().FirstOrDefault(x => x.Id == id);
-
-        if (poi != null)
-        {
-            ViewModel.Poi = poi;
+            if (!string.IsNullOrEmpty(value))
+            {
+                _ = LoadPoiFromApi(value);
+            }
         }
     }
 
@@ -58,7 +48,8 @@ public partial class DetailPage : ContentPage, IQueryAttributable
         // 👉 nhận từ navigate bình thường (Home/Map)
         else if (query.TryGetValue("Poi", out var poiObject) && poiObject is POI poi)
         {
-            ViewModel.Poi = poi;
+            // dùng id để load lại từ API
+            _ = LoadPoiFromApi(poi.Id);
         }
     }
 
@@ -175,5 +166,23 @@ public partial class DetailPage : ContentPage, IQueryAttributable
         }
 
         base.OnDisappearing();
+    }
+
+    private async Task LoadPoiFromApi(string id)
+    {
+        try
+        {
+            var api = new ApiService();
+            var poi = await api.GetPoiByIdAsync(id);
+
+            if (poi != null)
+            {
+                ViewModel.Poi = poi;
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"❌ Load detail error: {ex.Message}");
+        }
     }
 }

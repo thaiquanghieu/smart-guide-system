@@ -13,4 +13,16 @@ public class ApiService
         var data = await _http.GetFromJsonAsync<List<POI>>("/api/pois");
         return data ?? new List<POI>();
     }
+
+    public async Task<POI?> GetPoiByIdAsync(string id)
+    {
+        try
+        {
+            return await _http.GetFromJsonAsync<POI>($"/api/pois/{id}");
+        }
+        catch
+        {
+            return null;
+        }
+    }
 }
