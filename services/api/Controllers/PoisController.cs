@@ -20,30 +20,81 @@ public class PoisController : ControllerBase
     public async Task<IActionResult> GetPois()
     {
         var pois = await _db.Pois
-            .Select(x => new Poi
+            .Select(x => new
             {
-                Id = x.Id,
-                Name = x.Name,
-                Category = x.Category ?? "",
-                Description = x.Description ?? "",
-                Address = x.Address ?? "",
-                PriceText = x.PriceText ?? "",
-                Latitude = x.Latitude,
-                Longitude = x.Longitude
+                x.Id,
+                x.Name,
+                x.Category,
+                x.Description,
+                x.Address,
+                x.PriceText,
+                x.Latitude,
+                x.Longitude
             })
             .ToListAsync();
 
-        return Ok(pois);
+        var poiImages = await _db.PoiImages
+            .OrderBy(x => x.SortOrder)
+            .ToListAsync();
+
+        var result = pois.Select(p => new
+        {
+            p.Id,
+            p.Name,
+            p.Category,
+            p.Description,
+            p.Address,
+            p.PriceText,
+            p.Latitude,
+            p.Longitude,
+            images = poiImages
+                .Where(i => i.PoiId == p.Id)
+                .OrderBy(i => i.SortOrder)
+                .Select(i => i.ImageUrl)
+                .ToList()
+        });
+
+        return Ok(result);
     }
 
     [HttpGet("{id}")]
     public async Task<IActionResult> GetById(string id)
     {
-        var poi = await _db.Pois.FirstOrDefaultAsync(x => x.Id == id);
+        var poi = await _db.Pois
+            .Where(x => x.Id == id)
+            .Select(x => new
+            {
+                x.Id,
+                x.Name,
+                x.Category,
+                x.Description,
+                x.Address,
+                x.PriceText,
+                x.Latitude,
+                x.Longitude
+            })
+            .FirstOrDefaultAsync();
 
         if (poi == null)
             return NotFound();
 
-        return Ok(poi);
+        var images = await _db.PoiImages
+            .Where(i => i.PoiId == id)
+            .OrderBy(i => i.SortOrder)
+            .Select(i => i.ImageUrl)
+            .ToListAsync();
+
+        return Ok(new
+        {
+            poi.Id,
+            poi.Name,
+            poi.Category,
+            poi.Description,
+            poi.Address,
+            poi.PriceText,
+            poi.Latitude,
+            poi.Longitude,
+            images
+        });
     }
 }

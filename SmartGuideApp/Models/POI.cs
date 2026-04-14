@@ -43,9 +43,6 @@ public class POI : INotifyPropertyChanged
         }
     }
 
-    public string ImageUrl { get; set; } = string.Empty;
-    public List<string> ImageUrls { get; set; } = new();
-
     public string OpenHours { get; set; } = string.Empty;
     public string PriceText { get; set; } = string.Empty;
 
@@ -66,4 +63,11 @@ public class POI : INotifyPropertyChanged
 
     public double Latitude { get; set; }
     public double Longitude { get; set; }
+
+    public List<string> Images { get; set; } = new();
+
+    public string Thumbnail =>
+        Images != null && Images.Count > 0
+            ? $"http://192.168.22.4:5022{Images[0]}"
+            : string.Empty;
 }

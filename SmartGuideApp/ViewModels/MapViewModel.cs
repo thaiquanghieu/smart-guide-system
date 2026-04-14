@@ -66,7 +66,7 @@ public class MapViewModel : BaseViewModel
 
     public string Title => SelectedPoi?.Name ?? "";
     public string Category => SelectedPoi?.Category?.ToUpper() ?? "";
-    public string ImageUrl => SelectedPoi?.ImageUrl ?? "";
+    public string ImageUrl => SelectedPoi?.Thumbnail ?? "";
     public string DistanceText => SelectedPoi?.DistanceText ?? "";
     public string RatingText => "4.8";
     public string Address => SelectedPoi?.Address ?? "";

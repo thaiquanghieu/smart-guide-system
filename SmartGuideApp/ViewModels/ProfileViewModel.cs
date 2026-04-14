@@ -4,19 +4,41 @@ namespace SmartGuideApp.ViewModels;
 
 public class ProfileViewModel : BaseViewModel
 {
-    public string UserName { get; }
-    public string Email { get; }
-    public string AvatarUrl { get; }
-    public int FavoriteCount { get; }
-    public int ListenedPoiCount { get; }
+    public string UserName { get; set; } = "";
+    public string Email { get; set; } = "";
+    public string AvatarUrl { get; set; } = "";
+    public int FavoriteCount { get; set; }
+    public int ListenedPoiCount { get; set; }
 
     public ProfileViewModel()
     {
-        var profile = new MockDataService().GetProfileSummary();
-        UserName = profile.UserName;
-        Email = profile.Email;
-        AvatarUrl = profile.AvatarUrl;
-        FavoriteCount = profile.FavoriteCount;
-        ListenedPoiCount = profile.ListenedPoiCount;
+        _ = LoadProfile();
+    }
+
+    private async Task LoadProfile()
+    {
+        try
+        {
+            var api = new ApiService();
+            var profile = await api.GetProfileAsync();
+
+            if (profile == null) return;
+
+            UserName = profile.UserName;
+            Email = profile.Email;
+            AvatarUrl = $"http://192.168.22.4:5022{profile.AvatarUrl}";
+            FavoriteCount = profile.FavoriteCount;
+            ListenedPoiCount = profile.ListenedPoiCount;
+
+            OnPropertyChanged(nameof(UserName));
+            OnPropertyChanged(nameof(Email));
+            OnPropertyChanged(nameof(AvatarUrl));
+            OnPropertyChanged(nameof(FavoriteCount));
+            OnPropertyChanged(nameof(ListenedPoiCount));
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ PROFILE ERROR: {ex.Message}");
+        }
     }
 }

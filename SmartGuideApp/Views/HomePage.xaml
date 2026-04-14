@@ -335,7 +335,7 @@
 
                                 <!-- Image -->
                                 <Grid>
-                                    <Image Source="{Binding ImageUrl}"
+                                    <Image Source="{Binding Thumbnail}"
                                            Aspect="AspectFill" />
 
                                     <!-- Category -->

@@ -25,4 +25,16 @@ public class ApiService
             return null;
         }
     }
+
+    public async Task<ProfileSummary?> GetProfileAsync()
+    {
+        try
+        {
+            return await _http.GetFromJsonAsync<ProfileSummary>("/api/profiles");
+        }
+        catch
+        {
+            return null;
+        }
+    }
 }

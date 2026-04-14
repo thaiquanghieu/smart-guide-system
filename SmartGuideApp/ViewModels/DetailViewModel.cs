@@ -52,7 +52,7 @@ public class DetailViewModel : BaseViewModel
     public string Title => Poi?.Name ?? string.Empty;
     public string Category => Poi?.Category ?? string.Empty;
     public string Address => Poi?.Address ?? string.Empty;
-    public string ImageUrl => Poi?.ImageUrl ?? string.Empty;
+    public string ImageUrl => Poi?.Thumbnail ?? string.Empty;
     public string Description => Poi?.Description ?? string.Empty;
     public string OpenHours => Poi?.OpenHours ?? string.Empty;
     public string PriceText => Poi?.PriceText ?? string.Empty;
@@ -172,14 +172,16 @@ public class DetailViewModel : BaseViewModel
     {
         Images.Clear();
 
-        if (Poi?.ImageUrls != null && Poi.ImageUrls.Count > 0)
+        if (Poi?.Images != null && Poi.Images.Count > 0)
         {
-            foreach (var image in Poi.ImageUrls)
-                Images.Add(image);
+            foreach (var image in Poi.Images)
+            {
+                Images.Add($"http://192.168.22.4:5022{image}");
+            }
         }
-        else if (!string.IsNullOrWhiteSpace(Poi?.ImageUrl))
+        else if (!string.IsNullOrWhiteSpace(Poi?.Thumbnail))
         {
-            Images.Add(Poi.ImageUrl);
+            Images.Add(Poi.Thumbnail);
         }
 
         OnPropertyChanged(nameof(ImageCounterText));

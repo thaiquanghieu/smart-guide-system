@@ -34,9 +34,10 @@ INSERT INTO pois (
 );
 
 INSERT INTO poi_images (poi_id, image_url, sort_order) VALUES
-('1', '/images/poi/poi-1-1.jpg', 1),
-('1', '/images/poi/poi-1-2.jpg', 2),
-('2', '/images/poi/poi-2-1.jpg', 1);
+('1', '/images/pois/poi-1-1.jpg', 1),
+('1', '/images/pois/poi-1-2.jpg', 2),
+('2', '/images/pois/poi-2-1.jpg', 1),
+('2', '/images/pois/poi-2-2.jpg', 2);
 
 INSERT INTO audio_guides (
   id, poi_id, language_code, language_name, voice_name, script_text
