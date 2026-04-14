@@ -55,6 +55,8 @@ public class HomeViewModel : BaseViewModel
             _allPois.Clear();
             _allPois.AddRange(data);
 
+            await DistanceService.UpdateDistancesAsync(_allPois);
+
             ApplyFilter();
         }
         catch (Exception ex)

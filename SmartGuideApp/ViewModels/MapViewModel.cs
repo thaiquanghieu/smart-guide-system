@@ -87,6 +87,9 @@ public class MapViewModel : BaseViewModel
 
             Console.WriteLine($"✅ MAP COUNT: {data.Count}");
 
+            // TÍNH DISTANCE TRƯỚC
+            await DistanceService.UpdateDistancesAsync(data);
+
             Pois.Clear();
             FilteredPois.Clear();
 
@@ -95,10 +98,9 @@ public class MapViewModel : BaseViewModel
                 Pois.Add(poi);
             }
 
-            FilterPois();
+            OnPropertyChanged(nameof(Pois));
 
-            // 🔥 QUAN TRỌNG: trigger lại UI để Map reload pin
-            OnPropertyChanged(nameof(FilteredPois));
+            FilterPois();
         }
         catch (Exception ex)
         {
@@ -209,6 +211,8 @@ public class MapViewModel : BaseViewModel
     public void SelectPoi(POI poi)
     {
         SelectedPoi = poi;
+        OnPropertyChanged(nameof(DistanceText));
+
         Suggestions.Clear();
         IsSuggestionVisible = false;
     }

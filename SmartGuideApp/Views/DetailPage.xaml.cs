@@ -177,6 +177,18 @@ public partial class DetailPage : ContentPage, IQueryAttributable
 
             if (poi != null)
             {
+                // TÍNH DISTANCE TẠI ĐÂY
+                var user = await Geolocation.GetLastKnownLocationAsync();
+
+                if (user != null)
+                {
+                    poi.DistanceKm = Location.CalculateDistance(
+                        user,
+                        new Location(poi.Latitude, poi.Longitude),
+                        DistanceUnits.Kilometers
+                    );
+                }
+
                 ViewModel.Poi = poi;
             }
         }
