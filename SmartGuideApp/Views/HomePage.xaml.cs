@@ -20,6 +20,21 @@ public partial class HomePage : ContentPage
         Loaded += OnLoaded;
     }
 
+    protected override void OnAppearing()
+    {
+        base.OnAppearing();
+
+        // Ensure we subscribe and attempt to load the preview map on Appearing as well
+        if (BindingContext is HomeViewModel vm)
+        {
+            vm.PropertyChanged -= OnViewModelPropertyChanged;
+            vm.PropertyChanged += OnViewModelPropertyChanged;
+        }
+
+        // Fire-and-forget; map UI updates on the main thread inside LoadMapPreview
+        _ = LoadMapPreview();
+    }
+
     private async void OnLoaded(object? sender, EventArgs e)
     {
         // Subscribe to ViewModel changes so we can refresh the mini-map when Pois are loaded

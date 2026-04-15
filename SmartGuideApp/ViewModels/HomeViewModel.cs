@@ -57,7 +57,7 @@ public class HomeViewModel : BaseViewModel
 
             await DistanceService.UpdateDistancesAsync(_allPois);
 
-            ApplyFilter();
+            await ApplyFilter();
         }
         catch (Exception ex)
         {
@@ -65,14 +65,16 @@ public class HomeViewModel : BaseViewModel
         }
     }
 
-    public void SetFilter(string filter)
+    public async Task SetFilter(string filter)
     {
         CurrentFilter = filter;
-        ApplyFilter();
+        await ApplyFilter();
         OnPropertyChanged(nameof(CurrentFilter));
     }
 
-    private void ApplyFilter()
+    
+
+    private async Task ApplyFilter()
     {
         IEnumerable<POI> filtered = _allPois;
 
@@ -83,6 +85,21 @@ public class HomeViewModel : BaseViewModel
                 x.Name.Contains(keyword, StringComparison.OrdinalIgnoreCase) ||
                 x.Address.Contains(keyword, StringComparison.OrdinalIgnoreCase) ||
                 x.Category.Contains(keyword, StringComparison.OrdinalIgnoreCase));
+        }
+
+        var location = await Geolocation.GetLocationAsync()
+            ?? await Geolocation.GetLastKnownLocationAsync();
+
+        if (location != null)
+        {
+            foreach (var poi in _allPois)
+            {
+                poi.DistanceKm = Location.CalculateDistance(
+                    location,
+                    new Location(poi.Latitude, poi.Longitude),
+                    DistanceUnits.Kilometers
+                );
+            }
         }
 
         filtered = CurrentFilter switch

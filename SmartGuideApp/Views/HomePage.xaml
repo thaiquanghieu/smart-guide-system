@@ -358,7 +358,7 @@
                                                 FontSize="11"
                                                 TextColor="#B45309" />
 
-                                            <Label Text="{Binding DistanceKm, StringFormat='{}{0:0.0} km'}"
+                                            <Label Text="{Binding DistanceText}"
                                                 FontSize="11"
                                                 FontAttributes="Bold"
                                                 TextColor="#B45309" />

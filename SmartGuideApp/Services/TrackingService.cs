@@ -5,13 +5,12 @@ namespace SmartGuideApp.Services;
 
 public class TrackingService
 {
+    private readonly AudioService _audioService = AudioService.Instance;
+    private double _radiusKm = 0.2; // default 200m : khoảng cách để trigger
+    private int _intervalMs = 5000; // default 5s : khoảng thời gian giữa 2 lần check vị trí
     private bool _isRunning = false;
     private HashSet<string> _triggeredPois = new();
-
-    private Queue<POI> _poiQueue = new();
-    private bool _isProcessing = false;
-
-    private readonly AudioService _audioService = new();
+    private string? _currentPoiId = null;
 
     public async Task StartTrackingAsync(List<POI> pois)
     {
@@ -23,30 +22,39 @@ public class TrackingService
         {
             try
             {
-                var location = await Geolocation.GetLastKnownLocationAsync();
+                var location = await Geolocation.GetLocationAsync()
+                ?? await Geolocation.GetLastKnownLocationAsync();
                 if (location != null)
                 {
-                    CheckNearby(location, pois);
+                    await CheckNearby(location, pois);
                 }
             }
             catch { }
 
-            await Task.Delay(5000); // 5s
+            await Task.Delay(_intervalMs);
         }
+    }
+
+    public void SetConfig(double radiusKm, int intervalMs)
+    {
+        _radiusKm = radiusKm;
+        _intervalMs = intervalMs;
     }
 
     public void Stop()
     {
         _isRunning = false;
+        _currentPoiId = null;
     }
 
-    private void CheckNearby(Location userLocation, List<POI> pois)
+    private async Task CheckNearby(Location userLocation, List<POI> pois)
     {
-        if (_isProcessing)
-            return;
+        POI? nearestPoi = null;
+        double minDistance = double.MaxValue;
 
         foreach (var poi in pois)
         {
+            // bỏ qua POI đã phát rồi
             if (_triggeredPois.Contains(poi.Id))
                 continue;
 
@@ -56,75 +64,40 @@ public class TrackingService
                 DistanceUnits.Kilometers
             );
 
-            if (distance < 0.5) // Khoảng cách tracking (đơn vị km)
+            // chỉ xét POI trong bán kính và gần nhất
+            if (distance < _radiusKm && distance < minDistance)
             {
-                _triggeredPois.Add(poi.Id);
-                _poiQueue.Enqueue(poi);
+                minDistance = distance;
+                nearestPoi = poi;
             }
         }
 
-        ProcessQueue();
-    }
-
-    private async void ProcessQueue()
-    {
-        if (_isProcessing || _poiQueue.Count == 0)
+        // không có POI phù hợp
+        if (nearestPoi == null)
             return;
 
-        _isProcessing = true;
-
-        var batch = new List<POI>();
-        while (_poiQueue.Count > 0)
-        {
-            batch.Add(_poiQueue.Dequeue());
-        }
-
-        foreach (var poi in batch)
-        {
-            await MainThread.InvokeOnMainThreadAsync(async () =>
-            {
-                await Shell.Current.GoToAsync($"//map");
-                await Shell.Current.GoToAsync($"DetailPage?poiId={poi.Id}");
-            });
-
-            await Task.Delay(500);
-            await WaitForAudioFinished();
-            await Task.Delay(800);
-        }
-
-        if (batch.Count > 0)
-        {
-            await MainThread.InvokeOnMainThreadAsync(async () =>
-            {
-                await Shell.Current.GoToAsync("..");
-            });
-        }
-
-        _isProcessing = false;
-    }
-
-    private async Task WaitForAudioFinished()
-    {
-        // đợi audio start
-        int waitStart = 0;
-        while (!AudioService.Instance.IsPlaying && waitStart < 30)
-        {
-            await Task.Delay(100);
-            waitStart++;
-        }
-
-        // nếu chưa start được → bỏ qua luôn
-        if (!AudioService.Instance.IsPlaying)
+        // nếu đang phát audio thì bỏ qua (tránh spam)
+        if (_audioService.IsPlaying)
             return;
 
-        // đợi audio chạy ổn định ít nhất 1s
-        await Task.Delay(1000);
+        // đánh dấu POI hiện tại
+        _currentPoiId = nearestPoi.Id;
+        _triggeredPois.Add(nearestPoi.Id);
 
-        // đợi kết thúc
-        while (AudioService.Instance.IsPlaying)
+        await MainThread.InvokeOnMainThreadAsync(async () =>
         {
-            await Task.Delay(300);
-        }
+            // chuyển sang detail
+            await Shell.Current.GoToAsync("//map");
+            await Shell.Current.GoToAsync($"DetailPage?poiId={nearestPoi.Id}");
+
+            // phát audio
+            await _audioService.PlayAsync(nearestPoi);
+
+            await Shell.Current.GoToAsync("..");
+
+            // reset current poi sau khi phát xong
+            _currentPoiId = null;
+        });
     }
 
 }

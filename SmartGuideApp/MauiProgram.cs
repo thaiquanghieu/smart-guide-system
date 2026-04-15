@@ -10,8 +10,8 @@ public static class MauiProgram
     {
         var builder = MauiApp.CreateBuilder();
         builder
-            .UseMauiApp<App>() // <--- BẮT BUỘC PHẢI GỌI ĐẦU TIÊN
-            .UseMauiMaps()     // <--- Đăng ký Maps NGAY SAU ĐÓ
+            .UseMauiApp<App>() 
+            .UseMauiMaps() 
             .ConfigureFonts(fonts =>
             {
                 fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");

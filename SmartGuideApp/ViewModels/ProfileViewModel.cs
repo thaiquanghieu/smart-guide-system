@@ -12,6 +12,7 @@ public class ProfileViewModel : BaseViewModel
 
     public ProfileViewModel()
     {
+        InitTrackingConfig();
         _ = LoadProfile();
     }
 
@@ -40,5 +41,57 @@ public class ProfileViewModel : BaseViewModel
         {
             Console.WriteLine($"❌ PROFILE ERROR: {ex.Message}");
         }
+    }
+
+    public bool IsBatterySaver
+    {
+        get => Preferences.Get("battery_saver", false);
+        set
+        {
+            Preferences.Set("battery_saver", value);
+            OnPropertyChanged();
+        }
+    }
+
+    public double TrackingRadiusKm
+    {
+        get => Preferences.Get("tracking_radius", 0.2);
+        set
+        {
+            Preferences.Set("tracking_radius", value);
+            OnPropertyChanged();
+        }
+    }
+
+    public int TrackingIntervalMs
+    {
+        get => Preferences.Get("tracking_interval", 5000);
+        set
+        {
+            Preferences.Set("tracking_interval", value);
+            OnPropertyChanged();
+        }
+    }
+
+    public void ApplyBatterySaver()
+    {
+        TrackingRadiusKm = 0.3;   // 300m
+        TrackingIntervalMs = 10000; // 10s
+    }
+
+    public void DisableBatterySaver()
+    {
+        TrackingRadiusKm = 0.2;
+        TrackingIntervalMs = 5000;
+    }
+
+    private void InitTrackingConfig()
+    {
+        // nếu chưa có data → set default
+        if (!Preferences.ContainsKey("tracking_radius"))
+            TrackingRadiusKm = 0.2;
+
+        if (!Preferences.ContainsKey("tracking_interval"))
+            TrackingIntervalMs = 5000;
     }
 }

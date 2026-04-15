@@ -296,6 +296,58 @@
                             ThumbColor="White" />
                 </Grid>
 
+                <!-- BATTERY SAVER -->
+                <Grid ColumnDefinitions="*,Auto">
+                    <Label Text="Tiết kiệm pin"
+                        VerticalOptions="Center"/>
+
+                    <Switch x:Name="BatterySaverSwitch"
+                            Grid.Column="1"
+                            Toggled="OnBatterySaverToggled"
+                            OnColor="#0F5BD7"
+                            ThumbColor="White"/>
+                </Grid>
+
+                <!-- RADIUS -->
+                <VerticalStackLayout Spacing="6">
+                    <Label Text="Bán kính nhận diện"
+                        FontSize="13"
+                        TextColor="#9CA3AF"/>
+
+                    <Slider x:Name="RadiusSlider"
+                            Minimum="0"
+                            Maximum="2"
+                            ValueChanged="OnRadiusSliderChanged"/>
+
+                    <Label x:Name="RadiusValueLabel"
+                        Text="200m"
+                        FontSize="12"
+                        TextColor="#9CA3AF"/>
+                </VerticalStackLayout>
+
+                <!-- INTERVAL -->
+                <VerticalStackLayout Spacing="6">
+                    <Label Text="Tần suất quét"
+                        FontSize="13"
+                        TextColor="#9CA3AF"/>
+
+                    <Slider x:Name="IntervalSlider"
+                            Minimum="0"
+                            Maximum="2"
+                            ValueChanged="OnIntervalSliderChanged"/>
+
+                    <Label x:Name="IntervalValueLabel"
+                        Text="5 giây"
+                        FontSize="12"
+                        TextColor="#9CA3AF"/>
+                </VerticalStackLayout>
+
+                <!-- STATUS -->
+                <Label x:Name="TrackingStatusLabel"
+                    Text="Đang dùng: 200m / 5 giây"
+                    FontSize="12"
+                    TextColor="#9CA3AF"/>
+
         <Button Text="Đóng"
             Clicked="OnCloseSettingsClicked"
             BackgroundColor="#0F5BD7"

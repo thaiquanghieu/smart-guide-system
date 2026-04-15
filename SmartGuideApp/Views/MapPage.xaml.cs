@@ -325,6 +325,24 @@ public partial class MapPage : ContentPage
 
             if (_isTrackingEnabled)
             {
+                var isSaver = Preferences.Get("battery_saver", false);
+
+                double radius;
+                int interval;
+
+                if (isSaver)
+                {
+                    radius = 0.3;
+                    interval = 10000;
+                }
+                else
+                {
+                    radius = Preferences.Get("tracking_radius", 0.2);
+                    interval = Preferences.Get("tracking_interval", 5000);
+                }
+
+                _trackingService.SetConfig(radius, interval);
+
                 await _trackingService.StartTrackingAsync(vm.Pois.ToList());
             }
         }
@@ -353,6 +371,24 @@ public partial class MapPage : ContentPage
 
         if (_isTrackingEnabled)
         {
+            var isSaver = Preferences.Get("battery_saver", false);
+
+            double radius;
+            int interval;
+
+            if (isSaver)
+            {
+                radius = 0.3;
+                interval = 10000;
+            }
+            else
+            {
+                radius = Preferences.Get("tracking_radius", 0.2);
+                interval = Preferences.Get("tracking_interval", 5000);
+            }
+
+            _trackingService.SetConfig(radius, interval);
+
             await _trackingService.StartTrackingAsync(vm.Pois.ToList());
         }
         else
