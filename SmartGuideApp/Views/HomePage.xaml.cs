@@ -122,19 +122,6 @@ public partial class HomePage : ContentPage
         }
     }
 
-    private async void OnFavoriteTapped(object? sender, TappedEventArgs e)
-    {
-        if (e.Parameter is POI poi)
-        {
-            poi.IsFavorite = !poi.IsFavorite;
-
-            if (poi.IsFavorite)
-            {
-                await ShowToast("Đã thêm vào yêu thích!");
-            }
-        }
-    }
-
     private async Task ShowToast(string message)
     {
         ToastText.Text = message;
@@ -288,5 +275,25 @@ public partial class HomePage : ContentPage
             return;
 
         await AudioService.Instance.PlayAsync(poi);
+    }
+
+    async void OnFavoriteTapped(object? sender, TappedEventArgs e)
+    {
+        if (e.Parameter is POI poi)
+        {
+            poi.IsFavorite = !poi.IsFavorite;
+
+            try
+            {
+                var api = new ApiService();
+                await api.ToggleFavoriteAsync(poi.Id, poi.IsFavorite);
+            }
+            catch { }
+
+            if (poi.IsFavorite)
+            {
+                await ShowToast("Đã thêm vào yêu thích!");
+            }
+        }
     }
 }

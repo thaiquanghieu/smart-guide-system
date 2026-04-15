@@ -16,7 +16,7 @@ public class ProfileViewModel : BaseViewModel
         _ = LoadProfile();
     }
 
-    private async Task LoadProfile()
+    public async Task LoadProfile()
     {
         try
         {
@@ -93,5 +93,10 @@ public class ProfileViewModel : BaseViewModel
 
         if (!Preferences.ContainsKey("tracking_interval"))
             TrackingIntervalMs = 5000;
+    }
+
+    public async Task RefreshAsync()
+    {
+        await LoadProfile();
     }
 }

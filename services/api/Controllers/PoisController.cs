@@ -124,4 +124,31 @@ public class PoisController : ControllerBase
             audios
         });
     }
+
+    [HttpPost("favorite/{poiId}")]
+    public async Task<IActionResult> ToggleFavorite(string poiId, [FromQuery] bool isFavorite)
+    {
+        var profile = await _db.Profiles.FirstOrDefaultAsync();
+        if (profile == null) return NotFound();
+
+        if (isFavorite)
+            profile.FavoriteCount += 1;
+        else
+            profile.FavoriteCount -= 1;
+
+        await _db.SaveChangesAsync();
+        return Ok(profile.FavoriteCount);
+    }
+
+    [HttpPost("listened/{poiId}")]
+    public async Task<IActionResult> IncreaseListened(string poiId)
+    {
+        var profile = await _db.Profiles.FirstOrDefaultAsync();
+        if (profile == null) return NotFound();
+
+        profile.ListenedPoiCount += 1;
+
+        await _db.SaveChangesAsync();
+        return Ok(profile.ListenedPoiCount);
+    }
 }

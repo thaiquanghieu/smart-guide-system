@@ -1,4 +1,5 @@
 using Microsoft.Maui.Storage;
+using SmartGuideApp.ViewModels;
 
 namespace SmartGuideApp.Views;
 
@@ -187,5 +188,15 @@ public partial class ProfilePage : ContentPage
 
         RadiusValueLabel.Text = $"{r}m";
         IntervalValueLabel.Text = $"{t} giây";
+    }
+
+    protected override async void OnAppearing()
+    {
+        base.OnAppearing();
+
+        if (BindingContext is ProfileViewModel vm)
+        {
+            await vm.RefreshAsync();
+        }
     }
 }

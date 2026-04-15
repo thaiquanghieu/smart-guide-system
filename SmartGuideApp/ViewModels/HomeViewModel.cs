@@ -176,4 +176,16 @@ public class HomeViewModel : BaseViewModel
         Suggestions = new ObservableCollection<POI>();
         IsSuggestionVisible = false;
     }
+
+    public async Task ToggleFavoriteAsync(POI poi)
+    {
+        poi.IsFavorite = !poi.IsFavorite;
+
+        try
+        {
+            var api = new ApiService();
+            await api.ToggleFavoriteAsync(poi.Id, poi.IsFavorite);
+        }
+        catch { }
+    }
 }

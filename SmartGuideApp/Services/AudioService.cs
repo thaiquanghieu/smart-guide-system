@@ -50,6 +50,14 @@ public class AudioService
             if (_cts == cts)
             {
                 poi.IsAudioPlaying = false;
+
+                try
+                {
+                    var api = new ApiService();
+                    await api.IncreaseListenedAsync(poi.Id);
+                }
+                catch { }
+
                 _currentPoi = null;
                 _cts = null;
             }

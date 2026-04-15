@@ -3,10 +3,17 @@ using SmartGuideApp.Models;
 
 public class ApiService
 {
+    private readonly HttpClient _httpClient;
+    private readonly string BaseUrl = "http://192.168.22.4:5022";
     private readonly HttpClient _http = new HttpClient
     {
         BaseAddress = new Uri("http://192.168.22.4:5022")
     };
+
+    public ApiService()
+    {
+        _httpClient = new HttpClient();
+    }
 
     public async Task<List<POI>> GetPoisAsync()
     {
@@ -36,5 +43,17 @@ public class ApiService
         {
             return null;
         }
+    }
+
+    public async Task ToggleFavoriteAsync(string poiId, bool isFavorite)
+    {
+        var url = $"{BaseUrl}/api/pois/favorite/{poiId}?isFavorite={isFavorite}";
+        await _httpClient.PostAsync(url, null);
+    }
+
+    public async Task IncreaseListenedAsync(string poiId)
+    {
+        var url = $"{BaseUrl}/api/pois/listened/{poiId}";
+        await _httpClient.PostAsync(url, null);
     }
 }

@@ -162,7 +162,17 @@ public class DetailViewModel : BaseViewModel
     {
         TogglePlayCommand = new Command(async () => await TogglePlayAsync());
         SeekCommand = new Command<double>(OnSeekRequested);
-        ToggleFavoriteCommand = new Command(() => IsFavorite = !IsFavorite);
+        ToggleFavoriteCommand = new Command(async () =>
+        {
+            IsFavorite = !IsFavorite;
+
+            try
+            {
+                var api = new ApiService();
+                await api.ToggleFavoriteAsync(Poi!.Id, IsFavorite);
+            }
+            catch { }
+        });
         PreviousImageCommand = new Command(GoPreviousImage);
         NextImageCommand = new Command(GoNextImage);
 
