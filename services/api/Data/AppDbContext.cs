@@ -10,11 +10,13 @@ public class AppDbContext : DbContext
     public DbSet<Poi> Pois => Set<Poi>();
     public DbSet<Profile> Profiles => Set<Profile>();
     public DbSet<PoiImage> PoiImages => Set<PoiImage>();
+    public DbSet<AudioGuide> AudioGuides => Set<AudioGuide>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<Poi>().ToTable("pois");
         modelBuilder.Entity<PoiImage>().ToTable("poi_images");
         modelBuilder.Entity<Profile>().ToTable("profiles");
+        modelBuilder.Entity<AudioGuide>().ToTable("audio_guides");
     }
 }

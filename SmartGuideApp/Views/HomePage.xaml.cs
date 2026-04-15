@@ -3,6 +3,7 @@ using SmartGuideApp.ViewModels;
 using Microsoft.Maui.Controls.Maps;
 using Microsoft.Maui.Maps;
 using Microsoft.Maui.Media;
+using SmartGuideApp.Services;
 
 namespace SmartGuideApp.Views;
 
@@ -12,9 +13,6 @@ public partial class HomePage : ContentPage
 
     bool isFilterActive = false;
     bool isSortActive = false;
-
-    private CancellationTokenSource? _homeAudioCts;
-    private POI? _homePlayingPoi;
 
     public HomePage()
     {
@@ -257,67 +255,9 @@ public partial class HomePage : ContentPage
         await Shell.Current.GoToAsync($"///map?poiId={poi.Id}");
     }
 
-
-
-    private async void OnHomeAudioTapped(object sender, TappedEventArgs e)
-    {
-        if (e.Parameter is not POI poi)
-            return;
-
-        var script = poi.Audios.FirstOrDefault()?.ScriptText;
-        if (string.IsNullOrWhiteSpace(script))
-            return;
-
-        // nếu đang phát → stop
-        if (_homePlayingPoi == poi && poi.IsAudioPlaying)
-        {
-            _homeAudioCts?.Cancel();
-            poi.IsAudioPlaying = false;
-            _homePlayingPoi = null;
-            return;
-        }
-
-        // stop audio cũ
-        _homeAudioCts?.Cancel();
-        if (_homePlayingPoi != null)
-            _homePlayingPoi.IsAudioPlaying = false;
-
-        var cts = new CancellationTokenSource();
-        _homeAudioCts = cts;
-        _homePlayingPoi = poi;
-        poi.IsAudioPlaying = true;
-
-        try
-        {
-            await TextToSpeech.SpeakAsync(
-                script,
-                new SpeechOptions
-                {
-                    Volume = 1.0f,
-                    Pitch = 1.0f
-                },
-                cts.Token);
-        }
-        catch { }
-        finally
-        {
-            if (_homeAudioCts == cts)
-            {
-                poi.IsAudioPlaying = false;
-                _homePlayingPoi = null;
-            }
-        }
-    }
-
     protected override void OnDisappearing()
     {
-        _homeAudioCts?.Cancel();
-
-        if (_homePlayingPoi != null)
-            _homePlayingPoi.IsAudioPlaying = false;
-
-        _homeAudioCts = null;
-        _homePlayingPoi = null;
+        AudioService.Instance.Stop();
 
         if (BindingContext is HomeViewModel vm)
         {
@@ -325,5 +265,13 @@ public partial class HomePage : ContentPage
         }
 
         base.OnDisappearing();
+    }
+
+    private async void OnHomeAudioTapped(object sender, TappedEventArgs e)
+    {
+        if (e.Parameter is not POI poi)
+            return;
+
+        await AudioService.Instance.PlayAsync(poi);
     }
 }

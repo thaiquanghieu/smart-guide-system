@@ -31,9 +31,6 @@ public partial class MapPage : ContentPage
     private bool _isMapReady;
     private string? _pendingPoiId;
 
-    private CancellationTokenSource? _mapAudioCts;
-    private POI? _mapPlayingPoi;
-
     public MapPage()
     {
         InitializeComponent();
@@ -144,7 +141,6 @@ public partial class MapPage : ContentPage
 
     private void OnMapClicked(object sender, MapClickedEventArgs e)
     {
-        StopMapAudio();
         ViewModel.ClearSelection();
         ViewModel.HideSuggestions();
         ViewModel.IsSearchActive = false;
@@ -171,7 +167,6 @@ public partial class MapPage : ContentPage
 
     private async void OnCancelSearch(object sender, EventArgs e)
     {
-        StopMapAudio();
         ViewModel.SearchText = "";
         ViewModel.HideSuggestions();
         ViewModel.IsSearchActive = false;
@@ -278,68 +273,9 @@ public partial class MapPage : ContentPage
         }
     }
 
-    private void StopMapAudio()
-    {
-        _mapAudioCts?.Cancel();
-
-        if (_mapPlayingPoi != null)
-            _mapPlayingPoi.IsAudioPlaying = false;
-
-        _mapPlayingPoi = null;
-        _mapAudioCts = null;
-    }
-
-    private async void OnMapAudioTapped(object? sender, TappedEventArgs e)
-    {
-        var poi = ViewModel.SelectedPoi;
-        if (poi == null)
-            return;
-
-        var script = poi.Audios.FirstOrDefault()?.ScriptText;
-        if (string.IsNullOrWhiteSpace(script))
-            return;
-
-        if (_mapPlayingPoi == poi && poi.IsAudioPlaying)
-        {
-            StopMapAudio();
-            return;
-        }
-
-        StopMapAudio();
-
-        var cts = new CancellationTokenSource();
-        _mapAudioCts = cts;
-        _mapPlayingPoi = poi;
-        poi.IsAudioPlaying = true;
-
-        try
-        {
-            await TextToSpeech.SpeakAsync(
-                script,
-                new SpeechOptions
-                {
-                    Volume = 1.0f,
-                    Pitch = 1.0f
-                },
-                cts.Token);
-        }
-        catch
-        {
-        }
-        finally
-        {
-            if (_mapAudioCts == cts)
-            {
-                poi.IsAudioPlaying = false;
-                _mapPlayingPoi = null;
-                _mapAudioCts = null;
-            }
-        }
-    }
-
     protected override void OnDisappearing()
     {
-        StopMapAudio();
+        AudioService.Instance.Stop();
         _trackingService.Stop();
 
         if (BindingContext is MapViewModel vm)
@@ -454,5 +390,12 @@ public partial class MapPage : ContentPage
             await TrackingButton.TranslateTo(0, 50, 200, Easing.CubicOut);
         }
     }
+    
+    private async void OnMapAudioTapped(object sender, TappedEventArgs e)
+    {
+        if (ViewModel.SelectedPoi == null)
+            return;
 
+        await AudioService.Instance.PlayAsync(ViewModel.SelectedPoi);
+    }
 }

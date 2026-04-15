@@ -2,14 +2,13 @@ using SmartGuideApp.Models;
 using System.Collections.ObjectModel;
 using System.Windows.Input;
 using Microsoft.Maui.Media;
+using SmartGuideApp.Services;
 
 namespace SmartGuideApp.ViewModels;
 
 public class DetailViewModel : BaseViewModel
 {
     private POI? _poi;
-    private CancellationTokenSource? _cts;
-    private CancellationTokenSource? _progressCts;
     private bool _isPlaying;
     private double _playbackProgress;
     private int _estimatedDurationSeconds = 0;
@@ -166,6 +165,14 @@ public class DetailViewModel : BaseViewModel
         ToggleFavoriteCommand = new Command(() => IsFavorite = !IsFavorite);
         PreviousImageCommand = new Command(GoPreviousImage);
         NextImageCommand = new Command(GoNextImage);
+
+        Device.StartTimer(TimeSpan.FromMilliseconds(300), () =>
+    {
+        if (Poi != null)
+            IsPlaying = Poi.IsAudioPlaying;
+
+        return true;
+    });
     }
 
     private void LoadImages()
@@ -204,63 +211,12 @@ public class DetailViewModel : BaseViewModel
 
     private async Task TogglePlayAsync()
     {
-        if (IsPlaying)
-        {
-            StopAudio(resetProgress: false);
-            return;
-        }
-
-        if (string.IsNullOrWhiteSpace(ScriptText))
+        if (Poi == null)
             return;
 
-        try
-        {
-            _cts?.Cancel();
-            _progressCts?.Cancel();
+        await AudioService.Instance.PlayAsync(Poi);
 
-            _cts = new CancellationTokenSource();
-            _progressCts = new CancellationTokenSource();
-
-            IsPlaying = true;
-            _ = RunProgressAsync(_progressCts.Token);
-
-            await TextToSpeech.SpeakAsync(
-                ScriptText,
-                new SpeechOptions
-                {
-                    Volume = 1.0f,
-                    Pitch = 1.0f
-                },
-                _cts.Token);
-        }
-        catch
-        {
-        }
-        finally
-        {
-            IsPlaying = false;
-            _progressCts?.Cancel();
-            PlaybackProgress = 0;
-        }
-    }
-
-    private async Task RunProgressAsync(CancellationToken token)
-    {
-        if (_estimatedDurationSeconds <= 0)
-            _estimatedDurationSeconds = 1;
-
-        var intervalMs = 250;
-        var totalMs = _estimatedDurationSeconds * 1000.0;
-        var elapsedMs = PlaybackProgress / 100.0 * totalMs;
-
-        while (!token.IsCancellationRequested && elapsedMs < totalMs)
-        {
-            await Task.Delay(intervalMs, token);
-            elapsedMs += intervalMs;
-            PlaybackProgress = elapsedMs / totalMs * 100.0;
-        }
-
-        PlaybackProgress = 100;
+        IsPlaying = Poi.IsAudioPlaying;
     }
 
     private void OnSeekRequested(double newValue)
@@ -268,15 +224,6 @@ public class DetailViewModel : BaseViewModel
         PlaybackProgress = newValue;
     }
 
-    private void StopAudio(bool resetProgress)
-    {
-        _cts?.Cancel();
-        _progressCts?.Cancel();
-        IsPlaying = false;
-
-        if (resetProgress)
-            PlaybackProgress = 0;
-    }
 
     private int GetCurrentSeconds()
     {

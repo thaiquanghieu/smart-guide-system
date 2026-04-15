@@ -37,6 +37,9 @@ public class PoisController : ControllerBase
             .OrderBy(x => x.SortOrder)
             .ToListAsync();
 
+        var audioGuides = await _db.AudioGuides
+        .ToListAsync();
+
         var result = pois.Select(p => new
         {
             p.Id,
@@ -51,6 +54,17 @@ public class PoisController : ControllerBase
                 .Where(i => i.PoiId == p.Id)
                 .OrderBy(i => i.SortOrder)
                 .Select(i => i.ImageUrl)
+                .ToList(),
+            audios = audioGuides
+                .Where(a => a.PoiId == p.Id)
+                .Select(a => new
+                {
+                    a.Id,
+                    a.LanguageCode,
+                    a.LanguageName,
+                    a.VoiceName,
+                    a.ScriptText
+                })
                 .ToList()
         });
 
@@ -84,6 +98,18 @@ public class PoisController : ControllerBase
             .Select(i => i.ImageUrl)
             .ToListAsync();
 
+        var audios = await _db.AudioGuides
+        .Where(a => a.PoiId == id)
+        .Select(a => new
+        {
+            a.Id,
+            a.LanguageCode,
+            a.LanguageName,
+            a.VoiceName,
+            a.ScriptText
+        })
+        .ToListAsync();
+
         return Ok(new
         {
             poi.Id,
@@ -94,7 +120,8 @@ public class PoisController : ControllerBase
             poi.PriceText,
             poi.Latitude,
             poi.Longitude,
-            images
+            images,
+            audios
         });
     }
 }
