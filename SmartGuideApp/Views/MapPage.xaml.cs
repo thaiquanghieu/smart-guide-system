@@ -12,9 +12,12 @@ namespace SmartGuideApp.Views;
 [QueryProperty(nameof(PoiId), "poiId")]
 public partial class MapPage : ContentPage
 {
+    private Pin? _selectedPin;
     private MapViewModel ViewModel => (MapViewModel)BindingContext;
     private TrackingService _trackingService = new();
     private bool _isTrackingEnabled;
+
+    private Dictionary<string, Pin> _poiPins = new();
 
     private string? _poiId;
     public string? PoiId
@@ -68,15 +71,9 @@ public partial class MapPage : ContentPage
         if (poi == null)
             return;
 
-        ViewModel.SelectPoi(poi);
         SearchEntry.Text = poi.Name;
 
-        MainMap.MoveToRegion(MapSpan.FromCenterAndRadius(
-            new Location(poi.Latitude, poi.Longitude),
-            Distance.FromMeters(300)
-        ));
-
-        await AnimateCard();
+        await TriggerPinClick(poi);
 
         _pendingPoiId = null;
     }
@@ -105,21 +102,22 @@ public partial class MapPage : ContentPage
 
     private void LoadMap()
     {
-        MainMap.Pins.Clear();
+        _poiPins.Clear();
 
         foreach (var poi in ViewModel.FilteredPois)
         {
             var pin = new Pin
             {
                 Label = poi.Name,
-                Address = string.Empty,
                 Location = new Location(poi.Latitude, poi.Longitude),
                 Type = PinType.Place
             };
 
+            _poiPins[poi.Id] = pin;
+
             pin.MarkerClicked += async (s, e) =>
             {
-                if (poi == null) return;
+                SelectPinVisual(pin);
 
                 ViewModel.SelectPoi(poi);
 
@@ -128,13 +126,10 @@ public partial class MapPage : ContentPage
                     Distance.FromMeters(300)
                 ));
 
-                SearchEntry?.Unfocus();
-
                 await AnimateCard();
 
                 e.HideInfoWindow = true;
             };
-
             MainMap.Pins.Add(pin);
         }
     }
@@ -277,6 +272,7 @@ public partial class MapPage : ContentPage
     {
         AudioService.Instance.Stop();
         _trackingService.Stop();
+        _trackingService.OnPoiDetected -= HandlePoiDetected;
 
         if (BindingContext is MapViewModel vm)
         {
@@ -303,9 +299,6 @@ public partial class MapPage : ContentPage
             vm.PropertyChanged -= OnViewModelPropertyChanged;
             vm.PropertyChanged += OnViewModelPropertyChanged;
 
-            // Ensure the map is populated after initialization. InitializeAsync may have
-            // set FilteredPois already, so subscribe above then explicitly load the map
-            // and update distances so pins appear immediately.
             LoadMap();
 
             await UpdateDistances();
@@ -342,6 +335,9 @@ public partial class MapPage : ContentPage
                 }
 
                 _trackingService.SetConfig(radius, interval);
+
+                _trackingService.OnPoiDetected -= HandlePoiDetected;
+                _trackingService.OnPoiDetected += HandlePoiDetected;
 
                 await _trackingService.StartTrackingAsync(vm.Pois.ToList());
             }
@@ -433,5 +429,52 @@ public partial class MapPage : ContentPage
             return;
 
         await AudioService.Instance.PlayAsync(ViewModel.SelectedPoi);
+    }
+
+    private async void HandlePoiDetected(string poiId)
+    {
+        if (!_isMapReady)
+            return;
+
+        var poi = ViewModel.Pois.FirstOrDefault(x => x.Id == poiId);
+        if (poi == null)
+            return;
+
+        await MainThread.InvokeOnMainThreadAsync(async () =>
+        {
+            await TriggerPinClick(poi);
+        });
+    }
+
+    private async Task TriggerPinClick(POI poi)
+    {
+        if (!_poiPins.TryGetValue(poi.Id, out var pin))
+            return;
+
+        await MainThread.InvokeOnMainThreadAsync(async () =>
+        {
+            SelectPinVisual(pin); // 🔥 highlight thật
+
+            ViewModel.SelectPoi(poi);
+
+            MainMap.MoveToRegion(MapSpan.FromCenterAndRadius(
+                new Location(poi.Latitude, poi.Longitude),
+                Distance.FromMeters(300)
+            ));
+
+            await AnimateCard();
+        });
+    }
+
+    private void SelectPinVisual(Pin pin)
+    {
+        if (_selectedPin != null)
+        {
+            _selectedPin.Type = PinType.Place;
+        }
+
+        pin.Type = PinType.SavedPin;
+
+        _selectedPin = pin;
     }
 }
