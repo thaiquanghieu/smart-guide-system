@@ -33,6 +33,18 @@ public class AudioService
         _currentPoi = poi;
         poi.IsAudioPlaying = true;
 
+        // Increment listened count immediately when playback starts so UI can reflect it.
+        try
+        {
+            var api = new ApiService();
+            var newCount = await api.IncreaseListenedAsync(poi.Id);
+            if (newCount.HasValue)
+            {
+                poi.ListenedCount = newCount.Value;
+            }
+        }
+        catch { }
+
         try
         {
             await TextToSpeech.SpeakAsync(
@@ -50,14 +62,6 @@ public class AudioService
             if (_cts == cts)
             {
                 poi.IsAudioPlaying = false;
-
-                try
-                {
-                    var api = new ApiService();
-                    await api.IncreaseListenedAsync(poi.Id);
-                }
-                catch { }
-
                 _currentPoi = null;
                 _cts = null;
             }

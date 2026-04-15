@@ -51,9 +51,21 @@ public class ApiService
         await _httpClient.PostAsync(url, null);
     }
 
-    public async Task IncreaseListenedAsync(string poiId)
+    public async Task<int?> IncreaseListenedAsync(string poiId)
     {
         var url = $"{BaseUrl}/api/pois/listened/{poiId}";
-        await _httpClient.PostAsync(url, null);
+        var resp = await _httpClient.PostAsync(url, null);
+        if (!resp.IsSuccessStatusCode) return null;
+
+        try
+        {
+            using var stream = await resp.Content.ReadAsStreamAsync();
+            var doc = await System.Text.Json.JsonDocument.ParseAsync(stream);
+            if (doc.RootElement.TryGetProperty("listened_count", out var lc))
+                return lc.GetInt32();
+        }
+        catch { }
+
+        return null;
     }
 }

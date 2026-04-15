@@ -68,7 +68,7 @@ public class MapViewModel : BaseViewModel
     public string Category => SelectedPoi?.Category?.ToUpper() ?? "";
     public string ImageUrl => SelectedPoi?.Thumbnail ?? "";
     public string DistanceText => SelectedPoi?.DistanceText ?? "";
-    public string RatingText => "4.8";
+    public string RatingText => SelectedPoi != null ? (SelectedPoi.RatingAvg > 0 ? SelectedPoi.RatingAvg.ToString("0.0") : "0.0") : "0.0";
     public string Address => SelectedPoi?.Address ?? "";
     public string Description => SelectedPoi?.Description ?? "";
 

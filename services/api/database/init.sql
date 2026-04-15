@@ -2,8 +2,9 @@ BEGIN;
 
 DROP TABLE IF EXISTS poi_images;
 DROP TABLE IF EXISTS audio_guides;
+DROP TABLE IF EXISTS ratings;
 DROP TABLE IF EXISTS pois;
-DROP TABLE IF EXISTS profiles;
+DROP TABLE IF EXISTS users;
 
 CREATE TABLE pois (
   id text PRIMARY KEY,
@@ -16,6 +17,9 @@ CREATE TABLE pois (
   open_time text,
   close_time text,
   price_text text,
+  listened_count integer DEFAULT 0,
+  rating_avg double precision DEFAULT 0,
+  rating_count integer DEFAULT 0,
   latitude double precision NOT NULL,
   longitude double precision NOT NULL,
   created_at timestamp default now()
@@ -38,7 +42,7 @@ CREATE TABLE audio_guides (
   created_at timestamp default now()
 );
 
-CREATE TABLE profiles (
+CREATE TABLE users (
   id serial PRIMARY KEY,
   user_name text,
   email text UNIQUE,
@@ -46,6 +50,15 @@ CREATE TABLE profiles (
   favorite_count integer DEFAULT 0,
   listened_poi_count integer DEFAULT 0,
   created_at timestamp default now()
+);
+
+CREATE TABLE ratings (
+  id serial PRIMARY KEY,
+  poi_id text REFERENCES pois(id) ON DELETE CASCADE,
+  user_id integer REFERENCES users(id) ON DELETE CASCADE,
+  rating_value smallint NOT NULL,
+  created_at timestamp default now(),
+  UNIQUE (poi_id, user_id)
 );
 
 CREATE INDEX IF NOT EXISTS idx_pois_lat_lon ON pois (latitude, longitude);

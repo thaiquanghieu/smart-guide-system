@@ -248,6 +248,10 @@
                                FontAttributes="Bold"/>
 
                         <HorizontalStackLayout Spacing="6">
+                            <!-- Listen (icon + count) for selected POI (use listen2.png) -->
+                            <Image Source="listen2.png" WidthRequest="14" HeightRequest="14" VerticalOptions="Center" />
+                            <Label Text="{Binding SelectedPoi.ListenedCount}" VerticalOptions="Center" />
+
                             <Image Source="star.png" WidthRequest="14"/>
                             <Label Text="{Binding RatingText}"/>
                         </HorizontalStackLayout>

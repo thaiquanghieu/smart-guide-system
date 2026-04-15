@@ -21,7 +21,7 @@ public class ProfilesController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetProfile()
     {
-        var profile = await _db.Set<Profile>()
+        var profile = await _db.Set<User>()
             .Select(p => new
             {
                 UserName = p.UserName,

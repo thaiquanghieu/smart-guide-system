@@ -30,4 +30,13 @@ public class Poi
 
     [Column("longitude")]
     public double Longitude { get; set; }
+
+    [Column("listened_count")]
+    public int ListenedCount { get; set; }
+
+    [Column("rating_avg")]
+    public double RatingAvg { get; set; }
+
+    [Column("rating_count")]
+    public int RatingCount { get; set; }
 }

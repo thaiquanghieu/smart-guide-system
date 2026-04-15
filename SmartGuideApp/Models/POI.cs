@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
+using System.Text.Json.Serialization;
 using SmartGuideApp.Models;
 
 namespace SmartGuideApp.Models;
@@ -37,7 +38,7 @@ public class POI : INotifyPropertyChanged
     {
         get => _isAudioPlaying;
         set
-        {   
+        {
             if (_isAudioPlaying == value) return;
             _isAudioPlaying = value;
             OnPropertyChanged();
@@ -59,7 +60,44 @@ public class POI : INotifyPropertyChanged
         }
     }
 
-    public int ListenedCount { get; set; }
+    private int _listenedCount;
+    [JsonPropertyName("listened_count")]
+    public int ListenedCount
+    {
+        get => _listenedCount;
+        set
+        {
+            if (_listenedCount == value) return;
+            _listenedCount = value;
+            OnPropertyChanged();
+        }
+    }
+
+    private double _ratingAvg;
+    [JsonPropertyName("rating_avg")]
+    public double RatingAvg
+    {
+        get => _ratingAvg;
+        set
+        {
+            if (Math.Abs(_ratingAvg - value) < 0.0001) return;
+            _ratingAvg = value;
+            OnPropertyChanged();
+        }
+    }
+
+    private int _ratingCount;
+    [JsonPropertyName("rating_count")]
+    public int RatingCount
+    {
+        get => _ratingCount;
+        set
+        {
+            if (_ratingCount == value) return;
+            _ratingCount = value;
+            OnPropertyChanged();
+        }
+    }
     public List<AudioGuide> Audios { get; set; } = new();
 
     public double Latitude { get; set; }

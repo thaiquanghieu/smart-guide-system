@@ -6,6 +6,9 @@ namespace SmartGuideApp.ViewModels;
 
 public class HomeViewModel : BaseViewModel
 {
+    public string SortBy { get; set; } = "distance";
+    public bool IsAscending { get; set; } = true;
+
     private readonly List<POI> _allPois;
     private string _searchText = string.Empty;
 
@@ -76,17 +79,19 @@ public class HomeViewModel : BaseViewModel
 
     private async Task ApplyFilter()
     {
-        IEnumerable<POI> filtered = _allPois;
+        IEnumerable<POI> result = _allPois;
 
+        // 🔍 SEARCH
         if (!string.IsNullOrWhiteSpace(SearchText))
         {
             var keyword = SearchText.Trim();
-            filtered = filtered.Where(x =>
+            result = result.Where(x =>
                 x.Name.Contains(keyword, StringComparison.OrdinalIgnoreCase) ||
                 x.Address.Contains(keyword, StringComparison.OrdinalIgnoreCase) ||
                 x.Category.Contains(keyword, StringComparison.OrdinalIgnoreCase));
         }
 
+        // 📍 UPDATE DISTANCE
         var location = await Geolocation.GetLocationAsync()
             ?? await Geolocation.GetLastKnownLocationAsync();
 
@@ -102,19 +107,33 @@ public class HomeViewModel : BaseViewModel
             }
         }
 
-        filtered = CurrentFilter switch
+        // 🎯 FILTER
+        result = CurrentFilter switch
         {
-            "Gần bạn" => filtered.Where(x => x.DistanceKm <= 2.0),
-            "Nổi bật" => filtered.Where(x => x.IsFavorite || x.ListenedCount >= 3),
-            "Miễn phí" => filtered.Where(x => x.PriceText.Contains("Miễn phí", StringComparison.OrdinalIgnoreCase)),
-            _ => filtered
+            "Gần bạn" => result.Where(x => x.DistanceKm <= 2.0),
+            "Miễn phí" => result.Where(x => x.PriceText.Contains("Miễn phí", StringComparison.OrdinalIgnoreCase)),
+            _ => result
         };
 
-        // Tối ưu: Chỉ tạo mới Collection khi thực sự có thay đổi hoặc dùng tạm cách này để giảm tải
-        var resultList = filtered.ToList();
-        
-        // Kiểm tra nếu danh sách không đổi thì không gán lại để tránh nháy UI
-        Pois = new ObservableCollection<POI>(resultList);
+        // 🔥 SORT
+        result = SortBy switch
+        {
+            "distance" => IsAscending
+                ? result.OrderBy(x => x.DistanceKm)
+                : result.OrderByDescending(x => x.DistanceKm),
+
+            "listened" => IsAscending
+                ? result.OrderBy(x => x.ListenedCount)
+                : result.OrderByDescending(x => x.ListenedCount),
+
+            "name" => IsAscending
+                ? result.OrderBy(x => x.Name)
+                : result.OrderByDescending(x => x.Name),
+
+            _ => result
+        };
+
+        Pois = new ObservableCollection<POI>(result.ToList());
     }
 
     private ObservableCollection<POI> _suggestions = new();
@@ -187,5 +206,17 @@ public class HomeViewModel : BaseViewModel
             await api.ToggleFavoriteAsync(poi.Id, poi.IsFavorite);
         }
         catch { }
+    }
+
+    public async Task SetSort(string sortKey, bool asc)
+    {
+        SortBy = sortKey;
+        IsAscending = asc;
+        await ApplyFilter();
+    }
+
+    public async Task Reload()
+    {
+        await LoadPoisFromApi();
     }
 }

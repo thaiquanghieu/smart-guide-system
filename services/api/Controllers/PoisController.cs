@@ -29,7 +29,11 @@ public class PoisController : ControllerBase
                 x.Address,
                 x.PriceText,
                 x.Latitude,
-                x.Longitude
+                x.Longitude,
+
+                ListenedCount = x.ListenedCount,
+                RatingAvg = x.RatingAvg,
+                RatingCount = x.RatingCount
             })
             .ToListAsync();
 
@@ -50,6 +54,9 @@ public class PoisController : ControllerBase
             p.PriceText,
             p.Latitude,
             p.Longitude,
+            listened_count = p.ListenedCount,
+            rating_avg = p.RatingAvg,
+            rating_count = p.RatingCount,
             images = poiImages
                 .Where(i => i.PoiId == p.Id)
                 .OrderBy(i => i.SortOrder)
@@ -85,7 +92,10 @@ public class PoisController : ControllerBase
                 x.Address,
                 x.PriceText,
                 x.Latitude,
-                x.Longitude
+                x.Longitude,
+                ListenedCount = x.ListenedCount,
+                RatingAvg = x.RatingAvg,
+                RatingCount = x.RatingCount
             })
             .FirstOrDefaultAsync();
 
@@ -120,6 +130,9 @@ public class PoisController : ControllerBase
             poi.PriceText,
             poi.Latitude,
             poi.Longitude,
+            listened_count = poi.ListenedCount,
+            rating_avg = poi.RatingAvg,
+            rating_count = poi.RatingCount,
             images,
             audios
         });
@@ -128,27 +141,33 @@ public class PoisController : ControllerBase
     [HttpPost("favorite/{poiId}")]
     public async Task<IActionResult> ToggleFavorite(string poiId, [FromQuery] bool isFavorite)
     {
-        var profile = await _db.Profiles.FirstOrDefaultAsync();
-        if (profile == null) return NotFound();
+        var user = await _db.Users.FirstOrDefaultAsync();
+        if (user == null) return NotFound();
 
         if (isFavorite)
-            profile.FavoriteCount += 1;
+            user.FavoriteCount += 1;
         else
-            profile.FavoriteCount -= 1;
+            user.FavoriteCount -= 1;
 
         await _db.SaveChangesAsync();
-        return Ok(profile.FavoriteCount);
+        return Ok(user.FavoriteCount);
     }
 
     [HttpPost("listened/{poiId}")]
     public async Task<IActionResult> IncreaseListened(string poiId)
     {
-        var profile = await _db.Profiles.FirstOrDefaultAsync();
-        if (profile == null) return NotFound();
+        // increment per-POI listened count
+        var poi = await _db.Pois.FirstOrDefaultAsync(p => p.Id == poiId);
+        if (poi == null) return NotFound();
 
-        profile.ListenedPoiCount += 1;
+        poi.ListenedCount += 1;
+
+        // also increment first user summary (legacy behaviour)
+        var user = await _db.Users.FirstOrDefaultAsync();
+        if (user != null)
+            user.ListenedPoiCount += 1;
 
         await _db.SaveChangesAsync();
-        return Ok(profile.ListenedPoiCount);
+        return Ok(new { poiId = poi.Id, listened_count = poi.ListenedCount, user_listened = user?.ListenedPoiCount });
     }
 }

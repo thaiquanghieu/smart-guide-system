@@ -265,29 +265,6 @@
                         <HorizontalStackLayout Grid.Column="1"
                                                Spacing="8"
                                                HorizontalOptions="End">
-
-                            <Frame Padding="10,6"
-                                   CornerRadius="10"
-                                   BorderColor="#E5E7EB"
-                                   BackgroundColor="White"
-                                   HasShadow="False">
-                                <HorizontalStackLayout Spacing="6">
-                                    <Image x:Name="FilterIcon"
-                                           Source="filter.png"
-                                           WidthRequest="16"
-                                           HeightRequest="16" />
-
-                                    <Label x:Name="FilterText"
-                                           Text="Lọc"
-                                           FontSize="13"
-                                           TextColor="#9CA3AF" />
-                                </HorizontalStackLayout>
-
-                                <Frame.GestureRecognizers>
-                                    <TapGestureRecognizer Tapped="OnFilterClicked" />
-                                </Frame.GestureRecognizers>
-                            </Frame>
-
                             <Frame Padding="10,6"
                                    CornerRadius="10"
                                    BorderColor="#E5E7EB"
@@ -405,14 +382,30 @@
                                                            VerticalOptions="End"
                                                            Margin="0,0,14,14"
                                                            Spacing="4">
-                                        <Image Source="star.png"
-                                               WidthRequest="14"
-                                               HeightRequest="14" />
+                             <!-- Listen (icon + count) -->
+                             <HorizontalStackLayout Spacing="4"
+                                        VerticalOptions="Center"
+                                        HorizontalOptions="Center">
+                              <Image Source="listen.png"
+                                  WidthRequest="14"
+                                  HeightRequest="14"
+                                  VerticalOptions="Center" />
 
-                                        <Label Text="4.1"
-                                               FontSize="12"
-                                               FontAttributes="Bold"
-                                               TextColor="White" />
+                              <Label Text="{Binding ListenedCount}"
+                                  FontSize="12"
+                                  FontAttributes="Bold"
+                                  TextColor="White"
+                                  VerticalOptions="Center" />
+                             </HorizontalStackLayout>
+
+                         <Image Source="star.png"
+                             WidthRequest="14"
+                             HeightRequest="14" />
+
+                         <Label Text="{Binding RatingAvg, StringFormat='{0:0.0}'}"
+                             FontSize="12"
+                             FontAttributes="Bold"
+                             TextColor="White" />
                                     </HorizontalStackLayout>
                                 </Grid>
 

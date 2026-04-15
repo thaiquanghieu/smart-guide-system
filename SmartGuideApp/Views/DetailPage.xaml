@@ -162,14 +162,29 @@
                                            MaxLines="1" />
 
                                     <HorizontalStackLayout Spacing="6">
-                                        <Image Source="star.png"
-                                               WidthRequest="14"
-                                               HeightRequest="14"
-                                               VerticalOptions="Center" />
-                                        <Label Text="{Binding RatingText}"
-                                               FontSize="14"
-                                               TextColor="White"
-                                               VerticalOptions="Center" />
+                         <!-- Listen (icon + count) -->
+                         <HorizontalStackLayout Spacing="6"
+                                    VerticalOptions="Center">
+                          <Image Source="listen.png"
+                              WidthRequest="14"
+                              HeightRequest="14"
+                              VerticalOptions="Center" />
+
+                          <Label Text="{Binding ListenedCountText}"
+                              FontSize="14"
+                              TextColor="White"
+                              VerticalOptions="Center" />
+                         </HorizontalStackLayout>
+
+                         <Image Source="star.png"
+                             WidthRequest="14"
+                             HeightRequest="14"
+                             VerticalOptions="Center" />
+
+                         <Label Text="{Binding RatingText}"
+                             FontSize="14"
+                             TextColor="White"
+                             VerticalOptions="Center" />
                                     </HorizontalStackLayout>
 
                                     <Label Text="{Binding Address}"

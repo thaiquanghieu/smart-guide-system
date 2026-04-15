@@ -3,6 +3,7 @@ using System.Collections.ObjectModel;
 using System.Windows.Input;
 using Microsoft.Maui.Media;
 using SmartGuideApp.Services;
+using System.ComponentModel;
 
 namespace SmartGuideApp.ViewModels;
 
@@ -21,29 +22,38 @@ public class DetailViewModel : BaseViewModel
         get => _poi;
         set
         {
+            if (_poi != null)
+                _poi.PropertyChanged -= OnPoiChanged;
+
             if (SetProperty(ref _poi, value))
             {
-                _estimatedDurationSeconds = ParseDurationToSeconds(Poi?.Audios.FirstOrDefault()?.DurationText);
+                if (_poi != null)
+                {
+                    _poi.PropertyChanged += OnPoiChanged;
 
-                LoadImages();
-                CurrentImageIndex = 0;
+                    _estimatedDurationSeconds = ParseDurationToSeconds(Poi?.Audios.FirstOrDefault()?.DurationText);
 
-                OnPropertyChanged(nameof(Title));
-                OnPropertyChanged(nameof(Category));
-                OnPropertyChanged(nameof(Address));
-                OnPropertyChanged(nameof(ImageUrl));
-                OnPropertyChanged(nameof(Description));
-                OnPropertyChanged(nameof(OpenHours));
-                OnPropertyChanged(nameof(PriceText));
-                OnPropertyChanged(nameof(DistanceText));
-                OnPropertyChanged(nameof(RatingText));
-                OnPropertyChanged(nameof(AudioVoice));
-                OnPropertyChanged(nameof(AudioDuration));
-                OnPropertyChanged(nameof(ScriptText));
-                OnPropertyChanged(nameof(CurrentTimeText));
-                OnPropertyChanged(nameof(RemainingTimeText));
-                OnPropertyChanged(nameof(IsFavorite));
-                OnPropertyChanged(nameof(FavoriteIcon));
+                    LoadImages();
+                    CurrentImageIndex = 0;
+
+                    OnPropertyChanged(nameof(Title));
+                    OnPropertyChanged(nameof(Category));
+                    OnPropertyChanged(nameof(Address));
+                    OnPropertyChanged(nameof(ImageUrl));
+                    OnPropertyChanged(nameof(Description));
+                    OnPropertyChanged(nameof(OpenHours));
+                    OnPropertyChanged(nameof(PriceText));
+                    OnPropertyChanged(nameof(DistanceText));
+                    OnPropertyChanged(nameof(RatingText));
+                    OnPropertyChanged(nameof(ListenedCountText));
+                    OnPropertyChanged(nameof(AudioVoice));
+                    OnPropertyChanged(nameof(AudioDuration));
+                    OnPropertyChanged(nameof(ScriptText));
+                    OnPropertyChanged(nameof(CurrentTimeText));
+                    OnPropertyChanged(nameof(RemainingTimeText));
+                    OnPropertyChanged(nameof(IsFavorite));
+                    OnPropertyChanged(nameof(FavoriteIcon));
+                }
             }
         }
     }
@@ -56,7 +66,10 @@ public class DetailViewModel : BaseViewModel
     public string OpenHours => Poi?.OpenHours ?? string.Empty;
     public string PriceText => Poi?.PriceText ?? string.Empty;
     public string DistanceText => Poi?.DistanceText ?? string.Empty;
-    public string RatingText => "4.8";
+    public string RatingText => Poi != null ? (Poi.RatingAvg > 0 ? Poi.RatingAvg.ToString("0.0") : "0.0") : "0.0";
+
+    // Number of times the POI has been listened to (comes from POI.ListenedCount)
+    public string ListenedCountText => Poi?.ListenedCount.ToString() ?? "0";
 
     public string AudioVoice => "TTS";
     public string AudioDuration => Poi?.Audios.FirstOrDefault()?.DurationText ?? "--:--";
@@ -263,5 +276,18 @@ public class DetailViewModel : BaseViewModel
         var minutes = totalSeconds / 60;
         var seconds = totalSeconds % 60;
         return $"{minutes:00}:{seconds:00}";
+    }
+
+    void OnPoiChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(POI.ListenedCount))
+        {
+            OnPropertyChanged(nameof(ListenedCountText));
+        }
+
+        if (e.PropertyName == nameof(POI.RatingAvg))
+        {
+            OnPropertyChanged(nameof(RatingText));
+        }
     }
 }

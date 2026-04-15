@@ -2,7 +2,7 @@ BEGIN;
 
 INSERT INTO pois (
   id, name, category, categories, short_description, description, address,
-  open_time, close_time, price_text, latitude, longitude
+  open_time, close_time, price_text, listened_count, rating_avg, rating_count, latitude, longitude
 ) VALUES
 (
   '1',
@@ -15,6 +15,9 @@ INSERT INTO pois (
   '08:00',
   '17:00',
   'Miễn phí',
+  120,
+  4.8,
+  25,
   10.779783,
   106.699018
 ),
@@ -29,6 +32,9 @@ INSERT INTO pois (
   '07:00',
   '18:30',
   '60.000đ',
+  80,
+  4.3,
+  10,
   10.787088,
   106.705856
 ),
@@ -43,6 +49,9 @@ INSERT INTO pois (
   '06:00',
   '18:00',
   'Miễn phí',
+  200,
+  4.1,
+  40,
   10.772107,
   106.698278
 ),
@@ -59,6 +68,9 @@ INSERT INTO pois (
   '00:00',
   '23:59',
   'Miễn phí',
+  5,
+  3.5,
+  2,
   10.801500,
   106.687800
 ),
@@ -75,6 +87,9 @@ INSERT INTO pois (
   '00:00',
   '23:59',
   'Miễn phí',
+  2,
+  0,
+  0,
   10.800419842651404,
   106.68120426805898
 );
@@ -136,7 +151,7 @@ INSERT INTO audio_guides (
   'Bạn đã đến nhà hàng xóm.'
 );
 
-INSERT INTO profiles (
+INSERT INTO users (
   user_name, email, avatar_url, favorite_count, listened_poi_count
 ) VALUES (
   'User Demo',
