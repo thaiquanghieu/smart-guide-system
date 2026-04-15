@@ -149,13 +149,6 @@ public partial class DetailPage : ContentPage, IQueryAttributable
     protected override void OnAppearing()
     {
         base.OnAppearing();
-
-        var isAutoPlay = Preferences.Get("auto_play", false);
-
-        if (isAutoPlay && ViewModel.TogglePlayCommand.CanExecute(null))
-        {
-            ViewModel.TogglePlayCommand.Execute(null);
-        }
     }
 
     protected override void OnDisappearing()
@@ -177,7 +170,7 @@ public partial class DetailPage : ContentPage, IQueryAttributable
 
             if (poi != null)
             {
-                // TÍNH DISTANCE TẠI ĐÂY
+                // TÍNH KHOẢNG CÁCH
                 var user = await Geolocation.GetLastKnownLocationAsync();
 
                 if (user != null)
@@ -190,6 +183,14 @@ public partial class DetailPage : ContentPage, IQueryAttributable
                 }
 
                 ViewModel.Poi = poi;
+
+                // AUTO PLAY
+                var isAutoPlay = Preferences.Get("auto_play", false);
+
+                if (isAutoPlay && ViewModel.TogglePlayCommand.CanExecute(null))
+                {
+                    ViewModel.TogglePlayCommand.Execute(null);
+                }
             }
         }
         catch (Exception ex)
