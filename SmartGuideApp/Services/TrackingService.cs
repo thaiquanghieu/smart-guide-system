@@ -92,6 +92,14 @@ public class TrackingService
             await Task.Delay(800);
         }
 
+        if (batch.Count > 0)
+        {
+            await MainThread.InvokeOnMainThreadAsync(async () =>
+            {
+                await Shell.Current.GoToAsync("..");
+            });
+        }
+
         _isProcessing = false;
     }
 
