@@ -267,9 +267,7 @@
           IsVisible="False"
           BackgroundColor="#80000000">
 
-          <Grid.GestureRecognizers>
-                <TapGestureRecognizer Tapped="OnCloseSettingsClicked"/>
-            </Grid.GestureRecognizers>
+          <!-- removed overlay tap handler so popup only closes via the Close button -->
 
         <Frame VerticalOptions="End"
             CornerRadius="20"
@@ -348,6 +346,62 @@
                     FontSize="12"
                     TextColor="#9CA3AF"/>
 
+
+                <!-- ===== LANGUAGE SETTINGS ===== -->
+
+                <BoxView HeightRequest="1" BackgroundColor="#E5E7EB"/>
+
+                <VerticalStackLayout Spacing="10">
+
+                    <Label Text="Ngôn ngữ"
+                        FontSize="14"
+                        FontAttributes="Bold"/>
+
+                    <!-- APP LANG -->
+                    <Grid ColumnDefinitions="*,Auto">
+                        <Label Text="Ngôn ngữ ứng dụng"
+                            VerticalOptions="Center"/>
+
+                        <Picker Grid.Column="1"
+                                WidthRequest="160"
+                                ItemsSource="{Binding LanguageOptions}"
+                                ItemDisplayBinding="{Binding Name}"
+                                SelectedItem="{Binding SelectedAppLanguageItem}"
+                                HorizontalOptions="Center"
+                                VerticalOptions="Center" />
+
+                    </Grid>
+
+                    <!-- CUSTOM AUDIO -->
+                    <Grid ColumnDefinitions="*,Auto">
+                        <Label Text="Tùy chỉnh ngôn ngữ đọc"
+                            VerticalOptions="Center"/>
+
+                        <Switch Grid.Column="1"
+                                IsToggled="{Binding IsAudioCustom}"
+                                OnColor="#0F5BD7"
+                                ThumbColor="White"/>
+                    </Grid>
+
+                    <!-- AUDIO LANG -->
+                    <Grid ColumnDefinitions="*,Auto">
+                        <Label Text="Ngôn ngữ thuyết minh"
+                            VerticalOptions="Center"
+                            TextColor="{Binding IsAudioCustom, Converter={StaticResource BoolToColorConverter}}"/>
+
+                        <Picker Grid.Column="1"
+                                WidthRequest="160"
+                                ItemsSource="{Binding LanguageOptions}"
+                                ItemDisplayBinding="{Binding Name}"
+                                SelectedItem="{Binding SelectedAudioLanguageItem}"
+                                IsEnabled="{Binding IsAudioCustom}"
+                                HorizontalOptions="Center"
+                                VerticalOptions="Center" />
+
+                    </Grid>
+
+                </VerticalStackLayout>
+
         <Button Text="Đóng"
             Clicked="OnCloseSettingsClicked"
             BackgroundColor="#0F5BD7"
@@ -355,6 +409,8 @@
             CornerRadius="12" />
             </VerticalStackLayout>
         </Frame>
-     </Grid>
+
+        
+    </Grid>
 </Grid>
 </ContentPage>

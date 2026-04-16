@@ -1,4 +1,7 @@
+using System.Collections.ObjectModel;
+using System.Linq;
 using SmartGuideApp.Services;
+using Microsoft.Maui.Storage;
 
 namespace SmartGuideApp.ViewModels;
 
@@ -14,6 +17,81 @@ public class ProfileViewModel : BaseViewModel
     {
         InitTrackingConfig();
         _ = LoadProfile();
+        _ = LoadAvailableLanguagesAsync();
+    }
+
+    // language options (code + human-friendly name)
+    public ObservableCollection<LanguageItem> LanguageOptions { get; } = new();
+
+    // Selected item for App language picker
+    public LanguageItem? SelectedAppLanguageItem
+    {
+        get => LanguageOptions.FirstOrDefault(l => l.Code == AppLanguage) ?? LanguageOptions.FirstOrDefault();
+        set
+        {
+            if (value == null) return;
+            // update preference (this also triggers other bindings via AppLanguage setter)
+            AppLanguage = value.Code;
+            // ensure UI pickers update
+            OnPropertyChanged(nameof(SelectedAppLanguageItem));
+            OnPropertyChanged(nameof(SelectedAudioLanguageItem));
+        }
+    }
+
+    // Selected item for Audio language picker
+    public LanguageItem? SelectedAudioLanguageItem
+    {
+        get => LanguageOptions.FirstOrDefault(l => l.Code == AudioLanguage) ?? LanguageOptions.FirstOrDefault();
+        set
+        {
+            if (value == null) return;
+            AudioLanguage = value.Code;
+            OnPropertyChanged(nameof(SelectedAudioLanguageItem));
+        }
+    }
+
+    private async Task LoadAvailableLanguagesAsync()
+    {
+        try
+        {
+            var api = new ApiService();
+            var pois = await api.GetPoisAsync();
+
+            var langs = pois
+                .Where(p => p.Audios != null)
+                .SelectMany(p => p.Audios)
+                .Where(a => !string.IsNullOrWhiteSpace(a.LanguageCode))
+                .GroupBy(a => a.LanguageCode)
+                .Select(g => new LanguageItem { Code = g.Key, Name = g.First().LanguageName ?? g.Key })
+                .OrderBy(l => l.Name)
+                .ToList();
+
+            // fallback defaults if API returned nothing
+            if (langs.Count == 0)
+            {
+                langs = new List<LanguageItem>
+                {
+                    new LanguageItem{ Code = "vi", Name = "Tiếng Việt" },
+                    new LanguageItem{ Code = "en", Name = "English" },
+                    new LanguageItem{ Code = "ja", Name = "日本語" },
+                    new LanguageItem{ Code = "ko", Name = "한국어" },
+                    new LanguageItem{ Code = "zh", Name = "中文" }
+                };
+            }
+
+            // populate collection on UI thread
+            LanguageOptions.Clear();
+            foreach (var l in langs)
+                LanguageOptions.Add(l);
+
+            // ensure selected items reflect current preferences
+            OnPropertyChanged(nameof(SelectedAppLanguageItem));
+            OnPropertyChanged(nameof(SelectedAudioLanguageItem));
+        }
+        catch
+        {
+            // ignore and leave defaults
+        }
     }
 
     public async Task LoadProfile()
@@ -99,4 +177,65 @@ public class ProfileViewModel : BaseViewModel
     {
         await LoadProfile();
     }
+
+    // ===== LANGUAGE SETTINGS =====
+
+    // App language
+    public string AppLanguage
+    {
+        get => Preferences.Get("app_lang", "vi");
+        set
+        {
+            Preferences.Set("app_lang", value);
+
+            // nếu chưa custom audio → sync theo app
+            if (!IsAudioCustom)
+            {
+                Preferences.Set("audio_lang", value);
+                OnPropertyChanged(nameof(AudioLanguage));
+                // also update picker SelectedItem bindings
+                OnPropertyChanged(nameof(SelectedAudioLanguageItem));
+                OnPropertyChanged(nameof(SelectedAppLanguageItem));
+            }
+
+            OnPropertyChanged();
+            // ensure App picker reflects change
+            OnPropertyChanged(nameof(SelectedAppLanguageItem));
+        }
+    }
+
+    // Audio language
+    public string AudioLanguage
+    {
+        get => Preferences.Get("audio_lang", "vi");
+        set
+        {
+            Preferences.Set("audio_lang", value);
+            OnPropertyChanged();
+        }
+    }
+
+    // bật/tắt custom audio
+    public bool IsAudioCustom
+    {
+        get => Preferences.Get("audio_custom", false);
+        set
+        {
+            Preferences.Set("audio_custom", value);
+
+            if (!value)
+            {
+                // nếu tắt → sync lại theo app
+                AudioLanguage = AppLanguage;
+                // update picker selection to reflect new audio language
+                OnPropertyChanged(nameof(SelectedAudioLanguageItem));
+            }
+
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(IsAudioLocked));
+        }
+    }
+
+    // để disable UI
+    public bool IsAudioLocked => !IsAudioCustom;
 }
