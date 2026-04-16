@@ -3,7 +3,6 @@ namespace SmartGuideApp.Pages;
 public partial class PaymentPage : ContentPage
 {
     private readonly int _planId;
-    private readonly int _userId = 1;
     private string _paymentCode = "";
 
     public PaymentPage(int planId)
@@ -22,7 +21,15 @@ public partial class PaymentPage : ContentPage
         try
         {
             var client = new HttpClient();
-            var url = $"http://192.168.22.4:5022/api/payments/create?userId={_userId}&planId={_planId}";
+            var userId = Preferences.Get("user_id", 0);
+
+            if (userId == 0)
+            {
+                await DisplayAlert("Lỗi", "Bạn chưa đăng nhập.", "OK");
+                return;
+            }
+
+            var url = $"http://192.168.22.4:5022/api/payments/create?userId={userId}&planId={_planId}";
 
             var res = await client.PostAsync(url, null);
             var json = await res.Content.ReadAsStringAsync();
@@ -109,7 +116,15 @@ public partial class PaymentPage : ContentPage
         try
         {
             var client = new HttpClient();
-            var url = $"http://192.168.22.4:5022/api/payments/scan?code={_paymentCode}&userId={_userId}";
+            var userId = Preferences.Get("user_id", 0);
+
+            if (userId == 0)
+            {
+                await DisplayAlert("Lỗi", "Bạn chưa đăng nhập.", "OK");
+                return;
+            }
+
+            var url = $"http://192.168.22.4:5022/api/payments/scan?code={_paymentCode}&userId={userId}";
 
             var res = await client.PostAsync(url, null);
 

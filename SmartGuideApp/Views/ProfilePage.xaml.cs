@@ -1,6 +1,7 @@
 using Microsoft.Maui.Storage;
 using SmartGuideApp.ViewModels;
 using SmartGuideApp.Pages;
+using SmartGuideApp.Pages;
 
 namespace SmartGuideApp.Views;
 
@@ -206,4 +207,18 @@ public partial class ProfilePage : ContentPage
         await Navigation.PushAsync(new PaywallPage(true));
     }
 
+    private async void OnLogoutClicked(object sender, EventArgs e)
+    {
+        bool confirm = await DisplayAlert(
+            "Đăng xuất",
+            "Bạn có chắc muốn đăng xuất?",
+            "Đăng xuất",
+            "Hủy");
+
+        if (!confirm) return;
+
+        Preferences.Remove("user_id");
+
+        Application.Current!.MainPage = new NavigationPage(new LoginPage());
+    }
 }

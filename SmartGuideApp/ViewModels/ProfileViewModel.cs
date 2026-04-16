@@ -248,7 +248,17 @@ public class ProfileViewModel : BaseViewModel
         {
             var client = new HttpClient();
 
-            var json = await client.GetStringAsync("http://192.168.22.4:5022/api/payments/check?userId=1");
+            var userId = Preferences.Get("user_id", 0);
+
+            if (userId == 0)
+            {
+                DaysLeftText = "Chưa đăng nhập";
+                OnPropertyChanged(nameof(DaysLeftText));
+                return;
+            }
+
+            var json = await client.GetStringAsync(
+                $"http://192.168.22.4:5022/api/payments/check?userId={userId}");
 
             var result = System.Text.Json.JsonSerializer.Deserialize<CheckResponse>(json);
 

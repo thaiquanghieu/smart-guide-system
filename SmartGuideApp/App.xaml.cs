@@ -20,20 +20,6 @@ public partial class App : Application
         }
         catch { }
 
-        // loading tạm (tránh trắng màn)
-        MainPage = new ContentPage
-        {
-            Content = new VerticalStackLayout
-            {
-                VerticalOptions = LayoutOptions.Center,
-                HorizontalOptions = LayoutOptions.Center,
-                Children =
-                {
-                    new Label { Text = "Loading...", FontSize = 20 }
-                }
-            }
-        };
-
         _ = CheckAccess();
     }
 
@@ -42,38 +28,30 @@ public partial class App : Application
     // =========================
     private async Task CheckAccess()
     {
-        int userId = 1;
+        var userId = Preferences.Get("user_id", 0);
+
+        if (userId == 0)
+        {
+            MainPage = new NavigationPage(new LoginPage());
+            return;
+        }
 
         try
         {
             var client = new HttpClient();
-
-            var url = "http://192.168.22.4:5022/api/payments/check?userId=1";
-
-            var res = await client.GetAsync(url);
-
+            var res = await client.GetAsync($"http://192.168.22.4:5022/api/payments/check?userId={userId}");
             var json = await res.Content.ReadAsStringAsync();
-
-            System.Diagnostics.Debug.WriteLine($"JSON: {json}");
 
             var result = System.Text.Json.JsonSerializer.Deserialize<CheckResponse>(json);
 
-            MainThread.BeginInvokeOnMainThread(() =>
-            {
-                if (result != null && result.isActive)
-                    MainPage = new AppShell();
-                else
-                    MainPage = new NavigationPage(new PaywallPage(false));
-            });
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine(ex.Message);
-
-            MainThread.BeginInvokeOnMainThread(() =>
-            {
+            if (result != null && result.isActive)
+                MainPage = new AppShell();
+            else
                 MainPage = new NavigationPage(new PaywallPage(false));
-            });
+        }
+        catch
+        {
+            MainPage = new NavigationPage(new LoginPage());
         }
     }
 

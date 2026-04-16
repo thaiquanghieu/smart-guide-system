@@ -1,0 +1,77 @@
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="SmartGuideApp.Pages.LoginPage"
+             BackgroundColor="#041B2D"
+             NavigationPage.HasNavigationBar="False">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="30" Spacing="20">
+
+            <!-- LOGO -->
+            <Image Source="appiconfg.png"
+                   HeightRequest="200"
+                   HorizontalOptions="Center"/>
+
+            <!-- TITLE -->
+            <Label Text="Đăng nhập"
+                   FontSize="24"
+                   TextColor="White"
+                   HorizontalOptions="Center"/>
+
+            <!-- INPUT USER -->
+            <Frame BackgroundColor="White"
+                   CornerRadius="12"
+                   Padding="10">
+                <Entry x:Name="InputEntry"
+                       Placeholder="Email hoặc username"
+                       TextColor="#0F5BD7"/>
+            </Frame>
+
+            <!-- PASSWORD -->
+            <Frame BackgroundColor="White"
+                CornerRadius="12"
+                Padding="10">
+
+                <Grid ColumnDefinitions="*,40">
+
+                    <Entry x:Name="PasswordEntry"
+                        Placeholder="Mật khẩu"
+                        IsPassword="True"
+                        TextColor="#0F5BD7"/>
+
+                    <Image Grid.Column="1"
+                        x:Name="TogglePasswordIcon"
+                        Source="eye_close.png"
+                        WidthRequest="20"
+                        HeightRequest="20"
+                        VerticalOptions="Center"
+                        HorizontalOptions="Center">
+                        <Image.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="OnTogglePassword"/>
+                        </Image.GestureRecognizers>
+                    </Image>
+
+                </Grid>
+            </Frame>
+
+            <!-- BUTTON -->
+            <Button Text="Đăng nhập"
+                    BackgroundColor="#0F5BD7"
+                    TextColor="White"
+                    CornerRadius="12"
+                    HeightRequest="50"
+                    Clicked="OnLoginClicked"/>
+
+            <!-- GO REGISTER -->
+            <Label Text="Chưa có tài khoản? Đăng ký"
+                   TextColor="#0F5BD7"
+                   HorizontalOptions="Center">
+                <Label.GestureRecognizers>
+                    <TapGestureRecognizer Tapped="OnGoRegister"/>
+                </Label.GestureRecognizers>
+            </Label>
+
+        </VerticalStackLayout>
+    </ScrollView>
+
+</ContentPage>
