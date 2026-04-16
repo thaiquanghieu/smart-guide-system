@@ -19,8 +19,19 @@ public partial class App : Application
         }
         catch { }
 
-        MainPage = new NavigationPage(new LoginPage());
+        // Decide initial page immediately to avoid showing Login briefly when user is already signed in
+        var userId = Preferences.Get("user_id", 0);
+        if (userId == 0)
+        {
+            MainPage = new NavigationPage(new LoginPage());
+        }
+        else
+        {
+            // Assume user is signed in — show main shell immediately, then verify subscription in background
+            MainPage = new AppShell();
+        }
 
+        // Run subscription check in background (will replace MainPage with Paywall if needed)
         _ = CheckAccess();
     }
 
@@ -31,11 +42,9 @@ public partial class App : Application
     {
         var userId = Preferences.Get("user_id", 0);
 
+        // If not logged in, nothing to do here
         if (userId == 0)
-        {
-            MainPage = new NavigationPage(new LoginPage());
             return;
-        }
 
         try
         {
@@ -46,16 +55,21 @@ public partial class App : Application
             var result = System.Text.Json.JsonSerializer.Deserialize<CheckResponse>(json);
 
             if (result != null && result.isActive)
+            {
+                // already showing AppShell — nothing to change
+            }
+            else
+            {
+                // show paywall if subscription inactive
                 MainThread.BeginInvokeOnMainThread(() =>
                 {
-                    MainPage = new AppShell();
+                    MainPage = new NavigationPage(new PaywallPage(false));
                 });
-            else
-                MainPage = new NavigationPage(new PaywallPage(false));
+            }
         }
         catch
         {
-            MainPage = new NavigationPage(new LoginPage());
+            // network error: keep the current MainPage (don't force user back to Login)
         }
     }
 

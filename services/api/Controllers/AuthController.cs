@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SmartGuideAPI.Data;
 using SmartGuideAPI.Models;
+using Microsoft.AspNetCore.Identity;
 
 namespace SmartGuideAPI.Controllers;
 
@@ -15,6 +16,9 @@ public class AuthController : ControllerBase
     {
         _db = db;
     }
+
+    // Password hasher (can be replaced by DI if you prefer)
+    private readonly PasswordHasher<User> _hasher = new PasswordHasher<User>();
 
     // =========================
     // REGISTER
@@ -42,8 +46,10 @@ public class AuthController : ControllerBase
         {
             UserName = request.UserName,
             Email = request.Email,
-            PasswordHash = request.Password // demo → chưa hash
         };
+
+        // Hash the password before saving
+        user.PasswordHash = _hasher.HashPassword(user, request.Password);
 
         _db.Users.Add(user);
         await _db.SaveChangesAsync();
@@ -64,7 +70,8 @@ public class AuthController : ControllerBase
         if (user == null)
             return BadRequest("Sai tài khoản");
 
-        if (user.PasswordHash != request.Password)
+        var verify = _hasher.VerifyHashedPassword(user, user.PasswordHash, request.Password);
+        if (verify != PasswordVerificationResult.Success)
             return BadRequest("Sai mật khẩu");
 
         return Ok(new { userId = user.Id });
