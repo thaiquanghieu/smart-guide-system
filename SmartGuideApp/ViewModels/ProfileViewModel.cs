@@ -7,6 +7,7 @@ namespace SmartGuideApp.ViewModels;
 
 public class ProfileViewModel : BaseViewModel
 {
+    public string DaysLeftText { get; set; } = "Đang kiểm tra...";
     public string UserName { get; set; } = "";
     public string Email { get; set; } = "";
     public string AvatarUrl { get; set; } = "";
@@ -18,6 +19,8 @@ public class ProfileViewModel : BaseViewModel
         InitTrackingConfig();
         _ = LoadProfile();
         _ = LoadAvailableLanguagesAsync();
+
+        _ = LoadSubscription();
     }
 
     // language options (code + human-friendly name)
@@ -238,4 +241,48 @@ public class ProfileViewModel : BaseViewModel
 
     // để disable UI
     public bool IsAudioLocked => !IsAudioCustom;
+
+    private async Task LoadSubscription()
+    {
+        try
+        {
+            var client = new HttpClient();
+
+            var json = await client.GetStringAsync("http://192.168.22.4:5022/api/payments/check?userId=1");
+
+            var result = System.Text.Json.JsonSerializer.Deserialize<CheckResponse>(json);
+
+            if (result != null && result.isActive && result.expire != null)
+            {
+                var remaining = result.expire.Value - DateTime.UtcNow;
+
+                if (remaining.TotalSeconds <= 0)
+                {
+                    DaysLeftText = "Hết hạn";
+                }
+                else
+                {
+                    var daysLeft = (int)Math.Ceiling(remaining.TotalDays);
+                    DaysLeftText = $"Còn {daysLeft} ngày sử dụng";
+                }
+            }
+            else
+            {
+                DaysLeftText = "Hết hạn";
+            }
+
+            OnPropertyChanged(nameof(DaysLeftText));
+        }
+        catch
+        {
+            DaysLeftText = "Không tải được";
+            OnPropertyChanged(nameof(DaysLeftText));
+        }
+    }
+
+    class CheckResponse
+    {
+        public bool isActive { get; set; }
+        public DateTime? expire { get; set; }
+    }
 }

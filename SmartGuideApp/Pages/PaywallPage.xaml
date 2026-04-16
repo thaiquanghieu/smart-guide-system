@@ -1,0 +1,156 @@
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="SmartGuideApp.Pages.PaywallPage"
+             BackgroundColor="#041B2D"
+             NavigationPage.HasNavigationBar="False"
+             Shell.TabBarIsVisible="False">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="20,10,20,20" Spacing="14">
+
+            <!-- HEADER -->
+            <Grid ColumnDefinitions="Auto,*,Auto">
+
+                <!-- BACK -->
+                <Label x:Name="BackButton"
+                       Text="←"
+                       FontSize="26"
+                       TextColor="White"
+                       VerticalOptions="Center"
+                       IsVisible="False">
+                    <Label.GestureRecognizers>
+                        <TapGestureRecognizer Tapped="OnBackTapped"/>
+                    </Label.GestureRecognizers>
+                </Label>
+
+                <!-- TITLE (ẩn vì dùng logo) -->
+                <Label Grid.Column="1"
+                       Text=""
+                       HorizontalOptions="Center"/>
+
+                <BoxView Grid.Column="2" WidthRequest="24" Opacity="0"/>
+            </Grid>
+
+            <!-- LOGO -->
+            <Image Source="appiconfg.png"
+                   WidthRequest="220"
+                   HeightRequest="220"
+                   Aspect="AspectFit"
+                   HorizontalOptions="Center"
+                   Margin="0,-30,0,-30"/>
+
+            <!-- SUBTITLE -->
+            <Label Text="Vui lòng chọn gói phù hợp"
+                   FontSize="13"
+                   TextColor="#D4E3F7"
+                   HorizontalOptions="Center"
+                   HorizontalTextAlignment="Center"
+                   Margin="0,-6,0,8"/>
+
+            <!-- GÓI NGÀY -->
+            <Frame CornerRadius="22"
+                   Padding="18"
+                   BackgroundColor="#F4F9FF"
+                   BorderColor="#B9D8FF">
+                <Frame.GestureRecognizers>
+                    <TapGestureRecognizer Tapped="OnPlanClicked" CommandParameter="1"/>
+                </Frame.GestureRecognizers>
+
+                <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto">
+                    <Label Text="Gói Ngày" FontSize="18" FontAttributes="Bold"/>
+                    <Label Grid.Row="1" Text="1 ngày trải nghiệm thử" FontSize="13" TextColor="#6B7280"/>
+                    <Label Grid.Column="1" Text="29.000 đ" FontSize="18" FontAttributes="Bold" TextColor="#0F5BD7"/>
+                </Grid>
+            </Frame>
+
+            <!-- GÓI TUẦN -->
+            <Frame CornerRadius="22"
+                   Padding="18"
+                   BackgroundColor="#F4F9FF"
+                   BorderColor="#B9D8FF">
+                <Frame.GestureRecognizers>
+                    <TapGestureRecognizer Tapped="OnPlanClicked" CommandParameter="2"/>
+                </Frame.GestureRecognizers>
+
+                <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto">
+                    <Label Text="Gói Tuần" FontSize="18" FontAttributes="Bold"/>
+                    <Label Grid.Row="1" Text="7 ngày trải nghiệm đầy đủ" FontSize="13" TextColor="#6B7280"/>
+                    <Label Grid.Column="1" Text="99.000 đ" FontSize="18" FontAttributes="Bold" TextColor="#0F5BD7"/>
+                </Grid>
+            </Frame>
+
+            <!-- GÓI THÁNG -->
+            <Frame CornerRadius="22"
+                   Padding="18"
+                   BackgroundColor="#E9F2FF"
+                   BorderColor="#9CC2FF">
+                <Frame.GestureRecognizers>
+                    <TapGestureRecognizer Tapped="OnPlanClicked" CommandParameter="3"/>
+                </Frame.GestureRecognizers>
+
+                <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto">
+                    <Label Text="Gói Tháng" FontSize="18" FontAttributes="Bold"/>
+                    <Label Grid.Row="1" Text="30 ngày không giới hạn" FontSize="13" TextColor="#6B7280"/>
+                    <Label Grid.Column="1" Text="199.000 đ" FontSize="18" FontAttributes="Bold" TextColor="#0F5BD7"/>
+                </Grid>
+            </Frame>
+
+            <!-- GÓI NĂM -->
+            <Frame CornerRadius="22"
+                   Padding="18"
+                   BackgroundColor="#0F5BD7"
+                   BorderColor="#4C8FF1">
+                <Frame.GestureRecognizers>
+                    <TapGestureRecognizer Tapped="OnPlanClicked" CommandParameter="4"/>
+                </Frame.GestureRecognizers>
+
+                <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto">
+                    <Label Text="Gói Năm" FontSize="18" FontAttributes="Bold" TextColor="#EAF3FF"/>
+                    <Label Grid.Row="1" Text="365 ngày • Tiết kiệm hơn 40%" FontSize="13" TextColor="#D6E8FF"/>
+                    <Label Grid.Column="1" Text="999.000 đ" FontSize="18" FontAttributes="Bold" TextColor="White"/>
+                </Grid>
+            </Frame>
+
+            <!-- QR BUTTON -->
+            <VerticalStackLayout Spacing="10" Margin="0,8,0,0">
+
+                <Frame WidthRequest="84"
+                       HeightRequest="84"
+                       CornerRadius="42"
+                       BackgroundColor="#0F5BD7"
+                       HorizontalOptions="Center"
+                       HasShadow="True">
+
+                    <Frame.GestureRecognizers>
+                        <TapGestureRecognizer Tapped="OnScanClicked"/>
+                    </Frame.GestureRecognizers>
+
+                    <Image Source="qr.png"
+                           WidthRequest="34"
+                           HeightRequest="34"
+                           HorizontalOptions="Center"
+                           VerticalOptions="Center"/>
+                </Frame>
+
+                <Label Text="Quét QR để nhận ưu đãi"
+                       FontSize="14"
+                       FontAttributes="Bold"
+                       TextColor="White"
+                       HorizontalOptions="Center"/>
+
+                <Label Text="Xem hướng dẫn"
+                       FontSize="13"
+                       TextColor="#CFE3FF"
+                       TextDecorations="Underline"
+                       HorizontalOptions="Center">
+                    <Label.GestureRecognizers>
+                        <TapGestureRecognizer Tapped="OnShowGuideClicked"/>
+                    </Label.GestureRecognizers>
+                </Label>
+
+            </VerticalStackLayout>
+
+        </VerticalStackLayout>
+    </ScrollView>
+
+</ContentPage>

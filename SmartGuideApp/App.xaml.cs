@@ -1,4 +1,6 @@
 ﻿using Microsoft.Maui.Storage;
+using SmartGuideApp.Pages;
+using System.Net.Http;
 
 namespace SmartGuideApp;
 
@@ -8,8 +10,7 @@ public partial class App : Application
     {
         InitializeComponent();
 
-        // Ensure first-run defaults for preferences. If the user has never set
-        // "auto_play", enable it by default on fresh installs.
+        // default auto play
         try
         {
             if (!Preferences.ContainsKey("auto_play"))
@@ -17,16 +18,68 @@ public partial class App : Application
                 Preferences.Set("auto_play", true);
             }
         }
-        catch
-        {
-            // If Preferences API isn't available for some reason, swallow
-            // the exception to avoid crashing the app on startup.
-        }
+        catch { }
 
-        MainPage = new AppShell();
+        // loading tạm (tránh trắng màn)
+        MainPage = new ContentPage
+        {
+            Content = new VerticalStackLayout
+            {
+                VerticalOptions = LayoutOptions.Center,
+                HorizontalOptions = LayoutOptions.Center,
+                Children =
+                {
+                    new Label { Text = "Loading...", FontSize = 20 }
+                }
+            }
+        };
+
+        _ = CheckAccess();
     }
 
+    // =========================
+    // CHECK SUB
+    // =========================
+    private async Task CheckAccess()
+    {
+        int userId = 1;
 
+        try
+        {
+            var client = new HttpClient();
+
+            var url = "http://192.168.22.4:5022/api/payments/check?userId=1";
+
+            var res = await client.GetAsync(url);
+
+            var json = await res.Content.ReadAsStringAsync();
+
+            System.Diagnostics.Debug.WriteLine($"JSON: {json}");
+
+            var result = System.Text.Json.JsonSerializer.Deserialize<CheckResponse>(json);
+
+            MainThread.BeginInvokeOnMainThread(() =>
+            {
+                if (result != null && result.isActive)
+                    MainPage = new AppShell();
+                else
+                    MainPage = new NavigationPage(new PaywallPage(false));
+            });
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine(ex.Message);
+
+            MainThread.BeginInvokeOnMainThread(() =>
+            {
+                MainPage = new NavigationPage(new PaywallPage(false));
+            });
+        }
+    }
+
+    // =========================
+    // DEEP LINK (GIỮ NGUYÊN)
+    // =========================
     protected override async void OnAppLinkRequestReceived(Uri uri)
     {
         base.OnAppLinkRequestReceived(uri);
@@ -52,5 +105,9 @@ public partial class App : Application
         }
     }
 
-
+    class CheckResponse
+    {
+        public bool isActive { get; set; }
+        public DateTime? expire { get; set; }
+    }
 }

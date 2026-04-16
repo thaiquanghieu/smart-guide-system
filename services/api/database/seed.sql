@@ -76,13 +76,29 @@ INSERT INTO audio_guides (
 -- USER
 -- =========================
 INSERT INTO users (
-  user_name, email, avatar_url, favorite_count, listened_poi_count
+  user_name, email, avatar_url, 
+  favorite_count, listened_poi_count, password_hash
 ) VALUES (
   'User Demo',
   'demo@email.com',
   '/images/avatar.png',
   5,
-  10
+  10,
+  '123456' -- tạm demo (sau hash thật)
 );
+
+-- =========================
+-- SUBSCRIPTION (TEST)
+-- =========================
+INSERT INTO subscriptions (user_id, expire_at)
+VALUES (1, NOW() + INTERVAL '3 days');
+
+-- =========================
+-- PAYMENT TEST (QR)
+-- =========================
+INSERT INTO payments (user_id, plan_id, code)
+VALUES
+(1, 1, 'SGPAY_TEST1'),
+(1, 2, 'SGPAY_TEST2');
 
 COMMIT;

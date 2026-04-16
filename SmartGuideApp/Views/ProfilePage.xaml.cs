@@ -1,5 +1,6 @@
 using Microsoft.Maui.Storage;
 using SmartGuideApp.ViewModels;
+using SmartGuideApp.Pages;
 
 namespace SmartGuideApp.Views;
 
@@ -199,4 +200,10 @@ public partial class ProfilePage : ContentPage
             await vm.RefreshAsync();
         }
     }
+
+    private async void OnGoToPaywall(object sender, EventArgs e)
+    {
+        await Navigation.PushAsync(new PaywallPage(true));
+    }
+
 }

@@ -1,0 +1,112 @@
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="SmartGuideApp.Pages.PaymentPage"
+             BackgroundColor="#041B2D"
+             NavigationPage.HasNavigationBar="False"
+             Shell.TabBarIsVisible="False">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="20,20,20,20" Spacing="16">
+
+            <!-- HEADER -->
+            <Grid ColumnDefinitions="Auto,*,Auto">
+
+                <Label Text="←"
+                       FontSize="26"
+                       TextColor="White">
+                    <Label.GestureRecognizers>
+                        <TapGestureRecognizer Tapped="OnBackTapped"/>
+                    </Label.GestureRecognizers>
+                </Label>
+
+                <Label Grid.Column="1"
+                       Text="Thanh toán"
+                       FontSize="22"
+                       FontAttributes="Bold"
+                       TextColor="White"
+                       HorizontalOptions="Center"/>
+
+                <BoxView Grid.Column="2" WidthRequest="24" Opacity="0"/>
+            </Grid>
+
+            <!-- PLAN -->
+            <Frame x:Name="PlanCard"
+                   CornerRadius="20"
+                   Padding="16"
+                   BackgroundColor="#F4F9FF"
+                   BorderColor="#B9D8FF">
+
+                <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto">
+
+                    <Label x:Name="PlanNameLabel"
+                           FontSize="18"
+                           FontAttributes="Bold"/>
+
+                    <Label x:Name="PlanDaysLabel"
+                           Grid.Row="1"
+                           FontSize="12"
+                           TextColor="#6B7280"/>
+
+                    <Label x:Name="PlanPriceLabel"
+                           Grid.Column="1"
+                           FontSize="18"
+                           FontAttributes="Bold"
+                           TextColor="#0F5BD7"/>
+                </Grid>
+            </Frame>
+
+            <!-- QR -->
+            <Frame CornerRadius="16"
+                   Padding="16"
+                   BackgroundColor="White">
+
+                <VerticalStackLayout Spacing="10" HorizontalOptions="Center">
+
+                    <Image x:Name="QrImage"
+                           WidthRequest="220"
+                           HeightRequest="220"
+                           HorizontalOptions="Center"/>
+
+                    <Label x:Name="LoadingLabel"
+                           Text="Đang tạo mã..."
+                           FontSize="14"
+                           TextColor="#0B1320"
+                           HorizontalTextAlignment="Center"/>
+                </VerticalStackLayout>
+            </Frame>
+
+            <!-- INFO -->
+            <Label Text="Hoặc chuyển khoản thủ công"
+                   TextColor="#CFE3FF"
+                   HorizontalOptions="Center"/>
+
+            <Frame Padding="16"
+                   CornerRadius="16"
+                   BackgroundColor="#F4F9FF">
+
+                <VerticalStackLayout Spacing="8">
+
+                    <Label Text="Techcombank"/>
+                    <Label Text="4001012005"/>
+                    <Label Text="THAI QUANG HIEU"/>
+
+                    <Label Text="Nội dung:" FontAttributes="Bold"/>
+
+                    <Label x:Name="TransferContentLabel"
+                           FontAttributes="Bold"
+                           TextColor="#0F5BD7"/>
+                </VerticalStackLayout>
+            </Frame>
+
+            <!-- BUTTON -->
+            <Button Text="Tôi đã thanh toán"
+                    Clicked="OnConfirmPaidClicked"
+                    BackgroundColor="#0F5BD7"
+                    TextColor="White"
+                    CornerRadius="16"
+                    HeightRequest="50"/>
+
+        </VerticalStackLayout>
+    </ScrollView>
+
+</ContentPage>

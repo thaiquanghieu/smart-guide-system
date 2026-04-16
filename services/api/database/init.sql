@@ -61,6 +61,84 @@ CREATE TABLE ratings (
   UNIQUE (poi_id, user_id)
 );
 
+-- =========================
+-- USERS (ADD PASSWORD)
+-- =========================
+ALTER TABLE users
+ADD COLUMN IF NOT EXISTS password_hash TEXT;
+
+-- =========================
+-- PLANS
+-- =========================
+CREATE TABLE IF NOT EXISTS plans (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(50) UNIQUE,
+    days INT,
+    price INT,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- seed
+INSERT INTO plans (name, days, price) VALUES
+('Gói ngày', 1, 29000),
+('Gói tuần', 7, 99000),
+('Gói tháng', 30, 199000),
+('Gói năm', 365, 999000)
+ON CONFLICT DO NOTHING;
+
+-- =========================
+-- SUBSCRIPTIONS
+-- =========================
+CREATE TABLE IF NOT EXISTS subscriptions (
+    id SERIAL PRIMARY KEY,
+    user_id INT UNIQUE,
+    expire_at TIMESTAMP,
+    created_at TIMESTAMP DEFAULT NOW(),
+
+    CONSTRAINT fk_sub_user
+    FOREIGN KEY (user_id) REFERENCES users(id)
+    ON DELETE CASCADE
+);
+
+-- =========================
+-- PAYMENTS (QR)
+-- =========================
+CREATE TABLE IF NOT EXISTS payments (
+    id SERIAL PRIMARY KEY,
+
+    user_id INT,
+    plan_id INT,
+
+    code VARCHAR(100) UNIQUE,
+    is_used BOOLEAN DEFAULT FALSE,
+
+    created_at TIMESTAMP DEFAULT NOW(),
+    used_at TIMESTAMP,
+
+    CONSTRAINT fk_pay_user
+    FOREIGN KEY (user_id) REFERENCES users(id),
+
+    CONSTRAINT fk_pay_plan
+    FOREIGN KEY (plan_id) REFERENCES plans(id)
+);
+
+-- =========================
+-- QR LOGS
+-- =========================
+CREATE TABLE IF NOT EXISTS qr_logs (
+    id SERIAL PRIMARY KEY,
+
+    user_id INT,
+    code VARCHAR(100),
+
+    scanned_at TIMESTAMP DEFAULT NOW(),
+
+    CONSTRAINT fk_qr_user
+    FOREIGN KEY (user_id) REFERENCES users(id)
+);
+
 CREATE INDEX IF NOT EXISTS idx_pois_lat_lon ON pois (latitude, longitude);
+
+
 
 COMMIT;

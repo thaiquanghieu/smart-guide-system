@@ -14,15 +14,38 @@
 
             <!-- HEADER -->
             <Grid>
+                <!-- TITLE -->
                 <Label Text="Smart Guide"
-                       HorizontalOptions="Center"
-                       FontSize="22"
-                       FontAttributes="Bold"
-                       TextColor="#0F5BD7">
+                    HorizontalOptions="Center"
+                    FontSize="22"
+                    FontAttributes="Bold"
+                    TextColor="#0F5BD7">
                     <Label.Shadow>
                         <Shadow Brush="#00000022" Offset="0,2" Radius="6"/>
                     </Label.Shadow>
                 </Label>
+
+                <!-- NÚT GIA HẠN -->
+                <Frame HorizontalOptions="End"
+                    VerticalOptions="Center"
+                    Padding="12,5"
+                    CornerRadius="14"
+                    BackgroundColor="#0F5BD7"
+                    HasShadow="False"
+                    Margin="0,0,10,0">
+
+                    <Frame.GestureRecognizers>
+                        <TapGestureRecognizer Tapped="OnGoToPaywall"/>
+                    </Frame.GestureRecognizers>
+
+                    <Label Text="Gia hạn"
+                        FontSize="13"
+                        TextColor="White"
+                        FontAttributes="Bold"
+                        HorizontalOptions="Center"
+                        VerticalOptions="Center"/>
+                </Frame>
+
             </Grid>
 
             <!-- AVATAR -->
@@ -80,6 +103,15 @@
                        TextColor="#6B7280"
                        HorizontalTextAlignment="Center"
                        HorizontalOptions="Center"/>
+
+                <Label Text="{Binding DaysLeftText}"
+                        FontSize="15"
+                        FontAttributes="Bold"
+                        TextColor="#0F5BD7"
+                        BackgroundColor="#E8F0FF"
+                        Padding="6,2"
+                        HorizontalOptions="Center"
+                        HorizontalTextAlignment="Center"/>
             </VerticalStackLayout>
 
             <!-- STATS -->
