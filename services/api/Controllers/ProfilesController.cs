@@ -16,12 +16,11 @@ public class ProfilesController : ControllerBase
         _db = db;
     }
 
-    // Simple endpoint to return a single profile summary.
-    // For now we return the first profile row (this project doesn't have auth yet).
-    [HttpGet]
-    public async Task<IActionResult> GetProfile()
+    [HttpGet("{userId}")]
+    public async Task<IActionResult> GetProfile(int userId)
     {
-        var profile = await _db.Set<User>()
+        var user = await _db.Users
+            .Where(p => p.Id == userId)
             .Select(p => new
             {
                 UserName = p.UserName,
@@ -32,9 +31,9 @@ public class ProfilesController : ControllerBase
             })
             .FirstOrDefaultAsync();
 
-        if (profile == null)
+        if (user == null)
             return NotFound();
 
-        return Ok(profile);
+        return Ok(user);
     }
 }

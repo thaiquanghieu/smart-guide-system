@@ -37,7 +37,12 @@ public class ApiService
     {
         try
         {
-            return await _http.GetFromJsonAsync<ProfileSummary>("/api/profiles");
+            var userId = Preferences.Get("user_id", 0);
+
+            if (userId == 0) return null;
+
+            return await _http.GetFromJsonAsync<ProfileSummary>(
+                $"/api/profiles/{userId}");
         }
         catch
         {

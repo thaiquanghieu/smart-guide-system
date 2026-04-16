@@ -10,7 +10,6 @@ public partial class App : Application
     {
         InitializeComponent();
 
-        // default auto play
         try
         {
             if (!Preferences.ContainsKey("auto_play"))
@@ -19,6 +18,8 @@ public partial class App : Application
             }
         }
         catch { }
+
+        MainPage = new NavigationPage(new LoginPage());
 
         _ = CheckAccess();
     }
@@ -45,7 +46,10 @@ public partial class App : Application
             var result = System.Text.Json.JsonSerializer.Deserialize<CheckResponse>(json);
 
             if (result != null && result.isActive)
-                MainPage = new AppShell();
+                MainThread.BeginInvokeOnMainThread(() =>
+                {
+                    MainPage = new AppShell();
+                });
             else
                 MainPage = new NavigationPage(new PaywallPage(false));
         }

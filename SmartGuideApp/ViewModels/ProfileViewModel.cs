@@ -108,7 +108,7 @@ public class ProfileViewModel : BaseViewModel
 
             UserName = profile.UserName;
             Email = profile.Email;
-            AvatarUrl = $"http://192.168.22.4:5022{profile.AvatarUrl}";
+            AvatarUrl = string.IsNullOrWhiteSpace(profile.AvatarUrl) ? "user.png" : $"http://192.168.22.4:5022{profile.AvatarUrl}";
             FavoriteCount = profile.FavoriteCount;
             ListenedPoiCount = profile.ListenedPoiCount;
 
