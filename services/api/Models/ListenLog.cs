@@ -16,6 +16,9 @@ public class ListenLog
     [Column("poi_id")]
     public string PoiId { get; set; } = "";
 
+    [Column("duration_seconds")]
+    public int DurationSeconds { get; set; } = 0;
+
     [Column("listened_at")]
-    public DateTime ListenedAt { get; set; }
+    public DateTime ListenedAt { get; set; } = DateTime.UtcNow;
 }

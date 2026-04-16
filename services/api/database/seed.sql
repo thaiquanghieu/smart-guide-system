@@ -1,26 +1,34 @@
 BEGIN;
 
 -- =========================
--- USERS
+-- USERS (with roles)
 -- =========================
-INSERT INTO users (
-  user_name, email, password_hash, avatar_url, favorite_count, listened_poi_count
-) VALUES
-('hieu', 'hieu@gmail.com', '123456', '/images/avatar.png', 0, 0),
-('test', 'test@gmail.com', '123456', '/images/avatar2.png', 0, 0),
-('demo', 'demo@email.com', '123456', '/images/avatar.png', 0, 0)
+-- Users (for mobile app)
+INSERT INTO users (user_name, email, password_hash, avatar_url, role, is_active) 
+VALUES
+('hieu', 'hieu@gmail.com', '$2a$11$6VMh5XxzVvW.K5pyHjq2H.ZO6FoI5t8.C5SnUHqtCDjB2VzHlwOV.', '/images/avatar.png', 'user', true),
+('test', 'test@gmail.com', '$2a$11$6VMh5XxzVvW.K5pyHjq2H.ZO6FoI5t8.C5SnUHqtCDjB2VzHlwOV.', '/images/avatar2.png', 'user', true),
+('demo', 'demo@email.com', '$2a$11$6VMh5XxzVvW.K5pyHjq2H.ZO6FoI5t8.C5SnUHqtCDjB2VzHlwOV.', '/images/avatar.png', 'user', true),
+
+-- Owners (for seller web)
+('owner_1', 'owner1@example.com', '$2a$11$6VMh5XxzVvW.K5pyHjq2H.ZO6FoI5t8.C5SnUHqtCDjB2VzHlwOV.', '/images/owner-1.png', 'owner', true),
+('owner_2', 'owner2@example.com', '$2a$11$6VMh5XxzVvW.K5pyHjq2H.ZO6FoI5t8.C5SnUHqtCDjB2VzHlwOV.', '/images/owner-2.png', 'owner', true),
+
+-- Admin
+('admin', 'admin@smartguide.com', '123456', '/images/admin.png', 'admin', true)
 ON CONFLICT (email) DO NOTHING;
 
 -- =========================
--- POIS
+-- POIS (with owners and status)
 -- =========================
 INSERT INTO pois (
-  id, name, category, categories, short_description, description,
-  address, open_time, close_time, price_text,
+  id, owner_id, name, category, categories, short_description, description,
+  address, open_time, close_time, price_text, radius, priority, status,
   latitude, longitude, listened_count, rating_avg, rating_count
 ) VALUES
 (
   '1',
+  4,
   'Nhà thờ Đức Bà Sài Gòn',
   'Kiến trúc',
   '["Kiến trúc","Tôn giáo","Lịch sử"]'::jsonb,
@@ -30,14 +38,18 @@ INSERT INTO pois (
   '08:00',
   '17:00',
   'Miễn phí',
+  100,
+  10,
+  'approved',
   10.779783,
   106.699018,
-  0,
+  15,
   4.8,
   125
 ),
 (
   '2',
+  4,
   'Thảo Cầm Viên Sài Gòn',
   'Thiên nhiên',
   '["Thiên nhiên","Sở thú","Gia đình"]'::jsonb,
@@ -47,14 +59,18 @@ INSERT INTO pois (
   '07:00',
   '17:30',
   '60.000đ',
+  150,
+  5,
+  'approved',
   10.787071,
   106.705002,
-  0,
+  22,
   4.6,
   210
 ),
 (
   '3',
+  5,
   'Chợ Bến Thành',
   'Văn hóa',
   '["Văn hóa","Mua sắm","Ẩm thực"]'::jsonb,
@@ -64,14 +80,18 @@ INSERT INTO pois (
   '06:00',
   '18:00',
   'Miễn phí',
+  120,
+  8,
+  'approved',
   10.772518,
   106.698032,
-  0,
+  18,
   4.5,
   185
 ),
 (
   '4',
+  4,
   'Nhà của tôi',
   'Cá nhân',
   '["Cá nhân","Mốc vị trí"]'::jsonb,
@@ -81,6 +101,9 @@ INSERT INTO pois (
   '00:00',
   '23:59',
   'Miễn phí',
+  50,
+  1,
+  'pending',
   10.800402183790236,
   106.6812920379377,
   0,
@@ -89,6 +112,7 @@ INSERT INTO pois (
 ),
 (
   '5',
+  5,
   'Nhà hàng xóm',
   'Cá nhân',
   '["Cá nhân","Mốc vị trí"]'::jsonb,
@@ -98,6 +122,9 @@ INSERT INTO pois (
   '00:00',
   '23:59',
   'Miễn phí',
+  50,
+  2,
+  'rejected',
   10.800284637102754,
   106.68118732980707,
   0,

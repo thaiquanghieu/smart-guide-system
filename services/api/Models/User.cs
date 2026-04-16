@@ -27,4 +27,13 @@ public class User
 
     [Column("listened_poi_count")]
     public int ListenedPoiCount { get; set; }
+
+    [Column("role")]
+    public string Role { get; set; } = "user"; // "user", "owner", "admin"
+
+    [Column("is_active")]
+    public bool IsActive { get; set; } = true;
+
+    [Column("created_at")]
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }

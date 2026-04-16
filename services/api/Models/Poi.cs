@@ -10,11 +10,21 @@ public class Poi
     [Column("id")]
     public string Id { get; set; } = "";
 
+    [Column("owner_id")]
+    public int? OwnerId { get; set; }
+
     [Column("name")]
     public string Name { get; set; } = "";
 
     [Column("category")]
     public string Category { get; set; } = "";
+
+    [Column("categories")]
+    [System.Text.Json.Serialization.JsonIgnore]
+    public string CategoriesJson { get; set; } = "[]";
+
+    [Column("short_description")]
+    public string ShortDescription { get; set; } = "";
 
     [Column("description")]
     public string Description { get; set; } = "";
@@ -22,8 +32,23 @@ public class Poi
     [Column("address")]
     public string Address { get; set; } = "";
 
+    [Column("open_time")]
+    public string OpenTime { get; set; } = "";
+
+    [Column("close_time")]
+    public string CloseTime { get; set; } = "";
+
     [Column("price_text")]
     public string PriceText { get; set; } = "";
+
+    [Column("radius")]
+    public int Radius { get; set; } = 100;
+
+    [Column("priority")]
+    public int Priority { get; set; } = 0;
+
+    [Column("status")]
+    public string Status { get; set; } = "pending"; // "pending", "approved", "rejected"
 
     [Column("latitude")]
     public double Latitude { get; set; }
@@ -39,4 +64,10 @@ public class Poi
 
     [Column("rating_count")]
     public int RatingCount { get; set; }
+
+    [Column("created_at")]
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+    [Column("updated_at")]
+    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 }

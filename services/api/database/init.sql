@@ -26,6 +26,8 @@ CREATE TABLE users (
   avatar_url text,
   favorite_count integer DEFAULT 0,
   listened_poi_count integer DEFAULT 0,
+  role text DEFAULT 'user' CHECK (role IN ('user', 'owner', 'admin')),
+  is_active boolean DEFAULT true,
   created_at timestamp default now()
 );
 
@@ -34,6 +36,7 @@ CREATE TABLE users (
 -- =========================
 CREATE TABLE pois (
   id text PRIMARY KEY,
+  owner_id integer REFERENCES users(id) ON DELETE CASCADE,
   name text NOT NULL,
   category text,
   categories jsonb,
@@ -43,12 +46,16 @@ CREATE TABLE pois (
   open_time text,
   close_time text,
   price_text text,
+  radius integer DEFAULT 100,
+  priority integer DEFAULT 0,
+  status text DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
   listened_count integer DEFAULT 0,
   rating_avg double precision DEFAULT 0,
   rating_count integer DEFAULT 0,
   latitude double precision NOT NULL,
   longitude double precision NOT NULL,
-  created_at timestamp default now()
+  created_at timestamp default now(),
+  updated_at timestamp default now()
 );
 
 -- =========================
@@ -102,12 +109,13 @@ CREATE TABLE favorites (
 );
 
 -- =========================
--- LISTEN LOGS
+-- LISTEN LOGS (with duration tracking)
 -- =========================
 CREATE TABLE listen_logs (
   id serial PRIMARY KEY,
   user_id int NOT NULL,
   poi_id text NOT NULL,
+  duration_seconds integer DEFAULT 0,
   listened_at timestamp DEFAULT NOW(),
 
   CONSTRAINT fk_listen_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
