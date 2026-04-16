@@ -1,10 +1,61 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-             x:Class="SmartGuideApp.Pages.ScanPage">
+             x:Class="SmartGuideApp.Pages.ScanPage"
+             BackgroundColor="#041B2D"
+             NavigationPage.HasNavigationBar="False"
+             Shell.TabBarIsVisible="False">
 
-    <VerticalStackLayout VerticalOptions="Center" HorizontalOptions="Center">
-        <Label Text="Scan QR (coming soon)" />
-    </VerticalStackLayout>
+    <Grid>
+
+        <!-- BACK -->
+        <Image Source="back.png"
+               HeightRequest="24"
+               Margin="20,50,0,0"
+               HorizontalOptions="Start"
+               VerticalOptions="Start">
+            <Image.GestureRecognizers>
+                <TapGestureRecognizer Tapped="OnBackTapped"/>
+            </Image.GestureRecognizers>
+        </Image>
+
+        <!-- HEADER -->
+        <Label Text="Quét QR"
+               FontSize="22"
+               FontAttributes="Bold"
+               TextColor="White"
+               HorizontalOptions="Center"
+               Margin="0,50,0,0"/>
+
+        <!-- KHUNG SCAN -->
+        <Frame WidthRequest="250"
+               HeightRequest="250"
+               BorderColor="#0F5BD7"
+               BackgroundColor="Transparent"
+               CornerRadius="20"
+               HasShadow="False"
+               HorizontalOptions="Center"
+               VerticalOptions="Center"/>
+
+        <!-- FOOTER -->
+        <VerticalStackLayout VerticalOptions="End"
+                             Padding="20"
+                             Spacing="10">
+
+            <Label Text="Đưa mã QR vào khung để quét"
+                   HorizontalOptions="Center"
+                   TextColor="#CFE3FF"/>
+
+            <Label Text="Chọn ảnh từ thư viện"
+                   TextColor="#0F5BD7"
+                   HorizontalOptions="Center"
+                   TextDecorations="Underline">
+                <Label.GestureRecognizers>
+                    <TapGestureRecognizer Tapped="OnPickImageClicked"/>
+                </Label.GestureRecognizers>
+            </Label>
+
+        </VerticalStackLayout>
+
+    </Grid>
 
 </ContentPage>
-

@@ -51,6 +51,10 @@
 	</dict>
 	</array>
 
+	<key>NSCameraUsageDescription</key>
+	<string>Ứng dụng cần camera để quét mã QR</string>
 	
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Ứng dụng cần truy cập thư viện ảnh để quét mã QR</string>
 </dict>
 </plist>
