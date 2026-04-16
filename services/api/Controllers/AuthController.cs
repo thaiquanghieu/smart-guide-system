@@ -46,6 +46,7 @@ public class AuthController : ControllerBase
         {
             UserName = request.UserName,
             Email = request.Email,
+            PasswordHash = request.Password
         };
 
         // Hash the password before saving

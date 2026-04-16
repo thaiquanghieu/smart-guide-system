@@ -1,11 +1,37 @@
 BEGIN;
 
-DROP TABLE IF EXISTS poi_images;
-DROP TABLE IF EXISTS audio_guides;
-DROP TABLE IF EXISTS ratings;
-DROP TABLE IF EXISTS pois;
-DROP TABLE IF EXISTS users;
+-- =========================
+-- DROP OLD
+-- =========================
+DROP TABLE IF EXISTS listen_logs CASCADE;
+DROP TABLE IF EXISTS favorites CASCADE;
+DROP TABLE IF EXISTS qr_logs CASCADE;
+DROP TABLE IF EXISTS payments CASCADE;
+DROP TABLE IF EXISTS subscriptions CASCADE;
+DROP TABLE IF EXISTS plans CASCADE;
+DROP TABLE IF EXISTS ratings CASCADE;
+DROP TABLE IF EXISTS audio_guides CASCADE;
+DROP TABLE IF EXISTS poi_images CASCADE;
+DROP TABLE IF EXISTS pois CASCADE;
+DROP TABLE IF EXISTS users CASCADE;
 
+-- =========================
+-- USERS
+-- =========================
+CREATE TABLE users (
+  id serial PRIMARY KEY,
+  user_name text,
+  email text UNIQUE,
+  password_hash text,
+  avatar_url text,
+  favorite_count integer DEFAULT 0,
+  listened_poi_count integer DEFAULT 0,
+  created_at timestamp default now()
+);
+
+-- =========================
+-- POIS
+-- =========================
 CREATE TABLE pois (
   id text PRIMARY KEY,
   name text NOT NULL,
@@ -25,6 +51,9 @@ CREATE TABLE pois (
   created_at timestamp default now()
 );
 
+-- =========================
+-- POI IMAGES
+-- =========================
 CREATE TABLE poi_images (
   id serial PRIMARY KEY,
   poi_id text REFERENCES pois(id) ON DELETE CASCADE,
@@ -32,6 +61,9 @@ CREATE TABLE poi_images (
   sort_order integer DEFAULT 0
 );
 
+-- =========================
+-- AUDIO GUIDES
+-- =========================
 CREATE TABLE audio_guides (
   id text PRIMARY KEY,
   poi_id text REFERENCES pois(id) ON DELETE CASCADE,
@@ -42,16 +74,9 @@ CREATE TABLE audio_guides (
   created_at timestamp default now()
 );
 
-CREATE TABLE users (
-  id serial PRIMARY KEY,
-  user_name text,
-  email text UNIQUE,
-  avatar_url text,
-  favorite_count integer DEFAULT 0,
-  listened_poi_count integer DEFAULT 0,
-  created_at timestamp default now()
-);
-
+-- =========================
+-- RATINGS
+-- =========================
 CREATE TABLE ratings (
   id serial PRIMARY KEY,
   poi_id text REFERENCES pois(id) ON DELETE CASCADE,
@@ -62,15 +87,37 @@ CREATE TABLE ratings (
 );
 
 -- =========================
--- USERS (ADD PASSWORD)
+-- FAVORITES
 -- =========================
-ALTER TABLE users
-ADD COLUMN IF NOT EXISTS password_hash TEXT;
+CREATE TABLE favorites (
+  id serial PRIMARY KEY,
+  user_id int NOT NULL,
+  poi_id text NOT NULL,
+  created_at timestamp DEFAULT NOW(),
+
+  CONSTRAINT fk_fav_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  CONSTRAINT fk_fav_poi FOREIGN KEY (poi_id) REFERENCES pois(id) ON DELETE CASCADE,
+
+  UNIQUE(user_id, poi_id)
+);
+
+-- =========================
+-- LISTEN LOGS
+-- =========================
+CREATE TABLE listen_logs (
+  id serial PRIMARY KEY,
+  user_id int NOT NULL,
+  poi_id text NOT NULL,
+  listened_at timestamp DEFAULT NOW(),
+
+  CONSTRAINT fk_listen_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  CONSTRAINT fk_listen_poi FOREIGN KEY (poi_id) REFERENCES pois(id) ON DELETE CASCADE
+);
 
 -- =========================
 -- PLANS
 -- =========================
-CREATE TABLE IF NOT EXISTS plans (
+CREATE TABLE plans (
     id SERIAL PRIMARY KEY,
     name VARCHAR(50) UNIQUE,
     days INT,
@@ -78,7 +125,6 @@ CREATE TABLE IF NOT EXISTS plans (
     created_at TIMESTAMP DEFAULT NOW()
 );
 
--- seed
 INSERT INTO plans (name, days, price) VALUES
 ('Gói ngày', 1, 29000),
 ('Gói tuần', 7, 99000),
@@ -89,7 +135,7 @@ ON CONFLICT DO NOTHING;
 -- =========================
 -- SUBSCRIPTIONS
 -- =========================
-CREATE TABLE IF NOT EXISTS subscriptions (
+CREATE TABLE subscriptions (
     id SERIAL PRIMARY KEY,
     user_id INT UNIQUE,
     expire_at TIMESTAMP,
@@ -101,17 +147,14 @@ CREATE TABLE IF NOT EXISTS subscriptions (
 );
 
 -- =========================
--- PAYMENTS (QR)
+-- PAYMENTS
 -- =========================
-CREATE TABLE IF NOT EXISTS payments (
+CREATE TABLE payments (
     id SERIAL PRIMARY KEY,
-
     user_id INT,
     plan_id INT,
-
     code VARCHAR(100) UNIQUE,
     is_used BOOLEAN DEFAULT FALSE,
-
     created_at TIMESTAMP DEFAULT NOW(),
     used_at TIMESTAMP,
 
@@ -125,12 +168,10 @@ CREATE TABLE IF NOT EXISTS payments (
 -- =========================
 -- QR LOGS
 -- =========================
-CREATE TABLE IF NOT EXISTS qr_logs (
+CREATE TABLE qr_logs (
     id SERIAL PRIMARY KEY,
-
     user_id INT,
     code VARCHAR(100),
-
     scanned_at TIMESTAMP DEFAULT NOW(),
 
     CONSTRAINT fk_qr_user
@@ -138,7 +179,5 @@ CREATE TABLE IF NOT EXISTS qr_logs (
 );
 
 CREATE INDEX IF NOT EXISTS idx_pois_lat_lon ON pois (latitude, longitude);
-
-
 
 COMMIT;

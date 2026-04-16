@@ -279,6 +279,7 @@ public partial class HomePage : ContentPage
     {
         if (e.Parameter is POI poi)
         {
+            var oldValue = poi.IsFavorite;
             poi.IsFavorite = !poi.IsFavorite;
 
             try
@@ -286,7 +287,11 @@ public partial class HomePage : ContentPage
                 var api = new ApiService();
                 await api.ToggleFavoriteAsync(poi.Id, poi.IsFavorite);
             }
-            catch { }
+            catch
+            {
+                poi.IsFavorite = oldValue;
+                return;
+            }
 
             if (poi.IsFavorite)
             {

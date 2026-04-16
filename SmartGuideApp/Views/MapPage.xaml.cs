@@ -431,6 +431,28 @@ public partial class MapPage : ContentPage
         await AudioService.Instance.PlayAsync(ViewModel.SelectedPoi);
     }
 
+    private async void OnFavoriteTapped(object sender, TappedEventArgs e)
+    {
+        if (ViewModel.SelectedPoi == null)
+            return;
+
+        var poi = ViewModel.SelectedPoi;
+
+        var oldValue = poi.IsFavorite;
+        poi.IsFavorite = !poi.IsFavorite;
+
+        try
+        {
+            var api = new ApiService();
+            await api.ToggleFavoriteAsync(poi.Id, poi.IsFavorite);
+            await ViewModel.InitializeAsync();
+        }
+        catch
+        {
+            poi.IsFavorite = oldValue;
+        }
+    }
+
     private async void HandlePoiDetected(string poiId)
     {
         if (!_isMapReady)

@@ -198,14 +198,19 @@ public class HomeViewModel : BaseViewModel
 
     public async Task ToggleFavoriteAsync(POI poi)
     {
+        var oldValue = poi.IsFavorite;
         poi.IsFavorite = !poi.IsFavorite;
 
         try
         {
             var api = new ApiService();
             await api.ToggleFavoriteAsync(poi.Id, poi.IsFavorite);
+            await Reload();
         }
-        catch { }
+        catch
+        {
+            poi.IsFavorite = oldValue;
+        }
     }
 
     public async Task SetSort(string sortKey, bool asc)

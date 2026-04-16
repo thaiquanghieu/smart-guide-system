@@ -179,6 +179,7 @@ public class ProfileViewModel : BaseViewModel
     public async Task RefreshAsync()
     {
         await LoadProfile();
+        await LoadSubscription();
     }
 
     // ===== LANGUAGE SETTINGS =====
@@ -272,7 +273,10 @@ public class ProfileViewModel : BaseViewModel
                 }
                 else
                 {
-                    var daysLeft = (int)Math.Ceiling(remaining.TotalDays);
+                    var daysLeft = (int)Math.Floor(remaining.TotalDays);
+                    if (daysLeft <= 0)
+                        daysLeft = 1;
+
                     DaysLeftText = $"Còn {daysLeft} ngày sử dụng";
                 }
             }

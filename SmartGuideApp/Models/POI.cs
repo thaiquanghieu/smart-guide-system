@@ -49,6 +49,8 @@ public class POI : INotifyPropertyChanged
     public string PriceText { get; set; } = string.Empty;
 
     private bool _isFavorite;
+
+    [JsonPropertyName("is_favorite")]
     public bool IsFavorite
     {
         get => _isFavorite;

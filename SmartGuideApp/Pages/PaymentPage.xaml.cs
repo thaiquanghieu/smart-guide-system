@@ -34,6 +34,12 @@ public partial class PaymentPage : ContentPage
             var res = await client.PostAsync(url, null);
             var json = await res.Content.ReadAsStringAsync();
 
+            if (!res.IsSuccessStatusCode)
+            {
+                await DisplayAlert("Lỗi", json, "OK");
+                return;
+            }
+
             using var doc = System.Text.Json.JsonDocument.Parse(json);
 
             // ===== CODE =====
@@ -130,8 +136,20 @@ public partial class PaymentPage : ContentPage
 
             if (!res.IsSuccessStatusCode)
             {
-                var msg = await res.Content.ReadAsStringAsync();
-                await DisplayAlert("Lỗi", msg, "OK");
+                var json = await res.Content.ReadAsStringAsync();
+
+                try
+                {
+                    using var doc = System.Text.Json.JsonDocument.Parse(json);
+                    var message = doc.RootElement.GetProperty("message").GetString();
+
+                    await DisplayAlert("Lỗi", message, "OK");
+                }
+                catch
+                {
+                    await DisplayAlert("Lỗi", json, "OK");
+                }
+
                 return;
             }
 
@@ -153,4 +171,5 @@ public partial class PaymentPage : ContentPage
     {
         await Navigation.PopAsync();
     }
+
 }

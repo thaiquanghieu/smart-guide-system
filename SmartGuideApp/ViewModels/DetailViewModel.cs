@@ -177,14 +177,23 @@ public class DetailViewModel : BaseViewModel
         SeekCommand = new Command<double>(OnSeekRequested);
         ToggleFavoriteCommand = new Command(async () =>
         {
+            var oldValue = IsFavorite;
             IsFavorite = !IsFavorite;
 
             try
             {
                 var api = new ApiService();
                 await api.ToggleFavoriteAsync(Poi!.Id, IsFavorite);
+                var updated = await api.GetPoiByIdAsync(Poi.Id);
+                if (updated != null)
+                {
+                    Poi.IsFavorite = updated.IsFavorite;
+                }
             }
-            catch { }
+            catch
+            {
+                IsFavorite = oldValue;
+            }
         });
         PreviousImageCommand = new Command(GoPreviousImage);
         NextImageCommand = new Command(GoNextImage);

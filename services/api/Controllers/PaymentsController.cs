@@ -32,7 +32,7 @@ public class PaymentsController : ControllerBase
             PlanId = planId,
             Code = code,
             IsUsed = false,
-            CreatedAt = now
+            CreatedAt = DateTime.SpecifyKind(now, DateTimeKind.Utc)
         };
 
         _db.Payments.Add(payment);
@@ -65,18 +65,18 @@ public class PaymentsController : ControllerBase
             .FirstOrDefaultAsync(x => x.Code == code);
 
         if (payment == null)
-            return BadRequest("QR không tồn tại");
+            return BadRequest(new { message = "QR không tồn tại" });
 
         if (payment.IsUsed)
-            return BadRequest("QR đã dùng");
+            return BadRequest(new { message = "QR đã dùng" });
 
         if (payment.UserId != userId)
-            return BadRequest("QR không thuộc user");
+            return BadRequest(new { message = "QR không thuộc user" });
 
         var plan = await _db.Plans.FindAsync(payment.PlanId);
 
         if (plan == null)
-            return BadRequest("Plan không tồn tại");
+            return BadRequest(new { message = "Plan không tồn tại" });
 
         var sub = await _db.Subscriptions
             .FirstOrDefaultAsync(x => x.UserId == userId);
@@ -86,16 +86,16 @@ public class PaymentsController : ControllerBase
             sub = new Subscription
             {
                 UserId = userId,
-                ExpireAt = now.AddDays(plan.Days)
+                ExpireAt = DateTime.SpecifyKind(now.AddDays(plan.Days), DateTimeKind.Utc)
             };
             _db.Subscriptions.Add(sub);
         }
         else
         {
             if (sub.ExpireAt > now)
-                sub.ExpireAt = sub.ExpireAt.AddDays(plan.Days);
+                sub.ExpireAt = DateTime.SpecifyKind(sub.ExpireAt.AddDays(plan.Days), DateTimeKind.Utc);
             else
-                sub.ExpireAt = now.AddDays(plan.Days);
+                sub.ExpireAt = DateTime.SpecifyKind(now.AddDays(plan.Days), DateTimeKind.Utc);
         }
 
         payment.IsUsed = true;
