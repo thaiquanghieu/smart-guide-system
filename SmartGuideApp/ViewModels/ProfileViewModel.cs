@@ -108,7 +108,7 @@ public class ProfileViewModel : BaseViewModel
 
             UserName = profile.UserName;
             Email = profile.Email;
-            AvatarUrl = string.IsNullOrWhiteSpace(profile.AvatarUrl) ? "user.png" : $"http://192.168.22.4:5022{profile.AvatarUrl}";
+            AvatarUrl = string.IsNullOrWhiteSpace(profile.AvatarUrl) ? "user.png" : $"http://172.20.10.3:5022{profile.AvatarUrl}";
             FavoriteCount = profile.FavoriteCount;
             ListenedPoiCount = profile.ListenedPoiCount;
 
@@ -259,7 +259,7 @@ public class ProfileViewModel : BaseViewModel
             }
 
             var json = await client.GetStringAsync(
-                $"http://192.168.22.4:5022/api/payments/check?userId={userId}");
+                $"http://172.20.10.3:5022/api/payments/check?userId={userId}");
 
             var result = System.Text.Json.JsonSerializer.Deserialize<CheckResponse>(json);
 

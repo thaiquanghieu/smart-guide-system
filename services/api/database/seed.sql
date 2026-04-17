@@ -1,25 +1,22 @@
 BEGIN;
 
 -- =========================
--- USERS (with roles)
+-- USERS
 -- =========================
--- Users (for mobile app)
 INSERT INTO users (user_name, email, password_hash, avatar_url, role, is_active) 
 VALUES
 ('hieu', 'hieu@gmail.com', '$2a$11$6VMh5XxzVvW.K5pyHjq2H.ZO6FoI5t8.C5SnUHqtCDjB2VzHlwOV.', '/images/avatar.png', 'user', true),
 ('test', 'test@gmail.com', '$2a$11$6VMh5XxzVvW.K5pyHjq2H.ZO6FoI5t8.C5SnUHqtCDjB2VzHlwOV.', '/images/avatar2.png', 'user', true),
 ('demo', 'demo@email.com', '$2a$11$6VMh5XxzVvW.K5pyHjq2H.ZO6FoI5t8.C5SnUHqtCDjB2VzHlwOV.', '/images/avatar.png', 'user', true),
 
--- Owners (for seller web)
 ('owner_1', 'owner1@example.com', '$2a$11$6VMh5XxzVvW.K5pyHjq2H.ZO6FoI5t8.C5SnUHqtCDjB2VzHlwOV.', '/images/owner-1.png', 'owner', true),
 ('owner_2', 'owner2@example.com', '$2a$11$6VMh5XxzVvW.K5pyHjq2H.ZO6FoI5t8.C5SnUHqtCDjB2VzHlwOV.', '/images/owner-2.png', 'owner', true),
 
--- Admin
 ('admin', 'admin@smartguide.com', '123456', '/images/admin.png', 'admin', true)
 ON CONFLICT (email) DO NOTHING;
 
 -- =========================
--- POIS (with owners and status)
+-- POIS (5 POI ĐÚNG YÊU CẦU)
 -- =========================
 INSERT INTO pois (
   id, owner_id, name, category, categories, short_description, description,
@@ -27,269 +24,109 @@ INSERT INTO pois (
   latitude, longitude, listened_count, rating_avg, rating_count
 ) VALUES
 (
-  '1',
-  4,
+  '1',4,
   'Nhà thờ Đức Bà Sài Gòn',
   'Kiến trúc',
   '["Kiến trúc","Tôn giáo","Lịch sử"]'::jsonb,
-  'Công trình kiến trúc biểu tượng giữa trung tâm thành phố.',
-  'Nhà thờ Đức Bà Sài Gòn là một trong những công trình kiến trúc nổi bật nhất tại TP.HCM, mang phong cách Roman pha Gothic và gắn liền với lịch sử đô thị Sài Gòn.',
-  '01 Công xã Paris, Bến Nghé, Quận 1, TP.HCM',
-  '08:00',
-  '17:00',
-  'Miễn phí',
-  100,
-  10,
-  'approved',
-  10.779783,
-  106.699018,
-  15,
-  4.8,
-  125
+  'Biểu tượng kiến trúc Sài Gòn.',
+  'Nhà thờ Đức Bà là công trình nổi bật mang phong cách châu Âu giữa trung tâm thành phố.',
+  '01 Công xã Paris, Quận 1, TP.HCM',
+  '08:00','17:00','Miễn phí',
+  100,10,'approved',
+  10.779783,106.699018,15,4.8,125
 ),
 (
-  '2',
-  4,
+  '2',4,
   'Thảo Cầm Viên Sài Gòn',
   'Thiên nhiên',
-  '["Thiên nhiên","Sở thú","Gia đình"]'::jsonb,
-  'Một trong những sở thú lâu đời nhất Việt Nam.',
-  'Thảo Cầm Viên Sài Gòn là điểm tham quan quen thuộc với nhiều thế hệ, kết hợp giữa vườn thú, không gian xanh và hoạt động vui chơi phù hợp cho gia đình.',
-  '02 Nguyễn Bỉnh Khiêm, Bến Nghé, Quận 1, TP.HCM',
-  '07:00',
-  '17:30',
-  '60.000đ',
-  150,
-  5,
-  'approved',
-  10.787071,
-  106.705002,
-  22,
-  4.6,
-  210
+  '["Thiên nhiên","Sở thú"]'::jsonb,
+  'Sở thú lâu đời.',
+  'Thảo Cầm Viên là không gian xanh kết hợp vườn thú nổi tiếng tại TP.HCM.',
+  '02 Nguyễn Bỉnh Khiêm, Quận 1',
+  '07:00','17:30','60.000đ',
+  150,5,'approved',
+  10.787071,106.705002,22,4.6,210
 ),
 (
-  '3',
-  5,
+  '3',5,
   'Chợ Bến Thành',
   'Văn hóa',
-  '["Văn hóa","Mua sắm","Ẩm thực"]'::jsonb,
-  'Biểu tượng văn hóa lâu đời của Sài Gòn.',
-  'Chợ Bến Thành là khu chợ nổi tiếng bậc nhất TP.HCM, nơi du khách có thể khám phá văn hóa mua sắm, ẩm thực và nhịp sống sôi động của thành phố.',
-  'Lê Lợi, Phường Bến Thành, Quận 1, TP.HCM',
-  '06:00',
-  '18:00',
-  'Miễn phí',
-  120,
-  8,
-  'approved',
-  10.772518,
-  106.698032,
-  18,
-  4.5,
-  185
+  '["Văn hóa","Ẩm thực"]'::jsonb,
+  'Chợ nổi tiếng.',
+  'Chợ Bến Thành là điểm đến mua sắm và trải nghiệm văn hóa đặc trưng của Sài Gòn.',
+  'Lê Lợi, Quận 1',
+  '06:00','18:00','Miễn phí',
+  120,8,'approved',
+  10.772518,106.698032,18,4.5,185
 ),
 (
-  '4',
-  4,
-  'Nhà của tôi',
-  'Cá nhân',
-  '["Cá nhân","Mốc vị trí"]'::jsonb,
-  'Điểm đánh dấu vị trí nhà.',
-  'Đây là vị trí nhà của tôi dùng để demo tính năng nhận diện điểm đến và phát thuyết minh tự động.',
-  'Khu dân cư demo',
-  '00:00',
-  '23:59',
-  'Miễn phí',
-  50,
-  1,
-  'pending',
-  10.800402183790236,
-  106.6812920379377,
-  0,
-  5.0,
-  1
+  '4',4,
+  'Trường Đại học Sài Gòn - Cơ sở 1',
+  'Giáo dục',
+  '["Giáo dục","Đại học"]'::jsonb,
+  'Cơ sở chính SGU.',
+  'Nơi đào tạo sinh viên với môi trường học tập năng động và hiện đại.',
+  '105 Bà Huyện Thanh Quan, Phường Xuân Hòa, TP.HCM',
+  '07:00','18:00','Miễn phí',
+  120,6,'approved',
+  10.779408068913465,106.68448477006496,0,5,1
 ),
 (
-  '5',
-  5,
-  'Nhà hàng xóm',
-  'Cá nhân',
-  '["Cá nhân","Mốc vị trí"]'::jsonb,
-  'Điểm đánh dấu nhà hàng xóm.',
-  'Đây là vị trí nhà hàng xóm dùng để demo khoảng cách gần và cơ chế tracking tự động giữa các POI.',
-  'Khu dân cư demo',
-  '00:00',
-  '23:59',
-  'Miễn phí',
-  50,
-  2,
-  'rejected',
-  10.800284637102754,
-  106.68118732980707,
-  0,
-  4.9,
-  1
+  '5',5,
+  'Bệnh viện Mắt TP.HCM',
+  'Y tế',
+  '["Y tế","Bệnh viện"]'::jsonb,
+  'Bệnh viện chuyên khoa mắt.',
+  'Nơi khám và điều trị các bệnh về mắt với đội ngũ bác sĩ chuyên môn cao.',
+  '280 Điện Biên Phủ, Phường Xuân Hòa, TP.HCM',
+  '07:00','16:30','Theo dịch vụ',
+  120,7,'approved',
+  10.778903838810287,106.68495472988727,0,4.8,1
 )
 ON CONFLICT (id) DO NOTHING;
 
 -- =========================
--- POI IMAGES
--- =========================
-INSERT INTO poi_images (poi_id, image_url, sort_order) VALUES
-('1', '/images/pois/poi-1-1.jpg', 1),
-('1', '/images/pois/poi-1-2.jpg', 2),
-
-('2', '/images/pois/poi-2-1.jpg', 1),
-('2', '/images/pois/poi-2-2.jpg', 2),
-
-('3', '/images/pois/poi-3-1.jpg', 1),
-('3', '/images/pois/poi-3-2.jpg', 2),
-
-('4', '/images/pois/poi-4-1.jpg', 1),
-('5', '/images/pois/poi-5-1.jpg', 1)
-ON CONFLICT DO NOTHING;
-
--- =========================
--- AUDIO (VI / EN / JA / KO)
+-- AUDIO (THÊM zh + 2-3 câu)
 -- =========================
 INSERT INTO audio_guides (
   id, poi_id, language_code, language_name, voice_name, script_text
 ) VALUES
 
--- ===== POI 1: NOTRE DAME =====
-('1_vi','1','vi','Tiếng Việt','System','Nhà thờ Đức Bà Sài Gòn là công trình kiến trúc tiêu biểu của thành phố.'),
-('1_en','1','en','English','System','Notre Dame Cathedral of Saigon is a famous architectural landmark in Ho Chi Minh City.'),
-('1_ja','1','ja','日本語','System','サイゴンのノートルダム大聖堂は、ホーチミン市の有名な建築物です。'),
-('1_ko','1','ko','한국어','System','사이공 노트르담 대성당은 호치민시의 대표적인 건축물입니다.'),
+-- POI 1
+('1_vi','1','vi','Tiếng Việt','System','Nhà thờ Đức Bà là biểu tượng kiến trúc của Sài Gòn. Công trình mang phong cách châu Âu cổ kính. Đây là điểm check-in nổi tiếng của du khách.'),
+('1_en','1','en','English','System','Notre Dame Cathedral is an iconic landmark of Saigon. It features European architecture. It is a popular tourist attraction.'),
+('1_ja','1','ja','日本語','System','ノートルダム大聖堂はサイゴンの象徴です。ヨーロッパ風の建築です。観光客に人気があります。'),
+('1_ko','1','ko','한국어','System','노트르담 성당은 사이공의 상징입니다. 유럽식 건축입니다. 관광 명소입니다.'),
+('1_zh','1','zh','中文','System','圣母大教堂是西贡的标志性建筑。具有欧洲风格。是著名旅游景点。'),
 
--- ===== POI 2: ZOO =====
-('2_vi','2','vi','Tiếng Việt','System','Thảo Cầm Viên Sài Gòn là một trong những sở thú lâu đời nhất Việt Nam.'),
-('2_en','2','en','English','System','Saigon Zoo and Botanical Gardens is one of the oldest zoos in Vietnam.'),
-('2_ja','2','ja','日本語','System','サイゴン動植物園はベトナムで最も古い動物園の一つです。'),
-('2_ko','2','ko','한국어','System','사이공 동물원은 베트남에서 가장 오래된 동물원 중 하나입니다.'),
+-- POI 2
+('2_vi','2','vi','Tiếng Việt','System','Thảo Cầm Viên là sở thú lâu đời tại Việt Nam. Đây là nơi thư giãn xanh giữa thành phố. Phù hợp cho gia đình và trẻ em.'),
+('2_en','2','en','English','System','Saigon Zoo is one of the oldest in Vietnam. It offers a green space in the city. Suitable for families.'),
+('2_ja','2','ja','日本語','System','サイゴン動物園はベトナムで最も古いです。緑豊かな空間です。家族向けです。'),
+('2_ko','2','ko','한국어','System','사이공 동물원은 오래된 동물원입니다. 도심 속 녹지입니다. 가족에게 좋습니다.'),
+('2_zh','2','zh','中文','System','西贡动物园是越南最古老的动物园之一。这里是城市中的绿色空间。适合家庭游玩。'),
 
--- ===== POI 3: BEN THANH =====
-('3_vi','3','vi','Tiếng Việt','System','Chợ Bến Thành là biểu tượng văn hóa lâu đời của Sài Gòn.'),
-('3_en','3','en','English','System','Ben Thanh Market is a long-standing cultural symbol of Saigon.'),
-('3_ja','3','ja','日本語','System','ベンタイン市場はサイゴンの歴史ある文化的象徴です。'),
-('3_ko','3','ko','한국어','System','벤탄 시장은 사이공의 대표적인 문화 상징입니다.'),
+-- POI 3
+('3_vi','3','vi','Tiếng Việt','System','Chợ Bến Thành là biểu tượng văn hóa của Sài Gòn. Nơi đây có nhiều món ăn và hàng hóa. Rất đông du khách ghé thăm mỗi ngày.'),
+('3_en','3','en','English','System','Ben Thanh Market is a cultural symbol. It offers food and shopping. It is crowded with tourists.'),
+('3_ja','3','ja','日本語','System','ベンタイン市場は文化的象徴です。食べ物と買い物が楽しめます。観光客で賑わいます。'),
+('3_ko','3','ko','한국어','System','벤탄 시장은 문화 상징입니다. 음식과 쇼핑이 가능합니다. 관광객이 많습니다.'),
+('3_zh','3','zh','中文','System','滨城市场是文化象征。这里有美食和购物。每天都有很多游客。'),
 
--- ===== POI 4: HOME =====
-('4_vi','4','vi','Tiếng Việt','System','Bạn đã đến nhà của mình.'),
-('4_en','4','en','English','System','You have arrived at your home.'),
-('4_ja','4','ja','日本語','System','あなたの家に到着しました。'),
-('4_ko','4','ko','한국어','System','당신의 집에 도착했습니다.'),
+-- POI 4
+('4_vi','4','vi','Tiếng Việt','System','Đây là Trường Đại học Sài Gòn cơ sở 1. Nơi học tập của nhiều sinh viên. Môi trường năng động và hiện đại.'),
+('4_en','4','en','English','System','This is Saigon University campus 1. It is a place for students. It has a dynamic environment.'),
+('4_ja','4','ja','日本語','System','サイゴン大学第1キャンパスです。学生が学ぶ場所です。活気ある環境です。'),
+('4_ko','4','ko','한국어','System','사이공 대학교 1캠퍼스입니다. 학생들의 공간입니다. 활기찬 환경입니다.'),
+('4_zh','4','zh','中文','System','这是西贡大学第一校区。是学生学习的地方。环境充满活力。'),
 
--- ===== POI 5: NEIGHBOR =====
-('5_vi','5','vi','Tiếng Việt','System','Bạn đã đến nhà hàng xóm.'),
-('5_en','5','en','English','System','You have arrived at your neighbor''s house.'),
-('5_ja','5','ja','日本語','System','隣の家に到着しました。'),
-('5_ko','5','ko','한국어','System','이웃집에 도착했습니다.')
+-- POI 5
+('5_vi','5','vi','Tiếng Việt','System','Đây là Bệnh viện Mắt TP.HCM. Chuyên điều trị các bệnh về mắt. Có đội ngũ bác sĩ giỏi.'),
+('5_en','5','en','English','System','This is the Eye Hospital. It specializes in eye care. Doctors are experienced.'),
+('5_ja','5','ja','日本語','System','眼科病院です。目の治療を専門としています。医師は経験豊富です。'),
+('5_ko','5','ko','한국어','System','안과 병원입니다. 눈 치료 전문입니다. 의사가 숙련되어 있습니다.'),
+('5_zh','5','zh','中文','System','这是眼科医院。专门治疗眼科疾病。医生经验丰富。')
+
 ON CONFLICT (id) DO NOTHING;
-
--- =========================
--- FAVORITES
--- =========================
-INSERT INTO favorites (user_id, poi_id) VALUES
-(1, '1'),
-(1, '2'),
-(2, '3'),
-(3, '4')
-ON CONFLICT (user_id, poi_id) DO NOTHING;
-
--- =========================
--- LISTEN LOGS
--- =========================
-INSERT INTO listen_logs (user_id, poi_id) VALUES
-(1, '1'),
-(1, '2'),
-(1, '3'),
-(2, '2'),
-(2, '3'),
-(3, '4'),
-(3, '5');
-
--- =========================
--- RATINGS
--- =========================
-INSERT INTO ratings (poi_id, user_id, rating_value) VALUES
-('1', 1, 5),
-('2', 1, 4),
-('3', 2, 5)
-ON CONFLICT (poi_id, user_id) DO NOTHING;
-
--- =========================
--- SUBSCRIPTIONS
--- =========================
-INSERT INTO subscriptions (user_id, expire_at) VALUES
-(1, NOW() + INTERVAL '7 days'),
-(2, NOW() + INTERVAL '30 days'),
-(3, NOW() + INTERVAL '1 day')
-ON CONFLICT (user_id) DO NOTHING;
-
--- =========================
--- PAYMENTS
--- =========================
-INSERT INTO payments (user_id, plan_id, code, is_used, created_at, used_at) VALUES
-(1, 2, 'SGPAY_TEST_001', TRUE, NOW() - INTERVAL '1 day', NOW() - INTERVAL '1 day'),
-(2, 3, 'SGPAY_TEST_002', TRUE, NOW() - INTERVAL '2 days', NOW() - INTERVAL '2 days'),
-(3, 1, 'SGPAY_TEST_003', FALSE, NOW(), NULL)
-ON CONFLICT (code) DO NOTHING;
-
--- =========================
--- QR LOGS
--- =========================
-INSERT INTO qr_logs (user_id, code, scanned_at) VALUES
-(1, 'SGPAY_TEST_001', NOW() - INTERVAL '1 day'),
-(2, 'SGPAY_TEST_002', NOW() - INTERVAL '2 days')
-ON CONFLICT DO NOTHING;
-
--- =========================
--- SYNC COUNTS FROM LOG TABLES
--- =========================
-UPDATE users u
-SET favorite_count = sub.cnt
-FROM (
-  SELECT user_id, COUNT(*) AS cnt
-  FROM favorites
-  GROUP BY user_id
-) sub
-WHERE u.id = sub.user_id;
-
-UPDATE users
-SET favorite_count = 0
-WHERE id NOT IN (SELECT DISTINCT user_id FROM favorites);
-
-UPDATE users u
-SET listened_poi_count = sub.cnt
-FROM (
-  SELECT user_id, COUNT(*) AS cnt
-  FROM listen_logs
-  GROUP BY user_id
-) sub
-WHERE u.id = sub.user_id;
-
-UPDATE users
-SET listened_poi_count = 0
-WHERE id NOT IN (SELECT DISTINCT user_id FROM listen_logs);
-
-UPDATE pois p
-SET listened_count = sub.cnt
-FROM (
-  SELECT poi_id, COUNT(*) AS cnt
-  FROM listen_logs
-  GROUP BY poi_id
-) sub
-WHERE p.id = sub.poi_id;
-
-UPDATE pois
-SET listened_count = 0
-WHERE id NOT IN (SELECT DISTINCT poi_id FROM listen_logs);
-
--- =========================
--- FIX USER SEQUENCE
--- =========================
-SELECT setval('users_id_seq', COALESCE((SELECT MAX(id) FROM users), 1));
 
 COMMIT;

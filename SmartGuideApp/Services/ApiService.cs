@@ -5,10 +5,10 @@ using Microsoft.Maui.Storage;
 public class ApiService
 {
     private readonly HttpClient _httpClient;
-    private readonly string BaseUrl = "http://192.168.22.4:5022";
+    private readonly string BaseUrl = "http://172.20.10.3:5022";
     private readonly HttpClient _http = new HttpClient
     {
-        BaseAddress = new Uri("http://192.168.22.4:5022")
+        BaseAddress = new Uri("http://172.20.10.3:5022")
     };
 
     public ApiService()

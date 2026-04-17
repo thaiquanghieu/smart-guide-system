@@ -29,7 +29,7 @@ public partial class PaymentPage : ContentPage
                 return;
             }
 
-            var url = $"http://192.168.22.4:5022/api/payments/create?userId={userId}&planId={_planId}";
+            var url = $"http://172.20.10.3:5022/api/payments/create?userId={userId}&planId={_planId}";
 
             var res = await client.PostAsync(url, null);
             var json = await res.Content.ReadAsStringAsync();
@@ -130,7 +130,7 @@ public partial class PaymentPage : ContentPage
                 return;
             }
 
-            var url = $"http://192.168.22.4:5022/api/payments/scan?code={_paymentCode}&userId={userId}";
+            var url = $"http://172.20.10.3:5022/api/payments/scan?code={_paymentCode}&userId={userId}";
 
             var res = await client.PostAsync(url, null);
 

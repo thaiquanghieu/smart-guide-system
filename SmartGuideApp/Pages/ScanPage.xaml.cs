@@ -29,7 +29,7 @@ public partial class ScanPage : ContentPage
 
             var client = new HttpClient();
 
-            var url = $"http://192.168.22.4:5022/api/payments/scan?code={code}&userId={userId}";
+            var url = $"http://172.20.10.3:5022/api/payments/scan?code={code}&userId={userId}";
 
             var res = await client.PostAsync(url, null);
 

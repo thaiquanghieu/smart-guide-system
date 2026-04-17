@@ -49,7 +49,7 @@ public partial class App : Application
         try
         {
             var client = new HttpClient();
-            var res = await client.GetAsync($"http://192.168.22.4:5022/api/payments/check?userId={userId}");
+            var res = await client.GetAsync($"http://172.20.10.3:5022/api/payments/check?userId={userId}");
             var json = await res.Content.ReadAsStringAsync();
 
             var result = System.Text.Json.JsonSerializer.Deserialize<CheckResponse>(json);

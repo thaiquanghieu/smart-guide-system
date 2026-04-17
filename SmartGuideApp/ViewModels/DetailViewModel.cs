@@ -215,7 +215,7 @@ public class DetailViewModel : BaseViewModel
         {
             foreach (var image in Poi.Images)
             {
-                Images.Add($"http://192.168.22.4:5022{image}");
+                Images.Add($"http://172.20.10.3:5022{image}");
             }
         }
         else if (!string.IsNullOrWhiteSpace(Poi?.Thumbnail))

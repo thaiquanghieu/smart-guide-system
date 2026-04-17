@@ -65,7 +65,7 @@ public partial class RegisterPage : ContentPage
             });
 
             var res = await client.PostAsync(
-                "http://192.168.22.4:5022/api/auth/register",
+                "http://172.20.10.3:5022/api/auth/register",
                 new StringContent(json, Encoding.UTF8, "application/json")
             );
 

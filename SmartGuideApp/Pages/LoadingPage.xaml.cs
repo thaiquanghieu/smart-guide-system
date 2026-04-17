@@ -24,7 +24,7 @@ public partial class LoadingPage : ContentPage
         try
         {
             var client = new HttpClient();
-            var url = $"http://192.168.22.4:5022/api/payments/check?userId={userId}";
+            var url = $"http://172.20.10.3:5022/api/payments/check?userId={userId}";
 
             var res = await client.GetAsync(url);
             var json = await res.Content.ReadAsStringAsync();

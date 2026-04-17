@@ -109,6 +109,6 @@ public class POI : INotifyPropertyChanged
 
     public string Thumbnail =>
         Images != null && Images.Count > 0
-            ? $"http://192.168.22.4:5022{Images[0]}"
+            ? $"http://172.20.10.3:5022{Images[0]}"
             : string.Empty;
 }

@@ -33,7 +33,7 @@ public partial class LoginPage : ContentPage
             });
 
             var res = await client.PostAsync(
-                "http://192.168.22.4:5022/api/auth/login",
+                "http://172.20.10.3:5022/api/auth/login",
                 new StringContent(json, Encoding.UTF8, "application/json")
             );
 
@@ -56,7 +56,7 @@ public partial class LoginPage : ContentPage
             // =========================
 
             var checkRes = await client.GetAsync(
-                $"http://192.168.22.4:5022/api/payments/check?userId={userId}");
+                $"http://172.20.10.3:5022/api/payments/check?userId={userId}");
 
             var checkJson = await checkRes.Content.ReadAsStringAsync();
             var checkDoc = JsonDocument.Parse(checkJson);
