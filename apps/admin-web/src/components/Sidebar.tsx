@@ -9,7 +9,7 @@ export default function Sidebar() {
 
   const menuItems = [
     { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { href: '/users', label: 'Quản lý User', icon: Users },
+    { href: '/users', label: 'Quản lý tài khoản', icon: Users },
     { href: '/pois', label: 'Duyệt POI', icon: CheckCircle },
     { href: '/analytics', label: 'Thống kê', icon: BarChart3 },
   ]

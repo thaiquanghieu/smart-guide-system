@@ -17,11 +17,23 @@ public class AuthController : ControllerBase
         _db = db;
     }
 
-    // Password hasher (can be replaced by DI if you prefer)
     private readonly PasswordHasher<User> _hasher = new PasswordHasher<User>();
 
+    private bool VerifyPassword(User user, string password)
+    {
+        if (string.IsNullOrWhiteSpace(user.PasswordHash))
+            return false;
+
+        if (user.PasswordHash == password)
+            return true;
+
+        var verify = _hasher.VerifyHashedPassword(user, user.PasswordHash, password);
+        return verify == PasswordVerificationResult.Success ||
+               verify == PasswordVerificationResult.SuccessRehashNeeded;
+    }
+
     // =========================
-    // REGISTER (USER/OWNER)
+    // REGISTER OWNER
     // =========================
     [HttpPost("register")]
     public async Task<IActionResult> Register([FromBody] RegisterRequest request)
@@ -42,13 +54,11 @@ public class AuthController : ControllerBase
         if (await _db.Users.AnyAsync(x => x.UserName == request.UserName))
             return BadRequest(new { message = "Tên đã tồn tại" });
 
-        var role = request.Role == "owner" ? "owner" : "user";
-
         var user = new User
         {
             UserName = request.UserName,
             Email = request.Email,
-            Role = role,
+            Role = "owner",
             IsActive = true
         };
 
@@ -57,34 +67,37 @@ public class AuthController : ControllerBase
         _db.Users.Add(user);
         await _db.SaveChangesAsync();
 
-        return Ok(new { userId = user.Id, role = user.Role });
+        return Ok(new { userId = user.Id, role = "owner" });
     }
 
     // =========================
-    // LOGIN (USER/OWNER)
+    // OWNER LOGIN
     // =========================
     [HttpPost("login")]
     public async Task<IActionResult> Login([FromBody] LoginRequest request)
     {
         var user = await _db.Users.FirstOrDefaultAsync(x =>
             (x.Email == request.Input || x.UserName == request.Input) &&
-            (x.Role == "user" || x.Role == "owner"));
+            x.Role == "owner");
 
         if (user == null)
-            return BadRequest(new { message = "Sai tài khoản hoặc tài khoản không phải user/owner" });
+            return BadRequest(new { message = "Sai tài khoản hoặc tài khoản không phải owner" });
 
         if (!user.IsActive)
             return BadRequest(new { message = "Tài khoản đã bị vô hiệu hóa" });
 
-        var verify = _hasher.VerifyHashedPassword(user, user.PasswordHash, request.Password);
-        if (verify != PasswordVerificationResult.Success)
+        if (!VerifyPassword(user, request.Password))
             return BadRequest(new { message = "Sai mật khẩu" });
+
+        user.LastLoginAt = DateTime.UtcNow;
+        user.UpdatedAt = DateTime.UtcNow;
+        await _db.SaveChangesAsync();
 
         return Ok(new { userId = user.Id, role = user.Role });
     }
 
     // =========================
-    // ADMIN LOGIN (NO PASSWORD CHECK)
+    // ADMIN LOGIN
     // =========================
     [HttpPost("admin-login")]
     public async Task<IActionResult> AdminLogin([FromBody] LoginRequest request)
@@ -99,7 +112,13 @@ public class AuthController : ControllerBase
         if (!user.IsActive)
             return BadRequest(new { message = "Tài khoản đã bị vô hiệu hóa" });
 
-        // Admin login không cần check password
+        if (!VerifyPassword(user, request.Password))
+            return BadRequest(new { message = "Sai mật khẩu" });
+
+        user.LastLoginAt = DateTime.UtcNow;
+        user.UpdatedAt = DateTime.UtcNow;
+        await _db.SaveChangesAsync();
+
         return Ok(new { userId = user.Id, role = "admin" });
     }
 
@@ -132,7 +151,6 @@ public class RegisterRequest
     public string UserName { get; set; } = "";
     public string Email { get; set; } = "";
     public string Password { get; set; } = "";
-    public string Role { get; set; } = "user"; // "user" or "owner"
 }
 
 public class LoginRequest

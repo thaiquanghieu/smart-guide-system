@@ -5,14 +5,9 @@ BEGIN;
 -- =========================
 INSERT INTO users (user_name, email, password_hash, avatar_url, role, is_active) 
 VALUES
-('hieu', 'hieu@gmail.com', '$2a$11$6VMh5XxzVvW.K5pyHjq2H.ZO6FoI5t8.C5SnUHqtCDjB2VzHlwOV.', '/images/avatar.png', 'user', true),
-('test', 'test@gmail.com', '$2a$11$6VMh5XxzVvW.K5pyHjq2H.ZO6FoI5t8.C5SnUHqtCDjB2VzHlwOV.', '/images/avatar2.png', 'user', true),
-('demo', 'demo@email.com', '$2a$11$6VMh5XxzVvW.K5pyHjq2H.ZO6FoI5t8.C5SnUHqtCDjB2VzHlwOV.', '/images/avatar.png', 'user', true),
-
-('owner_1', 'owner1@example.com', '$2a$11$6VMh5XxzVvW.K5pyHjq2H.ZO6FoI5t8.C5SnUHqtCDjB2VzHlwOV.', '/images/owner-1.png', 'owner', true),
-('owner_2', 'owner2@example.com', '$2a$11$6VMh5XxzVvW.K5pyHjq2H.ZO6FoI5t8.C5SnUHqtCDjB2VzHlwOV.', '/images/owner-2.png', 'owner', true),
-
-('admin', 'admin@smartguide.com', '123456', '/images/admin.png', 'admin', true)
+('owner_1', 'owner1@example.com', 'owner123', '/images/owner-1.png', 'owner', true),
+('owner_2', 'owner2@example.com', 'owner123', '/images/owner-2.png', 'owner', true),
+('admin', 'admin@smartguide.com', 'admin123', '/images/admin.png', 'admin', true)
 ON CONFLICT (email) DO NOTHING;
 
 -- =========================
@@ -24,7 +19,7 @@ INSERT INTO pois (
   latitude, longitude, listened_count, rating_avg, rating_count
 ) VALUES
 (
-  '1',4,
+  '1',1,
   'Nhà thờ Đức Bà Sài Gòn',
   'Kiến trúc',
   '["Kiến trúc","Tôn giáo","Lịch sử"]'::jsonb,
@@ -36,7 +31,7 @@ INSERT INTO pois (
   10.779783,106.699018,15,4.8,125
 ),
 (
-  '2',4,
+  '2',1,
   'Thảo Cầm Viên Sài Gòn',
   'Thiên nhiên',
   '["Thiên nhiên","Sở thú"]'::jsonb,
@@ -48,7 +43,7 @@ INSERT INTO pois (
   10.787071,106.705002,22,4.6,210
 ),
 (
-  '3',5,
+  '3',2,
   'Chợ Bến Thành',
   'Văn hóa',
   '["Văn hóa","Ẩm thực"]'::jsonb,
@@ -60,7 +55,7 @@ INSERT INTO pois (
   10.772518,106.698032,18,4.5,185
 ),
 (
-  '4',4,
+  '4',1,
   'Trường Đại học Sài Gòn - Cơ sở 1',
   'Giáo dục',
   '["Giáo dục","Đại học"]'::jsonb,
@@ -72,7 +67,7 @@ INSERT INTO pois (
   10.779408068913465,106.68448477006496,0,5,1
 ),
 (
-  '5',5,
+  '5',2,
   'Bệnh viện Mắt TP.HCM',
   'Y tế',
   '["Y tế","Bệnh viện"]'::jsonb,
@@ -84,6 +79,25 @@ INSERT INTO pois (
   10.778903838810287,106.68495472988727,0,4.8,1
 )
 ON CONFLICT (id) DO NOTHING;
+
+-- =========================
+-- POI IMAGES
+-- =========================
+INSERT INTO poi_images (poi_id, image_url, sort_order) VALUES
+('1', '/images/pois/poi-1-1.jpg', 1),
+('1', '/images/pois/poi-1-2.jpg', 2),
+
+('2', '/images/pois/poi-2-1.jpg', 1),
+('2', '/images/pois/poi-2-2.jpg', 2),
+
+('3', '/images/pois/poi-3-1.jpg', 1),
+('3', '/images/pois/poi-3-2.jpg', 2),
+
+('4', 'https://commons.wikimedia.org/wiki/Special:FilePath/Saigon_University_campus_2_%2820230705_1527%29.jpg', 1),
+('4', 'https://commons.wikimedia.org/wiki/Special:FilePath/Saigon_University.JPG', 2),
+
+('5', 'https://commons.wikimedia.org/wiki/Special:FilePath/Benh_vien_Mat_saigon_-_panoramio.jpg', 1),
+('5', 'https://commons.wikimedia.org/wiki/Special:FilePath/Clinique_Saint-Paul_%C3%A0_Sa%C3%AFgon.jpg', 2);
 
 -- =========================
 -- AUDIO (THÊM zh + 2-3 câu)

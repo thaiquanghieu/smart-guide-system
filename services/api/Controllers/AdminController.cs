@@ -17,7 +17,7 @@ public class AdminController : ControllerBase
     }
 
     // =========================
-    // USER MANAGEMENT
+    // ACCOUNT MANAGEMENT
     // =========================
 
     [HttpGet("users")]
@@ -206,6 +206,7 @@ public class AdminController : ControllerBase
             return Forbid("Chỉ admin mới có quyền");
 
         var totalUsers = await _db.Users.CountAsync();
+        var totalAdmins = await _db.Users.Where(x => x.Role == "admin").CountAsync();
         var totalOwners = await _db.Users.Where(x => x.Role == "owner").CountAsync();
         var totalPois = await _db.Pois.CountAsync();
         var approvedPois = await _db.Pois.Where(x => x.Status == "approved").CountAsync();
@@ -235,7 +236,7 @@ public class AdminController : ControllerBase
 
         return Ok(new
         {
-            users = new { total = totalUsers, owners = totalOwners },
+            users = new { total = totalUsers, owners = totalOwners, admins = totalAdmins },
             pois = new { total = totalPois, approved = approvedPois, pending = pendingPois, rejected = rejectedPois },
             listens = new { total = totalListens, avg_duration_seconds = (int)avgDuration },
             top_pois = topPois,

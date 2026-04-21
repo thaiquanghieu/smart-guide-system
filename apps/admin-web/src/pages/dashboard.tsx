@@ -5,7 +5,7 @@ import apiClient from '@/lib/api'
 import { Users, MapPin, Volume2, TrendingUp } from 'lucide-react'
 
 interface DashboardStats {
-  users: { total: number; owners: number }
+  users: { total: number; owners: number; admins: number }
   pois: { total: number; approved: number; pending: number; rejected: number }
   listens: { total: number; avg_duration_seconds: number }
   top_pois: Array<{ id: string; name: string; listened_count: number }>
@@ -57,12 +57,15 @@ export default function Dashboard() {
                   <div className="bg-gradient-to-br from-secondary to-secondary/50 border border-blue-500/30 rounded-xl p-6 hover:border-blue-500/60 transition shadow-lg hover:shadow-blue-500/20">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-gray-400 text-sm font-medium mb-2">👥 Tổng Users</p>
+                        <p className="text-gray-400 text-sm font-medium mb-2">👥 Tổng tài khoản</p>
                         <p className="text-4xl font-bold text-white">
                           {stats.users.total}
                         </p>
                         <p className="text-sm text-blue-400 mt-2">
                           🏪 {stats.users.owners} chủ gian hàng
+                        </p>
+                        <p className="text-sm text-red-400 mt-1">
+                          🔐 {stats.users.admins} admin
                         </p>
                       </div>
                       <div className="text-5xl opacity-20">👥</div>

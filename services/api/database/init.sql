@@ -19,17 +19,19 @@ DROP TABLE IF EXISTS devices CASCADE;
 DROP TABLE IF EXISTS users CASCADE;
 
 -- =========================
--- USERS
+-- USERS (SYSTEM ACCOUNTS FOR OWNER/ADMIN)
 -- =========================
 CREATE TABLE users (
   id serial PRIMARY KEY,
-  user_name text,
-  email text UNIQUE,
-  password_hash text,
+  user_name text NOT NULL UNIQUE,
+  email text NOT NULL UNIQUE,
+  password_hash text NOT NULL,
   avatar_url text,
-  role text DEFAULT 'user' CHECK (role IN ('user', 'owner', 'admin')),
+  role text DEFAULT 'owner' CHECK (role IN ('owner', 'admin')),
   is_active boolean DEFAULT true,
-  created_at timestamptz DEFAULT now()
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now(),
+  last_login_at timestamptz
 );
 
 -- =========================

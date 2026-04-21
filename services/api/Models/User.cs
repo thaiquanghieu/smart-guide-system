@@ -23,11 +23,17 @@ public class User
     public string AvatarUrl { get; set; } = string.Empty;
 
     [Column("role")]
-    public string Role { get; set; } = "user"; // "user", "owner", "admin"
+    public string Role { get; set; } = "owner"; // "owner", "admin"
 
     [Column("is_active")]
     public bool IsActive { get; set; } = true;
 
     [Column("created_at")]
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+    [Column("updated_at")]
+    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+
+    [Column("last_login_at")]
+    public DateTime? LastLoginAt { get; set; }
 }

@@ -16,7 +16,7 @@ interface User {
 export default function Users() {
   const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
-  const [filter, setFilter] = useState<'all' | 'user' | 'owner'>('all')
+  const [filter, setFilter] = useState<'all' | 'admin' | 'owner'>('all')
 
   useEffect(() => {
     fetchUsers()
@@ -41,20 +41,20 @@ export default function Users() {
         prev.map((u) => (u.id === userId ? { ...u, isActive: !u.isActive } : u))
       )
     } catch (error) {
-      console.error('Failed to toggle user:', error)
+      console.error('Failed to toggle account:', error)
       alert('Cập nhật trạng thái thất bại')
     }
   }
 
   const handleDelete = async (userId: number) => {
-    if (!confirm('Xóa user này?')) return
+    if (!confirm('Xóa tài khoản này?')) return
 
     try {
       await apiClient.delete(`/admin/users/${userId}`)
       setUsers((prev) => prev.filter((u) => u.id !== userId))
     } catch (error) {
-      console.error('Failed to delete user:', error)
-      alert('Xóa user thất bại')
+      console.error('Failed to delete account:', error)
+      alert('Xóa tài khoản thất bại')
     }
   }
 
@@ -78,7 +78,7 @@ export default function Users() {
       case 'admin':
         return 'Quản trị viên'
       default:
-        return 'Người dùng'
+        return 'Tài khoản'
     }
   }
 
@@ -88,11 +88,11 @@ export default function Users() {
         <Sidebar />
         <main className="flex-1 p-8">
           <div className="max-w-7xl">
-            <h1 className="text-3xl font-bold text-white mb-6">Quản lý Người dùng</h1>
+            <h1 className="text-3xl font-bold text-white mb-6">Quản lý tài khoản</h1>
 
             {/* Filter */}
             <div className="flex gap-2 mb-6">
-              {(['all', 'user', 'owner'] as const).map((f) => (
+              {(['all', 'admin', 'owner'] as const).map((f) => (
                 <button
                   key={f}
                   onClick={() => setFilter(f)}
@@ -102,7 +102,7 @@ export default function Users() {
                       : 'bg-secondary text-gray-300 hover:text-white'
                   }`}
                 >
-                  {f === 'all' ? 'Tất cả' : f === 'user' ? 'User' : 'Chủ gian hàng'}
+                  {f === 'all' ? 'Tất cả' : f === 'admin' ? 'Admin' : 'Chủ gian hàng'}
                 </button>
               ))}
             </div>

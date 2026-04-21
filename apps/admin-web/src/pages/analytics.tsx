@@ -5,7 +5,7 @@ import apiClient from '@/lib/api'
 import { BarChart3, TrendingUp } from 'lucide-react'
 
 interface Analytics {
-  users: { total: number; owners: number }
+  users: { total: number; owners: number; admins: number }
   pois: { total: number; approved: number; pending: number; rejected: number }
   listens: { total: number; avg_duration_seconds: number }
   top_pois: Array<{ id: string; name: string; listened_count: number }>
@@ -55,12 +55,15 @@ export default function Analytics() {
                 {/* Key Metrics */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
                   <div className="bg-gradient-to-br from-secondary to-secondary/50 border border-blue-500/30 rounded-xl p-6 hover:border-blue-500/60 transition shadow-lg hover:shadow-blue-500/20">
-                    <p className="text-gray-400 text-sm font-medium mb-2">👥 Tổng Users</p>
+                    <p className="text-gray-400 text-sm font-medium mb-2">👥 Tổng tài khoản</p>
                     <p className="text-4xl font-bold text-white mb-2">
                       {analytics.users.total}
                     </p>
                     <p className="text-sm text-blue-400">
                       🏪 {analytics.users.owners} chủ gian hàng
+                    </p>
+                    <p className="text-sm text-red-400 mt-1">
+                      🔐 {analytics.users.admins} admin
                     </p>
                   </div>
 
