@@ -17,16 +17,16 @@ public class PoisController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetPois([FromQuery] int userId)
+    public async Task<IActionResult> GetPois([FromQuery] int deviceId)
     {
         var pois = await _db.Pois.ToListAsync();
         var poiImages = await _db.PoiImages.OrderBy(x => x.SortOrder).ToListAsync();
         var audioGuides = await _db.AudioGuides.ToListAsync();
 
-        var favoritePoiIds = userId == 0
+        var favoritePoiIds = deviceId == 0
             ? new HashSet<string>()
             : (await _db.Favorites
-                .Where(x => x.UserId == userId)
+                .Where(x => x.DeviceId == deviceId)
                 .Select(x => x.PoiId)
                 .ToListAsync())
             .ToHashSet();
@@ -69,7 +69,7 @@ public class PoisController : ControllerBase
     }
 
     [HttpGet("{id}")]
-    public async Task<IActionResult> GetById(string id, [FromQuery] int userId)
+    public async Task<IActionResult> GetById(string id, [FromQuery] int deviceId)
     {
         var poi = await _db.Pois.FirstOrDefaultAsync(x => x.Id == id);
         if (poi == null) return NotFound();
@@ -92,8 +92,8 @@ public class PoisController : ControllerBase
             })
             .ToListAsync();
 
-        var isFavorite = userId != 0 && await _db.Favorites
-            .AnyAsync(x => x.UserId == userId && x.PoiId == id);
+        var isFavorite = deviceId != 0 && await _db.Favorites
+            .AnyAsync(x => x.DeviceId == deviceId && x.PoiId == id);
 
         return Ok(new
         {
@@ -115,21 +115,21 @@ public class PoisController : ControllerBase
     }
 
     [HttpPost("favorite/{poiId}")]
-    public async Task<IActionResult> ToggleFavorite(string poiId, [FromQuery] int userId, [FromQuery] bool isFavorite)
+    public async Task<IActionResult> ToggleFavorite(string poiId, [FromQuery] int deviceId, [FromQuery] bool isFavorite)
     {
-        if (userId == 0)
-            return BadRequest("Thiếu userId");
+        if (deviceId == 0)
+            return BadRequest("Thiếu deviceId");
 
-        var user = await _db.Users.FindAsync(userId);
-        if (user == null)
-            return NotFound("Không tìm thấy user");
+        var device = await _db.Devices.FindAsync(deviceId);
+        if (device == null || !device.IsActive)
+            return NotFound("Không tìm thấy thiết bị");
 
         var poi = await _db.Pois.FindAsync(poiId);
         if (poi == null)
             return NotFound("Không tìm thấy POI");
 
         var existing = await _db.Favorites
-            .FirstOrDefaultAsync(x => x.UserId == userId && x.PoiId == poiId);
+            .FirstOrDefaultAsync(x => x.DeviceId == deviceId && x.PoiId == poiId);
 
         if (isFavorite)
         {
@@ -137,11 +137,9 @@ public class PoisController : ControllerBase
             {
                 _db.Favorites.Add(new Favorite
                 {
-                    UserId = userId,
+                    DeviceId = deviceId,
                     PoiId = poiId
                 });
-
-                user.FavoriteCount += 1;
             }
         }
         else
@@ -149,50 +147,50 @@ public class PoisController : ControllerBase
             if (existing != null)
             {
                 _db.Favorites.Remove(existing);
-
-                if (user.FavoriteCount > 0)
-                    user.FavoriteCount -= 1;
             }
         }
 
         await _db.SaveChangesAsync();
 
+        var favoriteCount = await _db.Favorites.CountAsync(x => x.DeviceId == deviceId);
+
         return Ok(new
         {
             poiId,
             is_favorite = isFavorite,
-            favorite_count = user.FavoriteCount
+            favorite_count = favoriteCount
         });
     }
 
     [HttpPost("listened/{poiId}")]
-    public async Task<IActionResult> IncreaseListened(string poiId, [FromQuery] int userId)
+    public async Task<IActionResult> IncreaseListened(string poiId, [FromQuery] int deviceId)
     {
-        if (userId == 0)
-            return BadRequest("Thiếu userId");
+        if (deviceId == 0)
+            return BadRequest("Thiếu deviceId");
 
         var poi = await _db.Pois.FirstOrDefaultAsync(p => p.Id == poiId);
         if (poi == null) return NotFound();
 
-        var user = await _db.Users.FindAsync(userId);
-        if (user == null) return NotFound("Không tìm thấy user");
+        var device = await _db.Devices.FindAsync(deviceId);
+        if (device == null || !device.IsActive) return NotFound("Không tìm thấy thiết bị");
 
         _db.ListenLogs.Add(new ListenLog
         {
-            UserId = userId,
+            DeviceId = deviceId,
             PoiId = poiId
         });
 
         poi.ListenedCount += 1;
-        user.ListenedPoiCount += 1;
 
         await _db.SaveChangesAsync();
+
+        var deviceListened = await _db.ListenLogs.CountAsync(x => x.DeviceId == deviceId);
 
         return Ok(new
         {
             poiId = poi.Id,
             listened_count = poi.ListenedCount,
-            user_listened = user.ListenedPoiCount
+            device_listened = deviceListened
         });
     }
 }

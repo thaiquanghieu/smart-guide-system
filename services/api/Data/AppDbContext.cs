@@ -9,6 +9,7 @@ public class AppDbContext : DbContext
 
     public DbSet<Poi> Pois => Set<Poi>();
     public DbSet<User> Users => Set<User>();
+    public DbSet<Device> Devices => Set<Device>();
     public DbSet<PoiImage> PoiImages => Set<PoiImage>();
     public DbSet<AudioGuide> AudioGuides => Set<AudioGuide>();
     public DbSet<Rating> Ratings => Set<Rating>();
@@ -25,6 +26,7 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<Poi>().ToTable("pois");
         modelBuilder.Entity<PoiImage>().ToTable("poi_images");
         modelBuilder.Entity<User>().ToTable("users");
+        modelBuilder.Entity<Device>().ToTable("devices");
         modelBuilder.Entity<AudioGuide>().ToTable("audio_guides");
         modelBuilder.Entity<Rating>().ToTable("ratings");
         modelBuilder.Entity<Plan>().ToTable("plans");
@@ -38,7 +40,7 @@ public class AppDbContext : DbContext
 
         // unique favorite (tránh trùng)
         modelBuilder.Entity<Favorite>()
-            .HasIndex(x => new { x.UserId, x.PoiId })
+            .HasIndex(x => new { x.DeviceId, x.PoiId })
             .IsUnique();
     }
 }

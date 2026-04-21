@@ -46,19 +46,25 @@ public partial class MapPage : ContentPage
 
     private async void OnLoaded(object? sender, EventArgs e)
     {
-        // If the map was already initialized in OnAppearing, skip Loaded handler
-        if (_isMapReady)
-            return;
-        await UpdateDistances();
-        _isMapReady = true;
+        try
+        {
+            if (_isMapReady)
+                return;
 
-        if (!string.IsNullOrWhiteSpace(_pendingPoiId))
-        {
-            await TryHandlePendingPoiAsync();
+            await UpdateDistances();
+            _isMapReady = true;
+
+            if (!string.IsNullOrWhiteSpace(_pendingPoiId))
+            {
+                await TryHandlePendingPoiAsync();
+            }
+            else
+            {
+                await FocusUserLocation();
+            }
         }
-        else
+        catch
         {
-            await FocusUserLocation();
         }
     }
 
@@ -80,23 +86,29 @@ public partial class MapPage : ContentPage
 
     private async Task UpdateDistances()
     {
-        var user = await Geolocation.GetLastKnownLocationAsync();
-        if (user == null) return;
-
-        foreach (var poi in ViewModel.Pois)
+        try
         {
-            poi.DistanceKm = Location.CalculateDistance(
-                user,
-                new Location(poi.Latitude, poi.Longitude),
-                DistanceUnits.Kilometers
-            );
+            var user = await Geolocation.GetLastKnownLocationAsync();
+            if (user == null) return;
+
+            foreach (var poi in ViewModel.Pois)
+            {
+                poi.DistanceKm = Location.CalculateDistance(
+                    user,
+                    new Location(poi.Latitude, poi.Longitude),
+                    DistanceUnits.Kilometers
+                );
+            }
+
+            if (ViewModel.SelectedPoi != null)
+            {
+                var selected = ViewModel.SelectedPoi;
+                ViewModel.SelectedPoi = null;
+                ViewModel.SelectedPoi = selected;
+            }
         }
-
-        if (ViewModel.SelectedPoi != null)
+        catch
         {
-            var selected = ViewModel.SelectedPoi;
-            ViewModel.SelectedPoi = null;
-            ViewModel.SelectedPoi = selected;
         }
     }
 
@@ -244,27 +256,41 @@ public partial class MapPage : ContentPage
 
     private async void OnMyLocationClicked(object sender, EventArgs e)
     {
-        var location = await Geolocation.GetLastKnownLocationAsync();
-
-        if (location != null)
+        try
         {
-            MainMap.MoveToRegion(MapSpan.FromCenterAndRadius(
-                new Location(location.Latitude, location.Longitude),
-                Distance.FromMeters(500)
-            ));
+            var location = await Geolocation.GetLastKnownLocationAsync();
+
+            if (location != null)
+            {
+                MainMap.IsShowingUser = true;
+                MainMap.MoveToRegion(MapSpan.FromCenterAndRadius(
+                    new Location(location.Latitude, location.Longitude),
+                    Distance.FromMeters(500)
+                ));
+            }
+        }
+        catch
+        {
         }
     }
 
     private async Task FocusUserLocation()
     {
-        var location = await Geolocation.GetLastKnownLocationAsync();
-
-        if (location != null)
+        try
         {
-            MainMap.MoveToRegion(MapSpan.FromCenterAndRadius(
-                new Location(location.Latitude, location.Longitude),
-                Distance.FromMeters(800)
-            ));
+            var location = await Geolocation.GetLastKnownLocationAsync();
+
+            if (location != null)
+            {
+                MainMap.IsShowingUser = true;
+                MainMap.MoveToRegion(MapSpan.FromCenterAndRadius(
+                    new Location(location.Latitude, location.Longitude),
+                    Distance.FromMeters(800)
+                ));
+            }
+        }
+        catch
+        {
         }
     }
 

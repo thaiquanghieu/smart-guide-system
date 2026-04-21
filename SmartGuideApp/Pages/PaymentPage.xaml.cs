@@ -20,37 +20,29 @@ public partial class PaymentPage : ContentPage
     {
         try
         {
-            var client = new HttpClient();
-            var userId = Preferences.Get("user_id", 0);
+            var api = new ApiService();
+            var device = await api.EnsureDeviceReadyAsync();
 
-            if (userId == 0)
+            if (!device.ok)
             {
-                await DisplayAlert("Lỗi", "Bạn chưa đăng nhập.", "OK");
+                await DisplayAlert("Lỗi", device.message, "OK");
                 return;
             }
 
-            var url = $"http://172.20.10.3:5022/api/payments/create?userId={userId}&planId={_planId}";
-
-            var res = await client.PostAsync(url, null);
-            var json = await res.Content.ReadAsStringAsync();
-
-            if (!res.IsSuccessStatusCode)
+            var (payment, message) = await api.CreatePaymentAsync(_planId);
+            if (payment == null || string.IsNullOrWhiteSpace(payment.Code))
             {
-                await DisplayAlert("Lỗi", json, "OK");
+                await DisplayAlert("Lỗi", message, "OK");
                 return;
             }
-
-            using var doc = System.Text.Json.JsonDocument.Parse(json);
 
             // ===== CODE =====
-            _paymentCode = doc.RootElement.GetProperty("code").GetString()!;
+            _paymentCode = payment.Code;
 
             // ===== PLAN (TỪ DB) =====
-            var plan = doc.RootElement.GetProperty("plan");
-
-            var name = plan.GetProperty("name").GetString();
-            var days = plan.GetProperty("days").GetInt32();
-            var price = plan.GetProperty("price").GetInt32();
+            var name = payment.Plan.Name;
+            var days = payment.Plan.Days;
+            var price = payment.Plan.Price;
 
             // ===== UI =====
             PlanNameLabel.Text = name;
@@ -121,38 +113,23 @@ public partial class PaymentPage : ContentPage
 
         try
         {
-            var client = new HttpClient();
-            var userId = Preferences.Get("user_id", 0);
+            var api = new ApiService();
+            var device = await api.EnsureDeviceReadyAsync();
 
-            if (userId == 0)
+            if (!device.ok)
             {
-                await DisplayAlert("Lỗi", "Bạn chưa đăng nhập.", "OK");
+                await DisplayAlert("Lỗi", device.message, "OK");
                 return;
             }
 
-            var url = $"http://172.20.10.3:5022/api/payments/scan?code={_paymentCode}&userId={userId}";
-
-            var res = await client.PostAsync(url, null);
-
-            if (!res.IsSuccessStatusCode)
+            var result = await api.ScanPaymentAsync(_paymentCode);
+            if (!result.ok)
             {
-                var json = await res.Content.ReadAsStringAsync();
-
-                try
-                {
-                    using var doc = System.Text.Json.JsonDocument.Parse(json);
-                    var message = doc.RootElement.GetProperty("message").GetString();
-
-                    await DisplayAlert("Lỗi", message, "OK");
-                }
-                catch
-                {
-                    await DisplayAlert("Lỗi", json, "OK");
-                }
-
+                await DisplayAlert("Lỗi", result.message, "OK");
                 return;
             }
 
+            Preferences.Set("subscription_active", true);
             await DisplayAlert("Thành công", "Gói của bạn đã được kích hoạt.", "OK");
 
             // 👉 vào app

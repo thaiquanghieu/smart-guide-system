@@ -92,13 +92,13 @@
 
             <!-- NAME -->
             <VerticalStackLayout Spacing="4">
-                <Label Text="{Binding UserName}"
+                <Label Text="{Binding DeviceName}"
                        FontSize="24"
                        FontAttributes="Bold"
                        HorizontalTextAlignment="Center"
                        HorizontalOptions="Center"/>
 
-                <Label Text="{Binding Email}"
+                <Label Text="{Binding DeviceDetails}"
                        FontSize="14"
                        TextColor="#6B7280"
                        HorizontalTextAlignment="Center"
@@ -258,7 +258,7 @@
                 </VerticalStackLayout>
             </Frame>
 
-            <!-- LOGOUT -->
+            <!-- RESET DEVICE -->
             <Frame CornerRadius="20" BackgroundColor="White" Padding="16">
                 <Frame.GestureRecognizers>
                     <TapGestureRecognizer Tapped="OnLogoutClicked"/>
@@ -275,7 +275,7 @@
                     </Frame>
 
                     <Label Grid.Column="1"
-                        Text="Đăng xuất"
+                        Text="Đăng ký lại thiết bị"
                         TextColor="#EF4444"
                         VerticalOptions="Center"/>
                 </Grid>

@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization;
+using SmartGuideApp.Config;
 using SmartGuideApp.Models;
 
 namespace SmartGuideApp.Models;
@@ -109,6 +110,6 @@ public class POI : INotifyPropertyChanged
 
     public string Thumbnail =>
         Images != null && Images.Count > 0
-            ? $"http://172.20.10.3:5022{Images[0]}"
+            ? AppEndpoints.BuildApiUrl(Images[0])
             : string.Empty;
 }

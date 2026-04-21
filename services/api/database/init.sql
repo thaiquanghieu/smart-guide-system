@@ -1,5 +1,7 @@
 BEGIN;
 
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+
 -- =========================
 -- DROP OLD
 -- =========================
@@ -13,6 +15,7 @@ DROP TABLE IF EXISTS ratings CASCADE;
 DROP TABLE IF EXISTS audio_guides CASCADE;
 DROP TABLE IF EXISTS poi_images CASCADE;
 DROP TABLE IF EXISTS pois CASCADE;
+DROP TABLE IF EXISTS devices CASCADE;
 DROP TABLE IF EXISTS users CASCADE;
 
 -- =========================
@@ -24,11 +27,29 @@ CREATE TABLE users (
   email text UNIQUE,
   password_hash text,
   avatar_url text,
-  favorite_count integer DEFAULT 0,
-  listened_poi_count integer DEFAULT 0,
   role text DEFAULT 'user' CHECK (role IN ('user', 'owner', 'admin')),
   is_active boolean DEFAULT true,
-  created_at timestamp default now()
+  created_at timestamptz DEFAULT now()
+);
+
+-- =========================
+-- DEVICES
+-- =========================
+CREATE TABLE devices (
+  id serial PRIMARY KEY,
+  device_uuid uuid NOT NULL UNIQUE DEFAULT gen_random_uuid(),
+  token_hash text,
+  token_issued_at timestamptz,
+  name text,
+  platform text,
+  model text,
+  app_version text,
+  is_active boolean DEFAULT true,
+  last_seen timestamptz,
+  registered_at timestamptz DEFAULT now(),
+  metadata jsonb DEFAULT '{}'::jsonb,
+  push_token text,
+  qr_code text UNIQUE
 );
 
 -- =========================
@@ -54,8 +75,8 @@ CREATE TABLE pois (
   rating_count integer DEFAULT 0,
   latitude double precision NOT NULL,
   longitude double precision NOT NULL,
-  created_at timestamp default now(),
-  updated_at timestamp default now()
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
 );
 
 -- =========================
@@ -78,7 +99,7 @@ CREATE TABLE audio_guides (
   language_name text,
   voice_name text,
   script_text text,
-  created_at timestamp default now()
+  created_at timestamptz DEFAULT now()
 );
 
 -- =========================
@@ -87,10 +108,10 @@ CREATE TABLE audio_guides (
 CREATE TABLE ratings (
   id serial PRIMARY KEY,
   poi_id text REFERENCES pois(id) ON DELETE CASCADE,
-  user_id integer REFERENCES users(id) ON DELETE CASCADE,
+  device_id integer REFERENCES devices(id) ON DELETE CASCADE,
   rating_value smallint NOT NULL,
-  created_at timestamp default now(),
-  UNIQUE (poi_id, user_id)
+  created_at timestamptz DEFAULT now(),
+  UNIQUE (poi_id, device_id)
 );
 
 -- =========================
@@ -98,14 +119,14 @@ CREATE TABLE ratings (
 -- =========================
 CREATE TABLE favorites (
   id serial PRIMARY KEY,
-  user_id int NOT NULL,
+  device_id int NOT NULL,
   poi_id text NOT NULL,
-  created_at timestamp DEFAULT NOW(),
+  created_at timestamptz DEFAULT NOW(),
 
-  CONSTRAINT fk_fav_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  CONSTRAINT fk_fav_device FOREIGN KEY (device_id) REFERENCES devices(id) ON DELETE CASCADE,
   CONSTRAINT fk_fav_poi FOREIGN KEY (poi_id) REFERENCES pois(id) ON DELETE CASCADE,
 
-  UNIQUE(user_id, poi_id)
+  UNIQUE(device_id, poi_id)
 );
 
 -- =========================
@@ -113,12 +134,12 @@ CREATE TABLE favorites (
 -- =========================
 CREATE TABLE listen_logs (
   id serial PRIMARY KEY,
-  user_id int NOT NULL,
+  device_id int NOT NULL,
   poi_id text NOT NULL,
   duration_seconds integer DEFAULT 0,
-  listened_at timestamp DEFAULT NOW(),
+  listened_at timestamptz DEFAULT NOW(),
 
-  CONSTRAINT fk_listen_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  CONSTRAINT fk_listen_device FOREIGN KEY (device_id) REFERENCES devices(id) ON DELETE CASCADE,
   CONSTRAINT fk_listen_poi FOREIGN KEY (poi_id) REFERENCES pois(id) ON DELETE CASCADE
 );
 
@@ -130,7 +151,7 @@ CREATE TABLE plans (
     name VARCHAR(50) UNIQUE,
     days INT,
     price INT,
-    created_at TIMESTAMP DEFAULT NOW()
+    created_at timestamptz DEFAULT NOW()
 );
 
 INSERT INTO plans (name, days, price) VALUES
@@ -145,12 +166,12 @@ ON CONFLICT DO NOTHING;
 -- =========================
 CREATE TABLE subscriptions (
     id SERIAL PRIMARY KEY,
-    user_id INT UNIQUE,
-    expire_at TIMESTAMP,
-    created_at TIMESTAMP DEFAULT NOW(),
+    device_id INT UNIQUE,
+    expire_at timestamptz,
+    created_at timestamptz DEFAULT NOW(),
 
-    CONSTRAINT fk_sub_user
-    FOREIGN KEY (user_id) REFERENCES users(id)
+    CONSTRAINT fk_sub_device
+    FOREIGN KEY (device_id) REFERENCES devices(id)
     ON DELETE CASCADE
 );
 
@@ -159,15 +180,15 @@ CREATE TABLE subscriptions (
 -- =========================
 CREATE TABLE payments (
     id SERIAL PRIMARY KEY,
-    user_id INT,
-    plan_id INT,
+    device_id INT NOT NULL,
+    plan_id INT NOT NULL,
     code VARCHAR(100) UNIQUE,
     is_used BOOLEAN DEFAULT FALSE,
-    created_at TIMESTAMP DEFAULT NOW(),
-    used_at TIMESTAMP,
+    created_at timestamptz DEFAULT NOW(),
+    used_at timestamptz,
 
-    CONSTRAINT fk_pay_user
-    FOREIGN KEY (user_id) REFERENCES users(id),
+    CONSTRAINT fk_pay_device
+    FOREIGN KEY (device_id) REFERENCES devices(id) ON DELETE CASCADE,
 
     CONSTRAINT fk_pay_plan
     FOREIGN KEY (plan_id) REFERENCES plans(id)
@@ -178,14 +199,22 @@ CREATE TABLE payments (
 -- =========================
 CREATE TABLE qr_logs (
     id SERIAL PRIMARY KEY,
-    user_id INT,
+    device_id INT NOT NULL,
     code VARCHAR(100),
-    scanned_at TIMESTAMP DEFAULT NOW(),
+    scanned_at timestamptz DEFAULT NOW(),
 
-    CONSTRAINT fk_qr_user
-    FOREIGN KEY (user_id) REFERENCES users(id)
+    CONSTRAINT fk_qr_device
+    FOREIGN KEY (device_id) REFERENCES devices(id) ON DELETE CASCADE
 );
 
 CREATE INDEX IF NOT EXISTS idx_pois_lat_lon ON pois (latitude, longitude);
+CREATE INDEX IF NOT EXISTS idx_devices_last_seen ON devices (last_seen);
+CREATE INDEX IF NOT EXISTS idx_devices_is_active ON devices (is_active);
+CREATE INDEX IF NOT EXISTS idx_devices_uuid ON devices (device_uuid);
+CREATE INDEX IF NOT EXISTS idx_subscriptions_expire_at ON subscriptions (expire_at);
+CREATE INDEX IF NOT EXISTS idx_payments_device_id ON payments (device_id);
+CREATE INDEX IF NOT EXISTS idx_qr_logs_device_id ON qr_logs (device_id);
+CREATE INDEX IF NOT EXISTS idx_favorites_device_id ON favorites (device_id);
+CREATE INDEX IF NOT EXISTS idx_listen_logs_device_id ON listen_logs (device_id);
 
 COMMIT;

@@ -22,12 +22,6 @@ public class User
     [Column("avatar_url")]
     public string AvatarUrl { get; set; } = string.Empty;
 
-    [Column("favorite_count")]
-    public int FavoriteCount { get; set; }
-
-    [Column("listened_poi_count")]
-    public int ListenedPoiCount { get; set; }
-
     [Column("role")]
     public string Role { get; set; } = "user"; // "user", "owner", "admin"
 

@@ -92,19 +92,25 @@ public class HomeViewModel : BaseViewModel
         }
 
         // 📍 UPDATE DISTANCE
-        var location = await Geolocation.GetLocationAsync()
-            ?? await Geolocation.GetLastKnownLocationAsync();
-
-        if (location != null)
+        try
         {
-            foreach (var poi in _allPois)
+            var location = await Geolocation.GetLocationAsync()
+                ?? await Geolocation.GetLastKnownLocationAsync();
+
+            if (location != null)
             {
-                poi.DistanceKm = Location.CalculateDistance(
-                    location,
-                    new Location(poi.Latitude, poi.Longitude),
-                    DistanceUnits.Kilometers
-                );
+                foreach (var poi in _allPois)
+                {
+                    poi.DistanceKm = Location.CalculateDistance(
+                        location,
+                        new Location(poi.Latitude, poi.Longitude),
+                        DistanceUnits.Kilometers
+                    );
+                }
             }
+        }
+        catch
+        {
         }
 
         // 🎯 FILTER

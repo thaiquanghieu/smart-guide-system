@@ -16,24 +16,26 @@ public class ProfilesController : ControllerBase
         _db = db;
     }
 
-    [HttpGet("{userId}")]
-    public async Task<IActionResult> GetProfile(int userId)
+    [HttpGet("{deviceId}")]
+    public async Task<IActionResult> GetProfile(int deviceId)
     {
-        var user = await _db.Users
-            .Where(p => p.Id == userId)
-            .Select(p => new
-            {
-                UserName = p.UserName,
-                Email = p.Email,
-                AvatarUrl = p.AvatarUrl,
-                FavoriteCount = p.FavoriteCount,
-                ListenedPoiCount = p.ListenedPoiCount
-            })
-            .FirstOrDefaultAsync();
-
-        if (user == null)
+        var device = await _db.Devices.FindAsync(deviceId);
+        if (device == null)
             return NotFound();
 
-        return Ok(user);
+        var favoriteCount = await _db.Favorites.CountAsync(x => x.DeviceId == deviceId);
+        var listenedPoiCount = await _db.ListenLogs.CountAsync(x => x.DeviceId == deviceId);
+
+        return Ok(new
+        {
+            device.Id,
+            DeviceName = string.IsNullOrWhiteSpace(device.Name) ? "Thiết bị Smart Guide" : device.Name,
+            DeviceUuid = device.DeviceUuid,
+            Platform = device.Platform,
+            Model = device.Model,
+            AppVersion = device.AppVersion,
+            FavoriteCount = favoriteCount,
+            ListenedPoiCount = listenedPoiCount
+        });
     }
 }

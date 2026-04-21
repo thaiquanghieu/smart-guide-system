@@ -1,6 +1,5 @@
 ﻿using Microsoft.Maui.Storage;
 using SmartGuideApp.Pages;
-using System.Net.Http;
 
 namespace SmartGuideApp;
 
@@ -19,57 +18,46 @@ public partial class App : Application
         }
         catch { }
 
-        // Decide initial page immediately to avoid showing Login briefly when user is already signed in
-        var userId = Preferences.Get("user_id", 0);
-        if (userId == 0)
-        {
-            MainPage = new NavigationPage(new LoginPage());
-        }
-        else
-        {
-            // Assume user is signed in — show main shell immediately, then verify subscription in background
-            MainPage = new AppShell();
-        }
-
-        // Run subscription check in background (will replace MainPage with Paywall if needed)
-        _ = CheckAccess();
+        MainPage = new LoadingPage();
+        _ = InitializeAsync();
     }
 
-    // =========================
-    // CHECK SUB
-    // =========================
-    private async Task CheckAccess()
+    private async Task InitializeAsync()
     {
-        var userId = Preferences.Get("user_id", 0);
-
-        // If not logged in, nothing to do here
-        if (userId == 0)
-            return;
+        var api = new ApiService();
 
         try
         {
-            var client = new HttpClient();
-            var res = await client.GetAsync($"http://172.20.10.3:5022/api/payments/check?userId={userId}");
-            var json = await res.Content.ReadAsStringAsync();
-
-            var result = System.Text.Json.JsonSerializer.Deserialize<CheckResponse>(json);
-
-            if (result != null && result.isActive)
+            var deviceRegistration = await api.EnsureDeviceReadyAsync();
+            if (!deviceRegistration.ok)
             {
-                // already showing AppShell — nothing to change
-            }
-            else
-            {
-                // show paywall if subscription inactive
+                Preferences.Set("subscription_active", false);
+
                 MainThread.BeginInvokeOnMainThread(() =>
                 {
                     MainPage = new NavigationPage(new PaywallPage(false));
                 });
+                return;
             }
+
+            var subscription = await api.CheckSubscriptionAsync();
+
+            Preferences.Set("subscription_active", subscription.Item1);
+
+            MainThread.BeginInvokeOnMainThread(() =>
+            {
+                MainPage = subscription.Item1
+                    ? new AppShell()
+                    : new NavigationPage(new PaywallPage(false));
+            });
         }
         catch
         {
-            // network error: keep the current MainPage (don't force user back to Login)
+            MainThread.BeginInvokeOnMainThread(() =>
+            {
+                Preferences.Set("subscription_active", false);
+                MainPage = new NavigationPage(new PaywallPage(false));
+            });
         }
     }
 
@@ -101,9 +89,4 @@ public partial class App : Application
         }
     }
 
-    class CheckResponse
-    {
-        public bool isActive { get; set; }
-        public DateTime? expire { get; set; }
-    }
 }

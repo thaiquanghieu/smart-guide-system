@@ -10,9 +10,9 @@ public class QrLog
     [Column("id")]
     public int Id { get; set; }
 
-    [Column("user_id")]
-    public int UserId { get; set; }
+    [Column("device_id")]
+    public int DeviceId { get; set; }
 
     [Column("code")]
-    public string Code { get; set; }
+    public string Code { get; set; } = "";
 }

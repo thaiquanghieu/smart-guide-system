@@ -10,44 +10,9 @@ public partial class LoadingPage : ContentPage
             HorizontalOptions = LayoutOptions.Center,
             Children =
             {
-                new Label { Text = "Loading...", FontSize = 20 }
+                new ActivityIndicator { IsRunning = true, Color = Color.FromArgb("#0F5BD7"), WidthRequest = 48, HeightRequest = 48 },
+                new Label { Text = "Đang kiểm tra thiết bị...", FontSize = 20, Margin = new Thickness(0, 16, 0, 0), HorizontalTextAlignment = TextAlignment.Center }
             }
         };
-
-        _ = Check();
-    }
-
-    private async Task Check()
-    {
-        var userId = Preferences.Get("user_id", 0);
-
-        try
-        {
-            var client = new HttpClient();
-            var url = $"http://172.20.10.3:5022/api/payments/check?userId={userId}";
-
-            var res = await client.GetAsync(url);
-            var json = await res.Content.ReadAsStringAsync();
-
-            var result = System.Text.Json.JsonSerializer.Deserialize<CheckResponse>(json);
-
-            MainThread.BeginInvokeOnMainThread(() =>
-            {
-                if (result != null && result.isActive)
-                    Application.Current!.MainPage = new AppShell();
-                else
-                    Application.Current!.MainPage = new NavigationPage(new PaywallPage(false));
-            });
-        }
-        catch
-        {
-            Application.Current!.MainPage = new NavigationPage(new PaywallPage(false));
-        }
-    }
-
-    class CheckResponse
-    {
-        public bool isActive { get; set; }
-        public DateTime? expire { get; set; }
     }
 }

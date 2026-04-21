@@ -40,14 +40,20 @@ public partial class HomePage : ContentPage
 
     private async void OnLoaded(object? sender, EventArgs e)
     {
-        // Subscribe to ViewModel changes so we can refresh the mini-map when Pois are loaded
-        if (BindingContext is HomeViewModel vm)
+        try
         {
-            vm.PropertyChanged -= OnViewModelPropertyChanged;
-            vm.PropertyChanged += OnViewModelPropertyChanged;
-        }
+            // Subscribe to ViewModel changes so we can refresh the mini-map when Pois are loaded
+            if (BindingContext is HomeViewModel vm)
+            {
+                vm.PropertyChanged -= OnViewModelPropertyChanged;
+                vm.PropertyChanged += OnViewModelPropertyChanged;
+            }
 
-        await LoadMapPreview();
+            await LoadMapPreview();
+        }
+        catch
+        {
+        }
     }
 
     private void OnViewModelPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
@@ -62,37 +68,43 @@ public partial class HomePage : ContentPage
 
     private async Task LoadMapPreview()
     {
-        if (PreviewMap == null) return;
-
-        PreviewMap.Pins.Clear();
-
-        foreach (var poi in ViewModel.Pois)
+        try
         {
-            var pin = new Pin
-            {
-                Label = poi.Name,
-                Location = new Location(poi.Latitude, poi.Longitude),
-                Type = PinType.Place
-            };
+            if (PreviewMap == null) return;
 
-            pin.MarkerClicked += async (s, e) =>
-            {
-                e.HideInfoWindow = true;
-                // Use absolute route to avoid Shell relative routing crash
-                await Shell.Current.GoToAsync($"///map?poiId={poi.Id}");
-            };
+            PreviewMap.Pins.Clear();
 
-            PreviewMap.Pins.Add(pin);
+            foreach (var poi in ViewModel.Pois)
+            {
+                var pin = new Pin
+                {
+                    Label = poi.Name,
+                    Location = new Location(poi.Latitude, poi.Longitude),
+                    Type = PinType.Place
+                };
+
+                pin.MarkerClicked += async (s, e) =>
+                {
+                    e.HideInfoWindow = true;
+                    await Shell.Current.GoToAsync($"///map?poiId={poi.Id}");
+                };
+
+                PreviewMap.Pins.Add(pin);
+            }
+
+            var location = await Geolocation.GetLastKnownLocationAsync();
+
+            if (location != null)
+            {
+                PreviewMap.IsShowingUser = true;
+                PreviewMap.MoveToRegion(MapSpan.FromCenterAndRadius(
+                    new Location(location.Latitude, location.Longitude),
+                    Distance.FromMeters(800)
+                ));
+            }
         }
-
-        var location = await Geolocation.GetLastKnownLocationAsync();
-
-        if (location != null)
+        catch
         {
-            PreviewMap.MoveToRegion(MapSpan.FromCenterAndRadius(
-                new Location(location.Latitude, location.Longitude),
-                Distance.FromMeters(800)
-            ));
         }
     }
 
@@ -103,14 +115,21 @@ public partial class HomePage : ContentPage
 
     private async void OnMyLocationClicked(object sender, EventArgs e)
     {
-        var location = await Geolocation.GetLastKnownLocationAsync();
-
-        if (location != null)
+        try
         {
-            PreviewMap.MoveToRegion(MapSpan.FromCenterAndRadius(
-                new Location(location.Latitude, location.Longitude),
-                Distance.FromMeters(800)
-            ));
+            var location = await Geolocation.GetLastKnownLocationAsync();
+
+            if (location != null)
+            {
+                PreviewMap.IsShowingUser = true;
+                PreviewMap.MoveToRegion(MapSpan.FromCenterAndRadius(
+                    new Location(location.Latitude, location.Longitude),
+                    Distance.FromMeters(800)
+                ));
+            }
+        }
+        catch
+        {
         }
     }
 

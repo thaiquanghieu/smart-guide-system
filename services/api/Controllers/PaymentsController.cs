@@ -16,19 +16,31 @@ public class PaymentsController : ControllerBase
         _db = db;
     }
 
+    private async Task<Device?> GetActiveDeviceAsync(int deviceId)
+    {
+        if (deviceId <= 0)
+            return null;
+
+        return await _db.Devices.FirstOrDefaultAsync(x => x.Id == deviceId && x.IsActive);
+    }
+
     // =========================
     // TẠO QR
     // =========================
     [HttpPost("create")]
-    public async Task<IActionResult> CreatePayment(int userId, int planId)
+    public async Task<IActionResult> CreatePayment(int deviceId, int planId)
     {
+        var device = await GetActiveDeviceAsync(deviceId);
+        if (device == null)
+            return BadRequest(new { message = "Thiết bị không hợp lệ hoặc đã bị khóa" });
+
         var now = DateTime.UtcNow;
 
         var code = $"SGPAY_{Guid.NewGuid().ToString().Substring(0,8)}";
 
         var payment = new Payment
         {
-            UserId = userId,
+            DeviceId = deviceId,
             PlanId = planId,
             Code = code,
             IsUsed = false,
@@ -39,6 +51,8 @@ public class PaymentsController : ControllerBase
         await _db.SaveChangesAsync();
 
         var plan = await _db.Plans.FindAsync(planId);
+        if (plan == null)
+            return BadRequest(new { message = "Plan không tồn tại" });
 
         return Ok(new
         {
@@ -57,8 +71,12 @@ public class PaymentsController : ControllerBase
     // SCAN QR
     // =========================
     [HttpPost("scan")]
-    public async Task<IActionResult> Scan(string code, int userId)
+    public async Task<IActionResult> Scan(string code, int deviceId)
     {
+        var device = await GetActiveDeviceAsync(deviceId);
+        if (device == null)
+            return BadRequest(new { message = "Thiết bị không hợp lệ hoặc đã bị khóa" });
+
         var now = DateTime.UtcNow;
 
         var payment = await _db.Payments
@@ -70,8 +88,8 @@ public class PaymentsController : ControllerBase
         if (payment.IsUsed)
             return BadRequest(new { message = "QR đã dùng" });
 
-        if (payment.UserId != userId)
-            return BadRequest(new { message = "QR không thuộc user" });
+        if (payment.DeviceId != deviceId)
+            return BadRequest(new { message = "QR không thuộc thiết bị này" });
 
         var plan = await _db.Plans.FindAsync(payment.PlanId);
 
@@ -79,13 +97,13 @@ public class PaymentsController : ControllerBase
             return BadRequest(new { message = "Plan không tồn tại" });
 
         var sub = await _db.Subscriptions
-            .FirstOrDefaultAsync(x => x.UserId == userId);
+            .FirstOrDefaultAsync(x => x.DeviceId == deviceId);
 
         if (sub == null)
         {
             sub = new Subscription
             {
-                UserId = userId,
+                DeviceId = deviceId,
                 ExpireAt = DateTime.SpecifyKind(now.AddDays(plan.Days), DateTimeKind.Utc)
             };
             _db.Subscriptions.Add(sub);
@@ -103,7 +121,7 @@ public class PaymentsController : ControllerBase
 
         _db.QrLogs.Add(new QrLog
         {
-            UserId = userId,
+            DeviceId = deviceId,
             Code = code
         });
 
@@ -117,10 +135,14 @@ public class PaymentsController : ControllerBase
     }
 
     [HttpGet("check")]
-    public async Task<IActionResult> Check(int userId)
+    public async Task<IActionResult> Check(int deviceId)
     {
+        var device = await GetActiveDeviceAsync(deviceId);
+        if (device == null)
+            return Ok(new { isActive = false, reason = "device_inactive" });
+
         var sub = await _db.Subscriptions
-            .FirstOrDefaultAsync(x => x.UserId == userId);
+            .FirstOrDefaultAsync(x => x.DeviceId == deviceId);
 
         if (sub == null)
             return Ok(new { isActive = false });

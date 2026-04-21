@@ -1,7 +1,6 @@
 using Microsoft.Maui.Storage;
 using SmartGuideApp.ViewModels;
 using SmartGuideApp.Pages;
-using SmartGuideApp.Pages;
 
 namespace SmartGuideApp.Views;
 
@@ -210,15 +209,17 @@ public partial class ProfilePage : ContentPage
     private async void OnLogoutClicked(object sender, EventArgs e)
     {
         bool confirm = await DisplayAlert(
-            "Đăng xuất",
-            "Bạn có chắc muốn đăng xuất?",
-            "Đăng xuất",
+            "Đăng ký lại thiết bị",
+            "Thao tác này sẽ xóa mã thiết bị đang lưu trên máy và kiểm tra lại quyền truy cập từ đầu. Bạn muốn tiếp tục chứ?",
+            "Tiếp tục",
             "Hủy");
 
         if (!confirm) return;
 
-        Preferences.Remove("user_id");
+        Preferences.Remove("device_id");
+        Preferences.Remove("device_uuid");
+        Preferences.Remove("subscription_active");
 
-        Application.Current!.MainPage = new NavigationPage(new LoginPage());
+        Application.Current!.MainPage = new LoadingPage();
     }
 }

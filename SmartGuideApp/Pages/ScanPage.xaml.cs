@@ -25,23 +25,26 @@ public partial class ScanPage : ContentPage
 
         try
         {
-            var userId = 1;
-
-            var client = new HttpClient();
-
-            var url = $"http://172.20.10.3:5022/api/payments/scan?code={code}&userId={userId}";
-
-            var res = await client.PostAsync(url, null);
-
-            if (!res.IsSuccessStatusCode)
+            var api = new ApiService();
+            var device = await api.EnsureDeviceReadyAsync();
+            if (!device.ok)
             {
-                var msg = await res.Content.ReadAsStringAsync();
-                await DisplayAlert("Lỗi", msg, "OK");
+                await DisplayAlert("Lỗi", device.message, "OK");
+                _isScanning = true;
+                return;
+            }
+
+            var result = await api.ScanPaymentAsync(code);
+
+            if (!result.ok)
+            {
+                await DisplayAlert("Lỗi", result.message, "OK");
 
                 _isScanning = true;
                 return;
             }
 
+            Preferences.Set("subscription_active", true);
             await DisplayAlert("Thành công", "Đã kích hoạt gói!", "OK");
 
             Application.Current!.MainPage = new AppShell();

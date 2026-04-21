@@ -19,7 +19,7 @@ public class RatingsController : ControllerBase
     public class RatingDto
     {
         public string PoiId { get; set; } = string.Empty;
-        public int UserId { get; set; }
+        public int DeviceId { get; set; }
         public short RatingValue { get; set; }
     }
 
@@ -32,16 +32,16 @@ public class RatingsController : ControllerBase
         var poi = await _db.Pois.FirstOrDefaultAsync(p => p.Id == dto.PoiId);
         if (poi == null) return NotFound("poi not found");
 
-        var user = await _db.Users.FindAsync(dto.UserId);
-        if (user == null) return NotFound("user not found");
+        var device = await _db.Devices.FindAsync(dto.DeviceId);
+        if (device == null || !device.IsActive) return NotFound("device not found");
 
-        var existing = await _db.Ratings.FirstOrDefaultAsync(r => r.PoiId == dto.PoiId && r.UserId == dto.UserId);
+        var existing = await _db.Ratings.FirstOrDefaultAsync(r => r.PoiId == dto.PoiId && r.DeviceId == dto.DeviceId);
         if (existing == null)
         {
             var rating = new Rating
             {
                 PoiId = dto.PoiId,
-                UserId = dto.UserId,
+                DeviceId = dto.DeviceId,
                 RatingValue = dto.RatingValue,
                 CreatedAt = DateTime.UtcNow
             };

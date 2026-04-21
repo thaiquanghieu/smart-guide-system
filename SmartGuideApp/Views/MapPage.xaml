@@ -10,7 +10,7 @@
         <!-- MAP -->
         <maps:Map x:Name="MainMap"
                   MapClicked="OnMapClicked"
-                  IsShowingUser="True" />
+                  IsShowingUser="False" />
 
         <!-- HEADER -->
         <Grid VerticalOptions="Start"

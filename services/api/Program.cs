@@ -1,7 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using SmartGuideAPI.Data;
 var builder = WebApplication.CreateBuilder(args);
-builder.WebHost.UseUrls("http://172.20.10.3:5022");
 builder.Services.AddControllers();
 
 // Add CORS

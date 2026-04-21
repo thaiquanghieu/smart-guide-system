@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.Linq;
+using SmartGuideApp.Config;
 using SmartGuideApp.Services;
 using Microsoft.Maui.Storage;
 
@@ -8,8 +9,8 @@ namespace SmartGuideApp.ViewModels;
 public class ProfileViewModel : BaseViewModel
 {
     public string DaysLeftText { get; set; } = "Đang kiểm tra...";
-    public string UserName { get; set; } = "";
-    public string Email { get; set; } = "";
+    public string DeviceName { get; set; } = "";
+    public string DeviceDetails { get; set; } = "";
     public string AvatarUrl { get; set; } = "";
     public int FavoriteCount { get; set; }
     public int ListenedPoiCount { get; set; }
@@ -106,14 +107,19 @@ public class ProfileViewModel : BaseViewModel
 
             if (profile == null) return;
 
-            UserName = profile.UserName;
-            Email = profile.Email;
-            AvatarUrl = string.IsNullOrWhiteSpace(profile.AvatarUrl) ? "user.png" : $"http://172.20.10.3:5022{profile.AvatarUrl}";
+            DeviceName = profile.DeviceName;
+            var platform = string.IsNullOrWhiteSpace(profile.Platform) ? "Thiết bị" : profile.Platform.ToUpperInvariant();
+            var model = string.IsNullOrWhiteSpace(profile.Model) ? "Unknown model" : profile.Model;
+            DeviceDetails = $"{platform} • {model}";
+            if (!string.IsNullOrWhiteSpace(profile.AppVersion))
+                DeviceDetails += $" • v{profile.AppVersion}";
+
+            AvatarUrl = "user.png";
             FavoriteCount = profile.FavoriteCount;
             ListenedPoiCount = profile.ListenedPoiCount;
 
-            OnPropertyChanged(nameof(UserName));
-            OnPropertyChanged(nameof(Email));
+            OnPropertyChanged(nameof(DeviceName));
+            OnPropertyChanged(nameof(DeviceDetails));
             OnPropertyChanged(nameof(AvatarUrl));
             OnPropertyChanged(nameof(FavoriteCount));
             OnPropertyChanged(nameof(ListenedPoiCount));
@@ -249,17 +255,17 @@ public class ProfileViewModel : BaseViewModel
         {
             var client = new HttpClient();
 
-            var userId = Preferences.Get("user_id", 0);
+            var deviceId = Preferences.Get("device_id", 0);
 
-            if (userId == 0)
+            if (deviceId == 0)
             {
-                DaysLeftText = "Chưa đăng nhập";
+                DaysLeftText = "Thiết bị chưa sẵn sàng";
                 OnPropertyChanged(nameof(DaysLeftText));
                 return;
             }
 
             var json = await client.GetStringAsync(
-                $"http://172.20.10.3:5022/api/payments/check?userId={userId}");
+                AppEndpoints.BuildApiUrl($"/api/payments/check?deviceId={deviceId}"));
 
             var result = System.Text.Json.JsonSerializer.Deserialize<CheckResponse>(json);
 

@@ -10,8 +10,8 @@ public class Payment
     [Column("id")]
     public int Id { get; set; }
 
-    [Column("user_id")]
-    public int UserId { get; set; }
+    [Column("device_id")]
+    public int DeviceId { get; set; }
 
     [Column("plan_id")]
     public int PlanId { get; set; }
@@ -22,9 +22,9 @@ public class Payment
     [Column("is_used")]
     public bool IsUsed { get; set; }
 
-    [Column("created_at")]
+    [Column("created_at", TypeName = "timestamptz")]
     public DateTime CreatedAt { get; set; }
 
-    [Column("used_at")]
+    [Column("used_at", TypeName = "timestamptz")]
     public DateTime? UsedAt { get; set; }
 }

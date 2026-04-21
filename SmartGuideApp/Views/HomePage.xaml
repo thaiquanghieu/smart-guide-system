@@ -201,7 +201,7 @@
 
                                 <Grid>
                                     <maps:Map x:Name="PreviewMap"
-                                              IsShowingUser="True"
+                                              IsShowingUser="False"
                                               MapClicked="OnMapClicked" />
 
                                     <Frame WidthRequest="54"

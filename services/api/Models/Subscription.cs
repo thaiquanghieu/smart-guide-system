@@ -10,8 +10,8 @@ public class Subscription
     [Column("id")]
     public int Id { get; set; } 
 
-    [Column("user_id")]
-    public int UserId { get; set; }
+    [Column("device_id")]
+    public int DeviceId { get; set; }
 
     [Column("expire_at", TypeName = "timestamptz")]
     public DateTime ExpireAt { get; set; }
