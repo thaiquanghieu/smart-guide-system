@@ -2,11 +2,9 @@ import { useState } from 'react'
 import { useRouter } from 'next/router'
 import Link from 'next/link'
 import apiClient from '@/lib/api'
-import { useAuthStore } from '@/lib/store'
 
 export default function Login() {
   const router = useRouter()
-  const { setUser } = useAuthStore()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [formData, setFormData] = useState({
@@ -106,15 +104,15 @@ export default function Login() {
         </form>
 
         <div className="mt-6 text-center text-gray-400">
-          Chưa có tài khoản?{' '}
+          Bạn chưa có tài khoản?{' '}
           <Link href="/auth/register" className="text-primary hover:underline">
-            Đăng ký ngay
+            Đăng ký
           </Link>
         </div>
 
         <div className="mt-8 text-center">
-          <Link href="/" className="text-accent hover:text-primary text-sm">
-            ← Quay lại trang chính
+          <Link href="http://localhost:3001/auth/login" className="text-accent hover:text-primary text-sm">
+            Đăng nhập admin
           </Link>
         </div>
       </div>

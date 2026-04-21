@@ -2,11 +2,9 @@ import { useState } from 'react'
 import { useRouter } from 'next/router'
 import Link from 'next/link'
 import apiClient from '@/lib/api'
-import { useAuthStore } from '@/lib/store'
 
 export default function Register() {
   const router = useRouter()
-  const { setUser } = useAuthStore()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [formData, setFormData] = useState({
@@ -37,21 +35,16 @@ export default function Register() {
         UserName: formData.userName,
         Email: formData.email,
         Password: formData.password,
-        Role: 'owner',
       })
 
       const response = await apiClient.post('/auth/register', {
         UserName: formData.userName,
         Email: formData.email,
         Password: formData.password,
-        Role: 'owner',
       })
 
       console.log('✅ Register success:', response.data)
-      localStorage.setItem('userId', response.data.userId)
-      setUser({ id: response.data.userId, userName: formData.userName, email: formData.email, role: 'owner', isActive: true })
-
-      router.push('/dashboard')
+      router.push('/auth/login')
     } catch (err: any) {
       console.error('❌ Register error:', err.response?.data || err.message)
       setError(err.response?.data?.message || err.message || 'Đăng ký thất bại')
