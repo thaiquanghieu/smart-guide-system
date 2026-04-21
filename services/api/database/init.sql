@@ -8,6 +8,7 @@ CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 DROP TABLE IF EXISTS listen_logs CASCADE;
 DROP TABLE IF EXISTS favorites CASCADE;
 DROP TABLE IF EXISTS qr_logs CASCADE;
+DROP TABLE IF EXISTS device_entry_grants CASCADE;
 DROP TABLE IF EXISTS payments CASCADE;
 DROP TABLE IF EXISTS subscriptions CASCADE;
 DROP TABLE IF EXISTS plans CASCADE;
@@ -79,6 +80,20 @@ CREATE TABLE pois (
   longitude double precision NOT NULL,
   created_at timestamptz DEFAULT now(),
   updated_at timestamptz DEFAULT now()
+);
+
+-- =========================
+-- DEVICE ENTRY GRANTS
+-- =========================
+CREATE TABLE device_entry_grants (
+  id serial PRIMARY KEY,
+  device_id int NOT NULL REFERENCES devices(id) ON DELETE CASCADE,
+  entry_code text NOT NULL,
+  poi_id text REFERENCES pois(id) ON DELETE SET NULL,
+  free_plays_total int NOT NULL DEFAULT 1,
+  free_plays_used int NOT NULL DEFAULT 0,
+  granted_at timestamptz DEFAULT now(),
+  expires_at timestamptz
 );
 
 -- =========================
@@ -213,6 +228,8 @@ CREATE INDEX IF NOT EXISTS idx_pois_lat_lon ON pois (latitude, longitude);
 CREATE INDEX IF NOT EXISTS idx_devices_last_seen ON devices (last_seen);
 CREATE INDEX IF NOT EXISTS idx_devices_is_active ON devices (is_active);
 CREATE INDEX IF NOT EXISTS idx_devices_uuid ON devices (device_uuid);
+CREATE INDEX IF NOT EXISTS idx_device_entry_grants_device_id ON device_entry_grants (device_id);
+CREATE INDEX IF NOT EXISTS idx_device_entry_grants_entry_code ON device_entry_grants (entry_code);
 CREATE INDEX IF NOT EXISTS idx_subscriptions_expire_at ON subscriptions (expire_at);
 CREATE INDEX IF NOT EXISTS idx_payments_device_id ON payments (device_id);
 CREATE INDEX IF NOT EXISTS idx_qr_logs_device_id ON qr_logs (device_id);

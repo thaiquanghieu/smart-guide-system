@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: smartguide-api
+    runtime: dotnet
+    rootDir: services/api
+    buildCommand: dotnet publish SmartGuideAPI.csproj -c Release -o out
+    startCommand: dotnet out/SmartGuideAPI.dll
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      - key: DATABASE_URL
+        sync: false
+
+  - type: web
+    name: smartguide-pwa
+    runtime: node
+    rootDir: apps/pwa
+    buildCommand: npm install && npm run build
+    startCommand: npm run start
+    envVars:
+      - key: NEXT_PUBLIC_API_URL
+        sync: false
