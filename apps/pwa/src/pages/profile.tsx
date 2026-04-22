@@ -158,6 +158,13 @@ export default function ProfilePage() {
     setAudioCustomState(getAudioCustom());
   }, [showLanguage]);
 
+  useEffect(() => {
+    setAppLangState(lang);
+    if (!audioCustom) {
+      setAudioLangState(lang);
+    }
+  }, [audioCustom, lang]);
+
   const menuItems = [
     { icon: "history.png", label: t("profile.history") },
     { icon: "favorite.png", label: t("profile.favoritePlaces") },
@@ -238,7 +245,8 @@ export default function ProfilePage() {
               await apiClient.delete(`/devices/${deviceId}`).catch(() => undefined);
             }
             resetDeviceIdentity();
-            router.replace("/");
+            profileCache = null;
+            router.replace("/paywall?returnTo=%2F");
           }}
         >
           <div className="flex h-10 w-10 items-center justify-center rounded-[12px] bg-[#F9FAFB]">

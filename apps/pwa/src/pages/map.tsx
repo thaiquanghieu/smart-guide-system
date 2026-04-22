@@ -38,6 +38,7 @@ type Poi = {
 
 let mapCache:
   | {
+      hasLoaded: boolean;
       pois: Poi[];
       searchText: string;
       userLocation: GeoPoint | null;
@@ -73,13 +74,22 @@ export default function MapPage() {
         const queryPoiId = typeof router.query.poiId === "string" ? router.query.poiId : "";
 
         if (mapCache) {
-          setPois(translatePois<Poi>(mapCache.pois, lang));
+          if (!mapCache.hasLoaded) {
+            mapCache = null;
+          } else {
+            setPois(translatePois<Poi>(mapCache.pois, lang));
           setSearchText(mapCache.searchText);
           setUserLocation(mapCache.userLocation);
           setTrackingEnabled(mapCache.trackingEnabled);
           setSubscriptionActive(mapCache.subscriptionActive);
           setFreePlaysRemaining(mapCache.freePlaysRemaining);
-          setMapCenter(mapCache.mapCenter);
+          setMapCenter(
+            mapCache.mapCenter ||
+              mapCache.userLocation ||
+              (mapCache.pois[0]
+                ? { latitude: mapCache.pois[0].latitude, longitude: mapCache.pois[0].longitude }
+                : null)
+          );
 
           if (queryPoiId) {
             const cachedSelectedPoi = mapCache.pois.find((item) => item.id === queryPoiId);
@@ -92,6 +102,7 @@ export default function MapPage() {
           }
 
           return;
+          }
         }
 
         await ensureDeviceReady();
@@ -122,6 +133,8 @@ export default function MapPage() {
         if (selectedPoi) {
           setSelectedPoiId(selectedPoi.id);
           setMapCenter({ latitude: selectedPoi.latitude, longitude: selectedPoi.longitude });
+        } else if (items[0]) {
+          setMapCenter({ latitude: items[0].latitude, longitude: items[0].longitude });
         }
 
         setSubscriptionActive(hasActiveSubscription);
@@ -159,6 +172,7 @@ export default function MapPage() {
 
   useEffect(() => {
     mapCache = {
+      hasLoaded: !errorMessage && pois.length > 0,
       pois,
       searchText,
       userLocation,
@@ -177,6 +191,11 @@ export default function MapPage() {
         : 0,
     }));
   }, [pois, userLocation]);
+
+  useEffect(() => {
+    if (mapCenter || userLocation || !enrichedPois.length) return;
+    setMapCenter({ latitude: enrichedPois[0].latitude, longitude: enrichedPois[0].longitude });
+  }, [enrichedPois, mapCenter, userLocation]);
 
   const updatePoi = (poiId: string, updater: (poi: Poi) => Poi) => {
     setPois((current) => current.map((poi) => (poi.id === poiId ? updater(poi) : poi)));
@@ -276,7 +295,7 @@ export default function MapPage() {
       <ToastBanner message={toast} />
 
       <main
-        className="relative min-h-screen bg-[#F4F7FB]"
+        className="relative min-h-screen overflow-hidden bg-[#F4F7FB]"
         style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 92px)" }}
       >
         <div
@@ -291,7 +310,13 @@ export default function MapPage() {
         </div>
 
         {visibleCenter ? (
-          <div className="absolute inset-0">
+          <div
+            className="absolute inset-x-0 z-0 overflow-hidden"
+            style={{
+              top: "calc(env(safe-area-inset-top) + 68px)",
+              bottom: "calc(env(safe-area-inset-bottom) + 74px)",
+            }}
+          >
             <MapSurface
               center={visibleCenter}
               pois={enrichedPois}
@@ -353,7 +378,7 @@ export default function MapPage() {
 
         <button
           type="button"
-          className="absolute right-4 z-20 flex h-[54px] w-[54px] items-center justify-center rounded-[18px] bg-white shadow-[0_10px_18px_rgba(0,0,0,0.08)]"
+          className="absolute right-4 z-30 flex h-[54px] w-[54px] items-center justify-center rounded-[18px] bg-white shadow-[0_10px_18px_rgba(0,0,0,0.08)]"
           style={{ top: "calc(env(safe-area-inset-top) + 190px)" }}
           onClick={() => {
             if (userLocation) {
@@ -367,7 +392,7 @@ export default function MapPage() {
 
         <button
           type="button"
-          className="absolute right-4 z-20 flex h-20 w-20 flex-col items-center justify-center rounded-full bg-[#374151] text-white shadow-[0_10px_18px_rgba(0,0,0,0.18)] transition-all duration-200"
+          className="absolute right-4 z-30 flex h-20 w-20 flex-col items-center justify-center rounded-full bg-[#374151] text-white shadow-[0_10px_18px_rgba(0,0,0,0.18)] transition-all duration-200"
           style={{ bottom: trackingBottom }}
           onClick={() => setTrackingEnabled((value) => !value)}
         >
@@ -381,7 +406,7 @@ export default function MapPage() {
 
         {selectedPoi ? (
           <div
-            className="absolute inset-x-4 z-20 rounded-[22px] border border-[#E5E7EB] bg-white p-4 shadow-[0_10px_24px_rgba(0,0,0,0.08)]"
+            className="absolute inset-x-4 z-30 rounded-[22px] border border-[#E5E7EB] bg-white p-4 shadow-[0_10px_24px_rgba(0,0,0,0.08)]"
             style={{ bottom: "calc(env(safe-area-inset-bottom) + 76px)" }}
           >
             <div className="grid grid-cols-[108px,1fr,40px] gap-3">

@@ -21,7 +21,9 @@ export default function AppHeader({
         {showMenu ? <img src="/assets/menu.png" alt="Menu" className="h-7 w-7" /> : null}
       </div>
 
-      <h1 className="text-[25px] font-bold text-[#0B63E5]">{t("app.title")}</h1>
+      <h1 className="text-[25px] font-bold text-[#0B63E5]" suppressHydrationWarning>
+        {t("app.title")}
+      </h1>
 
       <div className="flex h-[42px] min-w-[42px] items-center justify-end">
         {actionLabel ? (

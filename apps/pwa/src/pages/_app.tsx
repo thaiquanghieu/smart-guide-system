@@ -1,13 +1,23 @@
 import type { AppProps } from "next/app";
 import Head from "next/head";
-import Script from "next/script";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import "@/styles/globals.css";
 
 export default function App({ Component, pageProps }: AppProps) {
+  const [mounted, setMounted] = useState(false);
+
   useEffect(() => {
+    setMounted(true);
+
     if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.register("/sw.js").catch(() => undefined);
+      navigator.serviceWorker
+        .getRegistrations()
+        .then((registrations) => Promise.all(registrations.map((registration) => registration.unregister())))
+        .catch(() => undefined);
+    }
+
+    if ("caches" in window) {
+      caches.keys().then((keys) => Promise.all(keys.map((key) => caches.delete(key)))).catch(() => undefined);
     }
   }, []);
 
@@ -24,28 +34,8 @@ export default function App({ Component, pageProps }: AppProps) {
         <meta name="application-name" content="Smart Guide" />
         <link rel="manifest" href="/manifest.webmanifest" />
         <link rel="apple-touch-icon" sizes="180x180" href="/icon-192.png" />
-        <link
-          href="https://api.mapbox.com/mapbox-gl-js/v3.4.0/mapbox-gl.css"
-          rel="stylesheet"
-        />
-        <link
-          rel="stylesheet"
-          href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-          integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
-          crossOrigin=""
-        />
       </Head>
-      <Script
-        src="https://api.mapbox.com/mapbox-gl-js/v3.4.0/mapbox-gl.js"
-        strategy="beforeInteractive"
-      />
-      <Script
-        src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-        strategy="beforeInteractive"
-        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
-        crossOrigin=""
-      />
-      <Component {...pageProps} />
+      {mounted ? <Component {...pageProps} /> : <div className="min-h-screen bg-[#F4F7FB]" />}
     </>
   );
 }

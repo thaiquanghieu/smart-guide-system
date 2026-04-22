@@ -19,10 +19,11 @@ export default function SearchBar({ value, placeholder, active = true, onChange,
           value={value}
           onChange={(event) => onChange(event.target.value)}
           placeholder={placeholder}
+          suppressHydrationWarning
           className="border-0 bg-transparent text-[16px] text-[#0F5BD7] outline-none placeholder:text-[#6C8FD8]"
         />
         {active ? (
-          <button type="button" onClick={onCancel} className="text-[14px] text-[#0F5BD7]">
+          <button type="button" onClick={onCancel} className="text-[14px] text-[#0F5BD7]" suppressHydrationWarning>
             {t("common.cancel")}
           </button>
         ) : (

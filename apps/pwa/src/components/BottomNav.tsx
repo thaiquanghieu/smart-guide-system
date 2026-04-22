@@ -25,7 +25,10 @@ export default function BottomNav() {
                 alt={t(item.labelKey)}
                 className="h-6 w-6 object-contain"
               />
-              <span className={`text-[12px] ${active ? "font-semibold text-[#0F5BD7]" : "text-[#9CA3AF]"}`}>
+              <span
+                className={`text-[12px] ${active ? "font-semibold text-[#0F5BD7]" : "text-[#9CA3AF]"}`}
+                suppressHydrationWarning
+              >
                 {t(item.labelKey)}
               </span>
             </Link>

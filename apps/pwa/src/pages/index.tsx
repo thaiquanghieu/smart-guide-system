@@ -67,6 +67,7 @@ export default function HomePage() {
   const [subscriptionActive, setSubscriptionActive] = useState(false);
   const [freePlaysRemaining, setFreePlaysRemaining] = useState(0);
   const [playingPoiId, setPlayingPoiId] = useState("");
+  const [miniMapCenter, setMiniMapCenter] = useState<GeoPoint | null>(null);
 
   useEffect(() => {
     const load = async () => {
@@ -82,6 +83,9 @@ export default function HomePage() {
           setSortAscending(cachedState.sortAscending);
           setSubscriptionActive(cachedState.subscriptionActive);
           setFreePlaysRemaining(cachedState.freePlaysRemaining);
+          setMiniMapCenter(cachedState.userLocation || (cachedState.pois[0]
+            ? { latitude: cachedState.pois[0].latitude, longitude: cachedState.pois[0].longitude }
+            : null));
           setIsLoading(false);
           pendingRestoreScrollRef.current = cachedState.scrollY || 0;
           return;
@@ -161,6 +165,10 @@ export default function HomePage() {
           latitude: position.coords.latitude,
           longitude: position.coords.longitude,
         });
+        setMiniMapCenter((current) => current || {
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+        });
       },
       () => undefined,
       { enableHighAccuracy: true }
@@ -235,6 +243,11 @@ export default function HomePage() {
       ? { latitude: filteredPois[0].latitude, longitude: filteredPois[0].longitude }
       : null);
 
+  useEffect(() => {
+    if (miniMapCenter || !previewCenter) return;
+    setMiniMapCenter(previewCenter);
+  }, [miniMapCenter, previewCenter]);
+
   const sortLabel = useMemo(() => {
     if (sortBy === "name") return sortAscending ? t("home.sort.nameAsc") : t("home.sort.nameDesc");
     if (sortBy === "listened") return sortAscending ? t("home.sort.listenedAsc") : t("home.sort.listenedDesc");
@@ -307,8 +320,10 @@ export default function HomePage() {
         <AppHeader showMenu showNotification />
 
         <section className="space-y-1">
-          <p className="text-[12px] font-bold text-[#0F5BD7]">{t("home.journey")}</p>
-          <h2 className="max-w-[320px] text-[27px] font-bold leading-[1.18] text-[#111827]">
+          <p className="text-[12px] font-bold text-[#0F5BD7]" suppressHydrationWarning>
+            {t("home.journey")}
+          </p>
+          <h2 className="max-w-[320px] text-[27px] font-bold leading-[1.18] text-[#111827]" suppressHydrationWarning>
             {t("home.greeting")}
           </h2>
         </section>
@@ -351,21 +366,28 @@ export default function HomePage() {
         </div>
 
         <section className="space-y-3">
-          <h3 className="text-[24px] font-bold text-[#111827]">{t("home.currentLocation")}</h3>
+          <h3 className="text-[24px] font-bold text-[#111827]" suppressHydrationWarning>
+            {t("home.currentLocation")}
+          </h3>
           {previewCenter ? (
             <div className="ios-card overflow-hidden rounded-[20px] p-0">
               <div className="relative h-[200px]">
                 <MapSurface
-                  center={previewCenter}
+                  center={miniMapCenter || previewCenter}
                   pois={filteredPois}
                   userLocation={userLocation}
                   heightClassName="h-full"
+                  onMapTap={() => router.push("/map")}
                   onSelectPoi={(poiId) => router.push(`/map?poiId=${poiId}`)}
                 />
                 <button
                   type="button"
-                  className="absolute right-3 top-3 flex h-[54px] w-[54px] items-center justify-center rounded-[18px] bg-white shadow-[0_10px_18px_rgba(0,0,0,0.08)]"
-                  onClick={() => router.push("/map")}
+                  className="absolute right-3 top-3 z-20 flex h-[54px] w-[54px] items-center justify-center rounded-[18px] bg-white shadow-[0_10px_18px_rgba(0,0,0,0.08)]"
+                  onClick={() => {
+                    if (userLocation) {
+                      setMiniMapCenter(userLocation);
+                    }
+                  }}
                 >
                   <img src="/assets/location.png" alt={t("detail.location")} className="h-[26px] w-[26px]" />
                 </button>
@@ -377,7 +399,9 @@ export default function HomePage() {
         <section className="space-y-4">
           <div className="flex items-center justify-between">
             <button type="button" className="flex items-center gap-2" onClick={() => setShowFilterSheet(true)}>
-              <h3 className="text-[24px] font-bold text-[#111827]">{filter === "nearby" ? t("home.filter.nearby") : filter === "free" ? t("home.filter.free") : t("home.filter.all")}</h3>
+              <h3 className="text-[24px] font-bold text-[#111827]" suppressHydrationWarning>
+                {filter === "nearby" ? t("home.filter.nearby") : filter === "free" ? t("home.filter.free") : t("home.filter.all")}
+              </h3>
               <img src="/assets/dropdown.png" alt="Dropdown" className="h-[14px] w-[14px]" />
             </button>
             <button
@@ -390,13 +414,13 @@ export default function HomePage() {
               onClick={() => setShowSortSheet(true)}
             >
               <img src={sortBy === "distance" && sortAscending ? "/assets/sort.png" : "/assets/sort_active.png"} alt="Sort" className="h-[14px] w-[14px]" />
-              <span>{t("home.sort")}</span>
+              <span suppressHydrationWarning>{t("home.sort")}</span>
             </button>
           </div>
 
           {isLoading ? (
             <div className="ios-card rounded-[20px] px-4 py-5 text-[14px] text-[#6B7280]">
-              {t("home.loadingPois")}
+              <span suppressHydrationWarning>{t("home.loadingPois")}</span>
             </div>
           ) : null}
 
