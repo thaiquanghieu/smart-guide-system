@@ -6,6 +6,7 @@ import MapSurface from "@/components/MapSurface";
 import SearchBar from "@/components/SearchBar";
 import ToastBanner from "@/components/ToastBanner";
 import apiClient from "@/lib/api";
+import { translatePois, useAppI18n } from "@/lib/i18n";
 import { playPoiAudio, stopSpeech } from "@/lib/audio";
 import {
   ensureDeviceReady,
@@ -49,6 +50,7 @@ let mapCache:
 
 export default function MapPage() {
   const router = useRouter();
+  const { t, lang } = useAppI18n();
   const [pois, setPois] = useState<Poi[]>([]);
   const [selectedPoiId, setSelectedPoiId] = useState("");
   const [searchText, setSearchText] = useState("");
@@ -71,7 +73,7 @@ export default function MapPage() {
         const queryPoiId = typeof router.query.poiId === "string" ? router.query.poiId : "";
 
         if (mapCache) {
-          setPois(mapCache.pois);
+          setPois(translatePois<Poi>(mapCache.pois, lang));
           setSearchText(mapCache.searchText);
           setUserLocation(mapCache.userLocation);
           setTrackingEnabled(mapCache.trackingEnabled);
@@ -96,11 +98,11 @@ export default function MapPage() {
 
         const deviceId = getDeviceId();
         const [poiResponse, accessResponse] = await Promise.all([
-          apiClient.get(`/pois?deviceId=${deviceId}`),
+          apiClient.get(`/pois?deviceId=${deviceId}&lang=${lang}`),
           apiClient.get(`/access/free-listen?deviceId=${deviceId}`),
         ]);
 
-        const items = poiResponse.data || [];
+        const items = translatePois<Poi>(poiResponse.data || [], lang);
         const hasActiveSubscription = !!accessResponse.data?.hasActiveSubscription;
         const remainingFreePlays = Number(accessResponse.data?.freePlaysRemaining || 0);
 
@@ -125,12 +127,12 @@ export default function MapPage() {
         setSubscriptionActive(hasActiveSubscription);
         setFreePlaysRemaining(remainingFreePlays);
       } catch (error: any) {
-        setErrorMessage(error?.response?.data?.message || "Không thể tải bản đồ.");
+        setErrorMessage(error?.response?.data?.message || t("map.loadError"));
       }
     };
 
     load();
-  }, [router, router.query.poiId]);
+  }, [lang, router, router.query.poiId, t]);
 
   useEffect(() => {
     if (!navigator.geolocation) return;
@@ -285,7 +287,7 @@ export default function MapPage() {
           className="absolute left-0 right-0 z-20 text-center text-[22px] font-bold text-[#0F5BD7]"
           style={{ top: "calc(env(safe-area-inset-top) + 20px)" }}
         >
-          Smart Guide
+          {t("app.title")}
         </div>
 
         {visibleCenter ? (
@@ -310,7 +312,7 @@ export default function MapPage() {
         <div className="absolute inset-x-4 z-20" style={{ top: "calc(env(safe-area-inset-top) + 80px)" }}>
           <SearchBar
             value={searchText}
-            placeholder="Tìm kiếm địa điểm..."
+            placeholder={t("home.search")}
             active
             onChange={(value) => {
               setSearchText(value);
@@ -360,7 +362,7 @@ export default function MapPage() {
             }
           }}
         >
-          <img src="/assets/location.png" alt="Location" className="h-[26px] w-[26px]" />
+          <img src="/assets/location.png" alt={t("detail.location")} className="h-[26px] w-[26px]" />
         </button>
 
         <button
@@ -374,7 +376,7 @@ export default function MapPage() {
             alt="Tracking"
             className="h-5 w-5"
           />
-          <span className="mt-1 text-[10px]">Tracking: {trackingEnabled ? "ON" : "OFF"}</span>
+          <span className="mt-1 text-[10px]">{trackingEnabled ? t("map.trackingOn") : t("map.trackingOff")}</span>
         </button>
 
         {selectedPoi ? (
@@ -453,14 +455,14 @@ export default function MapPage() {
 
             <div className="mt-3 grid grid-cols-2 gap-[10px]">
               <button type="button" className="h-[50px] rounded-[16px] bg-[#0F5BD7] text-white" onClick={() => setShowDirections(true)}>
-                Chỉ đường
+                {t("map.directions")}
               </button>
               <button
                 type="button"
                 className="h-[50px] rounded-[16px] bg-[#E5E7EB] text-[#0F5BD7]"
                 onClick={() => router.push(`/detail?poiId=${selectedPoi.id}`)}
               >
-                Chi tiết
+                {t("map.detail")}
               </button>
             </div>
           </div>

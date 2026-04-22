@@ -100,6 +100,36 @@ INSERT INTO poi_images (poi_id, image_url, sort_order) VALUES
 ('5', 'https://commons.wikimedia.org/wiki/Special:FilePath/Clinique_Saint-Paul_%C3%A0_Sa%C3%AFgon.jpg', 2);
 
 -- =========================
+-- POI TRANSLATIONS
+-- =========================
+INSERT INTO poi_translations (poi_id, language_code, name, category, short_description, description, address, price_text) VALUES
+('1','en','Saigon Notre-Dame Cathedral','Architecture','An architectural icon of Saigon.','Notre-Dame Cathedral is a remarkable landmark with European-style architecture in the heart of the city.','01 Cong xa Paris, District 1, Ho Chi Minh City','Free'),
+('1','ja','サイゴン・ノートルダム大聖堂','建築','サイゴンを象徴する建築物です。','ノートルダム大聖堂は、市の中心部にあるヨーロッパ風建築の代表的なランドマークです。','ホーチミン市1区 コンザーパリス1番地','無料'),
+('1','ko','사이공 노트르담 대성당','건축','사이공의 상징적인 건축물입니다.','노트르담 대성당은 도심 한가운데에 자리한 유럽풍 건축의 대표 명소입니다.','호찌민시 1군 콩사파리 1번지','무료'),
+('1','zh','西贡圣母大教堂','建筑','西贡的建筑地标。','圣母大教堂是位于市中心、具有欧洲风格建筑特色的著名地标。','胡志明市第1郡巴黎公社路1号','免费'),
+
+('2','en','Saigon Zoo and Botanical Gardens','Nature','A historic zoo and green park.','Saigon Zoo and Botanical Gardens is a famous green space combining a zoo and relaxing urban park.','02 Nguyen Binh Khiem, District 1','60,000 VND'),
+('2','ja','サイゴン動植物園','自然','歴史ある動物園と緑地です。','サイゴン動植物園は、動物園と都会の緑地が一体となった有名なスポットです。','1区 グエンビンキエム通り2番地','60,000ドン'),
+('2','ko','사이공 동물원 및 식물원','자연','역사가 깊은 동물원과 녹지입니다.','사이공 동물원은 동물원과 도심 속 녹지가 어우러진 유명한 장소입니다.','1군 응우옌빈키엠 2번지','60,000동'),
+('2','zh','西贡动物园植物园','自然','历史悠久的动物园与绿地。','西贡动物园植物园是集动物园与城市绿地于一体的著名景点。','第1郡阮秉谦路2号','60,000越盾'),
+
+('3','en','Ben Thanh Market','Culture','A famous market in Saigon.','Ben Thanh Market is a must-visit destination for shopping and experiencing local Saigon culture.','Le Loi Street, District 1','Free'),
+('3','ja','ベンタイン市場','文化','サイゴンの有名市場です。','ベンタイン市場は、買い物とサイゴンの文化体験が楽しめる代表的な観光地です。','1区 レロイ通り','無料'),
+('3','ko','벤탄 시장','문화','사이공의 유명한 시장입니다.','벤탄 시장은 쇼핑과 사이공 문화를 함께 체험할 수 있는 대표 명소입니다.','1군 레로이 거리','무료'),
+('3','zh','滨城市场','文化','西贡著名市场。','滨城市场是购物和体验西贡本地文化的代表性景点。','第1郡黎利路','免费'),
+
+('4','en','Saigon University - Campus 1','Education','Main campus of Saigon University.','This is a dynamic and modern learning environment for many students at Saigon University.','105 Ba Huyen Thanh Quan, Xuan Hoa Ward, Ho Chi Minh City','Free'),
+('4','ja','サイゴン大学 第1キャンパス','教育','サイゴン大学の主要キャンパスです。','多くの学生が学ぶ、活気があり現代的な学習環境です。','ホーチミン市スアンホア坊 バーフエンタインクアン通り105番地','無料'),
+('4','ko','사이공대학교 1캠퍼스','교육','사이공대학교의 메인 캠퍼스입니다.','많은 학생들이 공부하는 활기차고 현대적인 학습 공간입니다.','호찌민시 쑤언호아동 바후옌타인꽌 105번지','무료'),
+('4','zh','西贡大学第一校区','教育','西贡大学主校区。','这里是许多学生学习的充满活力且现代化的校园环境。','胡志明市春和坊巴县清关路105号','免费'),
+
+('5','en','Ho Chi Minh City Eye Hospital','Healthcare','A specialized eye hospital.','This hospital focuses on eye care and treatment with an experienced team of doctors.','280 Dien Bien Phu, Xuan Hoa Ward, Ho Chi Minh City','Service-based'),
+('5','ja','ホーチミン市眼科病院','医療','眼科専門病院です。','経験豊富な医師が在籍し、眼科診療と治療を専門としています。','ホーチミン市スアンホア坊 ディエンビエンフー通り280番地','サービス別'),
+('5','ko','호찌민시 안과병원','의료','안과 전문 병원입니다.','경험 많은 의사들이 근무하며 안과 진료와 치료를 전문으로 합니다.','호찌민시 쑤언호아동 디엔비엔푸 280번지','서비스별'),
+('5','zh','胡志明市眼科医院','医疗','眼科专科医院。','这里专注于眼科诊疗，由经验丰富的医生团队提供服务。','胡志明市春和坊奠边府路280号','按服务收费')
+ON CONFLICT (poi_id, language_code) DO NOTHING;
+
+-- =========================
 -- AUDIO (THÊM zh + 2-3 câu)
 -- =========================
 INSERT INTO audio_guides (

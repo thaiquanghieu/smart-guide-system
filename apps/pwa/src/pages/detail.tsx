@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import BottomNav from "@/components/BottomNav";
 import ToastBanner from "@/components/ToastBanner";
 import apiClient from "@/lib/api";
+import { getLanguageName, translatePoi, useAppI18n } from "@/lib/i18n";
 import { playPoiAudio, stopSpeech } from "@/lib/audio";
 import { ensureDeviceReady, getDeviceId, setPendingPoiId, setReturnTo } from "@/lib/device";
 import { calculateDistanceKm, type GeoPoint } from "@/lib/location";
@@ -39,6 +40,7 @@ const detailCache = new Map<
 
 export default function DetailPage() {
   const router = useRouter();
+  const { lang, t } = useAppI18n();
   const [poi, setPoi] = useState<Poi | null>(null);
   const [userLocation, setUserLocation] = useState<GeoPoint | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -63,7 +65,7 @@ export default function DetailPage() {
         const cached = detailCache.get(poiId);
 
         if (cached) {
-          setPoi(cached.poi);
+          setPoi(translatePoi<Poi>(cached.poi, lang));
           setRatingValue(Number(cached.poi.user_rating || 0));
           setSubscriptionActive(cached.subscriptionActive);
           setFreePlaysRemaining(cached.freePlaysRemaining);
@@ -75,7 +77,7 @@ export default function DetailPage() {
 
         const deviceId = getDeviceId();
         const [poiResponse, accessResponse] = await Promise.all([
-          apiClient.get(`/pois/${poiId}?deviceId=${deviceId}`),
+          apiClient.get(`/pois/${poiId}?deviceId=${deviceId}&lang=${lang}`),
           apiClient.get(`/access/free-listen?deviceId=${deviceId}`),
         ]);
 
@@ -88,17 +90,17 @@ export default function DetailPage() {
           return;
         }
 
-        setPoi(poiResponse.data);
+        setPoi(translatePoi<Poi>(poiResponse.data, lang));
         setRatingValue(Number(poiResponse.data?.user_rating || 0));
         setSubscriptionActive(hasActiveSubscription);
         setFreePlaysRemaining(remainingFreePlays);
       } catch (error: any) {
-        setErrorMessage(error?.response?.data?.message || "Không thể tải chi tiết địa điểm.");
+        setErrorMessage(error?.response?.data?.message || t("detail.loadError"));
       }
     };
 
     load();
-  }, [router, router.isReady, router.query.poiId]);
+  }, [lang, router, router.isReady, router.query.poiId, t]);
 
   useEffect(() => {
     if (!navigator.geolocation) return;
@@ -151,9 +153,7 @@ export default function DetailPage() {
     return `${km.toFixed(1).replace(".", ",")} km`;
   }, [poi, userLocation]);
 
-  if (!poi) {
-    return <main className="app-shell">{errorMessage || "Đang tải chi tiết..."}</main>;
-  }
+  if (!poi) return <main className="app-shell">{errorMessage || t("detail.loading")}</main>;
 
   const currentImage = poi.images?.[imageIndex] || "/assets/appiconfg.png";
   const currentAudio = poi.audios?.[0];
@@ -264,7 +264,7 @@ export default function DetailPage() {
         rating_avg: Number(response.data?.rating_avg || current.rating_avg || 0),
         rating_count: Number(response.data?.rating_count || current.rating_count || 0),
       } : current);
-      setToast(previousRating > 0 ? "Đã cập nhật đánh giá!" : "Đã gửi đánh giá!");
+      setToast(previousRating > 0 ? t("detail.ratingUpdated") : t("detail.ratingSent"));
     } catch {
       setRatingValue(previousRating);
       setPoi((current) => current ? {
@@ -273,7 +273,7 @@ export default function DetailPage() {
         rating_avg: previousAvg,
         rating_count: previousCount,
       } : current);
-      setToast("Không thể gửi đánh giá.");
+      setToast(t("detail.ratingUpdateFail"));
     } finally {
       setRatingLoading(false);
     }
@@ -319,7 +319,7 @@ export default function DetailPage() {
                   className="flex h-10 w-10 items-center justify-center rounded-full bg-white/20 shadow-[0_4px_12px_rgba(15,23,42,0.18)] backdrop-blur-[2px]"
                   onClick={toggleAudio}
                 >
-                  <img src={isPlaying ? "/assets/audio.png" : "/assets/audio2.png"} alt="Audio" className="h-[30px] w-[30px]" />
+                  <img src={isPlaying ? "/assets/audio.png" : "/assets/audio2.png"} alt={t("detail.listenGuide")} className="h-[30px] w-[30px]" />
                 </button>
               </div>
 
@@ -404,22 +404,22 @@ export default function DetailPage() {
             className="h-[50px] rounded-[12px] bg-[#0F5BD7] px-2 text-[12px] font-bold text-white shadow-[0_6px_14px_rgba(15,91,215,0.22)]"
             onClick={() => router.push(`/map?poiId=${poi.id}`)}
           >
-            Vị trí
+            {t("detail.location")}
           </button>
         </div>
 
         <div className="ios-card rounded-[26px] px-5 py-5">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-[18px] font-bold text-[#111827]">Nghe thuyết minh</p>
-              <p className="mt-1 text-[14px] text-[#475569]">Giọng đọc: {currentAudio?.voiceName || "TTS"}</p>
+              <p className="text-[18px] font-bold text-[#111827]">{t("detail.listenGuide")}</p>
+              <p className="mt-1 text-[14px] text-[#475569]">{t("detail.voice")}: {currentAudio?.voiceName || getLanguageName(currentAudio?.languageCode || "vi", lang)}</p>
             </div>
             <button
               type="button"
               className="flex h-9 w-9 items-center justify-center rounded-full bg-[#D1D5DB] shadow-[0_4px_10px_rgba(15,23,42,0.08)]"
               onClick={toggleAudio}
             >
-              <img src={isPlaying ? "/assets/audio.png" : "/assets/audio2.png"} alt="Audio toggle" className="h-[18px] w-[18px]" />
+                  <img src={isPlaying ? "/assets/audio.png" : "/assets/audio2.png"} alt={t("detail.listenGuide")} className="h-[18px] w-[18px]" />
             </button>
           </div>
 
@@ -436,19 +436,19 @@ export default function DetailPage() {
             className="mt-4 w-full rounded-[18px] bg-[#EEF4FF] py-3 text-[#0058BC]"
             onClick={() => setScriptOpen(true)}
           >
-            Xem lời thuyết minh
+            {t("detail.viewScript")}
           </button>
         </div>
 
         <section className="space-y-[14px]">
-          <h2 className="text-[24px] font-bold text-[#111827]">Giới thiệu</h2>
+          <h2 className="text-[24px] font-bold text-[#111827]">{t("detail.intro")}</h2>
           <p className="text-[16px] leading-[1.45] text-[#111827]">{poi.description}</p>
         </section>
 
         <section className="ios-card rounded-[22px] px-5 py-5">
-          <h3 className="text-[18px] font-bold text-[#111827]">Đánh giá địa điểm</h3>
+          <h3 className="text-[18px] font-bold text-[#111827]">{t("detail.ratingTitle")}</h3>
           <p className="mt-1 text-[14px] text-[#6B7280]">
-            Chọn từ 1 đến 5 sao. Bạn có thể sửa lại đánh giá.
+            {t("detail.ratingHint")}
           </p>
 
           <div className="mt-4 flex items-center gap-3">
@@ -462,7 +462,7 @@ export default function DetailPage() {
               >
                 <img
                   src="/assets/star.png"
-                  alt={`${star} sao`}
+                  alt={`${star}`}
                   className={`h-8 w-8 object-contain ${star <= ratingValue ? "opacity-100" : "opacity-25 grayscale"}`}
                 />
               </button>
@@ -470,7 +470,7 @@ export default function DetailPage() {
           </div>
 
           <p className="mt-3 text-[13px] text-[#0F5BD7]">
-            {ratingValue > 0 ? `Bạn đã chọn ${ratingValue} sao` : "Bạn chưa đánh giá"}
+            {ratingValue > 0 ? t("detail.ratingSelected", { count: ratingValue }) : t("detail.ratingEmpty")}
           </p>
         </section>
       </main>
@@ -481,16 +481,16 @@ export default function DetailPage() {
             className="mx-auto max-h-full max-w-[540px] overflow-auto rounded-[24px] bg-white p-5"
             onClick={(event) => event.stopPropagation()}
           >
-            <h3 className="text-[20px] font-bold text-[#111827]">Lời thuyết minh</h3>
+            <h3 className="text-[20px] font-bold text-[#111827]">{t("detail.scriptTitle")}</h3>
             <p className="mt-4 whitespace-pre-line text-[15px] leading-7 text-[#334155]">
-              {currentAudio?.scriptText || "Chưa có lời thuyết minh."}
+              {currentAudio?.scriptText || t("detail.scriptEmpty")}
             </p>
             <button
               type="button"
               className="mt-5 w-full rounded-[14px] bg-[#0F5BD7] py-3 text-white"
               onClick={() => setScriptOpen(false)}
             >
-              Đóng
+              {t("common.close")}
             </button>
           </div>
         </div>

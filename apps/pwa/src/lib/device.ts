@@ -217,6 +217,9 @@ export function setAppLanguage(languageCode: string) {
   const storage = getStorage();
   if (!storage) return;
   storage.setItem(APP_LANG_KEY, languageCode);
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event("app-language-change"));
+  }
 }
 
 export function getAppLanguage() {

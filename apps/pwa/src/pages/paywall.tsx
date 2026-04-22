@@ -3,6 +3,7 @@ import { useRouter } from "next/router";
 import Head from "next/head";
 import apiClient from "@/lib/api";
 import { ensureDeviceReady, setReturnTo } from "@/lib/device";
+import { getPlanName, getPlanSubtitle, useAppI18n } from "@/lib/i18n";
 
 type Plan = {
   id: number;
@@ -13,6 +14,7 @@ type Plan = {
 
 export default function PaywallPage() {
   const router = useRouter();
+  const { lang, t } = useAppI18n();
   const [plans, setPlans] = useState<Plan[]>([]);
   const [message, setMessage] = useState("");
   const [isLoading, setIsLoading] = useState(true);
@@ -24,14 +26,14 @@ export default function PaywallPage() {
         const response = await apiClient.get("/plans");
         setPlans(response.data || []);
       } catch (error: any) {
-        setMessage(error?.response?.data?.message || "Khong tai duoc goi.");
+        setMessage(error?.response?.data?.message || t("paywall.loadingPlans"));
       } finally {
         setIsLoading(false);
       }
     };
 
     load();
-  }, []);
+  }, [t]);
 
   return (
     <main className="min-h-screen bg-[#041B2D] px-5 pb-10 text-white" style={{ paddingTop: "calc(env(safe-area-inset-top) + 14px)" }}>
@@ -41,9 +43,9 @@ export default function PaywallPage() {
       <div className="mx-auto max-w-[540px] space-y-[14px]">
         <div className="h-[18px]" />
 
-        <img src="/assets/appiconfg.png" alt="Smart Guide" className="mx-auto -my-8 w-[220px]" />
+        <img src="/assets/appiconfg.png" alt={t("app.title")} className="mx-auto -my-8 w-[220px]" />
 
-        <p className="-mt-2 text-center text-[13px] text-[#D4E3F7]">Vui lòng chọn gói phù hợp</p>
+        <p className="-mt-2 text-center text-[13px] text-[#D4E3F7]">{t("paywall.choosePlan")}</p>
 
         {message ? (
           <div className="rounded-[18px] border border-red-400/30 bg-red-500/10 p-4 text-sm text-red-100">{message}</div>
@@ -51,7 +53,7 @@ export default function PaywallPage() {
 
         <section className="space-y-3">
           {isLoading ? (
-            <div className="rounded-[22px] bg-[#F4F9FF] p-4 text-sm text-[#0B1320]">Đang tải danh sách gói...</div>
+            <div className="rounded-[22px] bg-[#F4F9FF] p-4 text-sm text-[#0B1320]">{t("paywall.loadingPlans")}</div>
           ) : null}
 
           {plans.map((plan, index) => {
@@ -75,17 +77,12 @@ export default function PaywallPage() {
               >
                 <div className="grid grid-cols-[1fr,auto] gap-3">
                   <div>
-                    <p className="text-[18px] font-bold">{plan.name}</p>
+                    <p className="text-[18px] font-bold">{getPlanName(plan.id, lang)}</p>
                     <p className={`mt-1 text-[13px] ${highlighted ? "text-[#D6E8FF]" : "text-[#6B7280]"}`}>
-                      {plan.id === 1
-                        ? "1 ngày trải nghiệm thử"
-                        : plan.id === 2
-                          ? "7 ngày trải nghiệm đầy đủ"
-                          : plan.id === 3
-                            ? "30 ngày không giới hạn"
-                            : "365 ngày • Tiết kiệm hơn 40%"}
+                      {getPlanSubtitle(plan.id, lang)}
                     </p>
                   </div>
+                  <p className="sr-only">{getPlanName(plan.id, lang)}</p>
                   <div className={`text-[18px] font-bold ${highlighted ? "text-white" : "text-[#0F5BD7]"}`}>
                     {plan.price.toLocaleString("vi-VN")} đ
                   </div>
@@ -102,8 +99,8 @@ export default function PaywallPage() {
           >
             <img src="/assets/qr.png" alt="QR" className="h-[34px] w-[34px]" />
           </button>
-          <p className="text-[14px] font-bold">Quét QR để nhận ưu đãi</p>
-          <p className="text-[13px] text-[#CFE3FF] underline">Xem hướng dẫn</p>
+          <p className="text-[14px] font-bold">{t("paywall.qrOffer")}</p>
+          <p className="text-[13px] text-[#CFE3FF] underline">{t("paywall.viewGuide")}</p>
         </div>
       </div>
     </main>

@@ -14,6 +14,7 @@ DROP TABLE IF EXISTS subscriptions CASCADE;
 DROP TABLE IF EXISTS plans CASCADE;
 DROP TABLE IF EXISTS ratings CASCADE;
 DROP TABLE IF EXISTS audio_guides CASCADE;
+DROP TABLE IF EXISTS poi_translations CASCADE;
 DROP TABLE IF EXISTS poi_images CASCADE;
 DROP TABLE IF EXISTS pois CASCADE;
 DROP TABLE IF EXISTS devices CASCADE;
@@ -104,6 +105,24 @@ CREATE TABLE poi_images (
   poi_id text REFERENCES pois(id) ON DELETE CASCADE,
   image_url text,
   sort_order integer DEFAULT 0
+);
+
+-- =========================
+-- POI TRANSLATIONS
+-- =========================
+CREATE TABLE poi_translations (
+  id serial PRIMARY KEY,
+  poi_id text NOT NULL REFERENCES pois(id) ON DELETE CASCADE,
+  language_code text NOT NULL,
+  name text,
+  category text,
+  short_description text,
+  description text,
+  address text,
+  price_text text,
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now(),
+  UNIQUE (poi_id, language_code)
 );
 
 -- =========================

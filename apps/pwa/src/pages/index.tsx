@@ -6,6 +6,7 @@ import MapSurface from "@/components/MapSurface";
 import SearchBar from "@/components/SearchBar";
 import ToastBanner from "@/components/ToastBanner";
 import apiClient from "@/lib/api";
+import { translatePois, useAppI18n } from "@/lib/i18n";
 import { playPoiAudio, stopSpeech } from "@/lib/audio";
 import { ensureDeviceReady, getDeviceId, setReturnTo } from "@/lib/device";
 import { calculateDistanceKm, type GeoPoint } from "@/lib/location";
@@ -28,7 +29,7 @@ type Poi = {
   audios: { languageCode: string; languageName: string; scriptText: string }[];
 };
 
-type FilterOption = "Tất cả" | "Gần bạn" | "Miễn phí";
+type FilterOption = "all" | "nearby" | "free";
 
 let homeCache:
   | {
@@ -49,6 +50,7 @@ const HOME_STATE_KEY = "page_state_home";
 
 export default function HomePage() {
   const router = useRouter();
+  const { lang, t } = useAppI18n();
   const pendingRestoreScrollRef = useRef<number | null>(null);
   const [pois, setPois] = useState<Poi[]>([]);
   const [searchText, setSearchText] = useState("");
@@ -57,7 +59,7 @@ export default function HomePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [toast, setToast] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
-  const [filter, setFilter] = useState<FilterOption>("Tất cả");
+  const [filter, setFilter] = useState<FilterOption>("all");
   const [sortBy, setSortBy] = useState<"distance" | "listened" | "name">("distance");
   const [sortAscending, setSortAscending] = useState(true);
   const [showFilterSheet, setShowFilterSheet] = useState(false);
@@ -72,7 +74,7 @@ export default function HomePage() {
         const cachedState = homeCache?.hasLoaded ? homeCache : loadPageState<typeof homeCache>(HOME_STATE_KEY);
 
         if (cachedState?.hasLoaded) {
-          setPois(cachedState.pois);
+          setPois(translatePois<Poi>(cachedState.pois, lang));
           setSearchText(cachedState.searchText);
           setUserLocation(cachedState.userLocation);
           setFilter(cachedState.filter);
@@ -89,7 +91,7 @@ export default function HomePage() {
 
         const deviceId = getDeviceId();
         const [poiResponse, accessResponse] = await Promise.all([
-          apiClient.get(`/pois?deviceId=${deviceId}`),
+          apiClient.get(`/pois?deviceId=${deviceId}&lang=${lang}`),
           apiClient.get(`/access/free-listen?deviceId=${deviceId}`),
         ]);
 
@@ -103,18 +105,18 @@ export default function HomePage() {
           return;
         }
 
-        setPois(poiResponse.data || []);
+        setPois(translatePois<Poi>(poiResponse.data || [], lang));
         setSubscriptionActive(!!accessResponse.data?.hasActiveSubscription);
         setFreePlaysRemaining(Number(accessResponse.data?.freePlaysRemaining || 0));
       } catch (error: any) {
-        setErrorMessage(error?.response?.data?.message || "Không thể kết nối tới server.");
+        setErrorMessage(error?.response?.data?.message || "Server connection failed.");
       } finally {
         setIsLoading(false);
       }
     };
 
     load();
-  }, [router]);
+  }, [lang, router]);
 
   useEffect(() => {
     if (!toast) return undefined;
@@ -185,10 +187,10 @@ export default function HomePage() {
       });
     }
 
-    result = filter === "Gần bạn"
+    result = filter === "nearby"
       ? result.filter((poi) => poi.distanceKm <= 2)
-      : filter === "Miễn phí"
-        ? result.filter((poi) => (poi.priceText || "").toLowerCase().includes("miễn phí"))
+      : filter === "free"
+        ? result.filter((poi) => (poi.priceText || "").toLowerCase().includes(lang === "vi" ? "miễn phí" : t("poi.free").toLowerCase()))
         : result;
 
     result.sort((left, right) => {
@@ -234,10 +236,10 @@ export default function HomePage() {
       : null);
 
   const sortLabel = useMemo(() => {
-    if (sortBy === "name") return sortAscending ? "Tên A-Z" : "Tên Z-A";
-    if (sortBy === "listened") return sortAscending ? "Nghe nhiều ↑" : "Nghe nhiều ↓";
-    return sortAscending ? "Khoảng cách ↑" : "Khoảng cách ↓";
-  }, [sortAscending, sortBy]);
+    if (sortBy === "name") return sortAscending ? t("home.sort.nameAsc") : t("home.sort.nameDesc");
+    if (sortBy === "listened") return sortAscending ? t("home.sort.listenedAsc") : t("home.sort.listenedDesc");
+    return sortAscending ? t("home.sort.distanceAsc") : t("home.sort.distanceDesc");
+  }, [sortAscending, sortBy, t]);
 
   const updatePoi = (poiId: string, updater: (poi: Poi) => Poi) => {
     setPois((current) => current.map((poi) => (poi.id === poiId ? updater(poi) : poi)));
@@ -305,16 +307,16 @@ export default function HomePage() {
         <AppHeader showMenu showNotification />
 
         <section className="space-y-1">
-          <p className="text-[12px] font-bold text-[#0F5BD7]">HÀNH TRÌNH CỦA BẠN</p>
+          <p className="text-[12px] font-bold text-[#0F5BD7]">{t("home.journey")}</p>
           <h2 className="max-w-[320px] text-[27px] font-bold leading-[1.18] text-[#111827]">
-            Xin chào! Bạn muốn đi đâu hôm nay?
+            {t("home.greeting")}
           </h2>
         </section>
 
         <div className="space-y-0">
           <SearchBar
             value={searchText}
-            placeholder="Tìm kiếm địa điểm..."
+            placeholder={t("home.search")}
             active={showSuggestions || !!searchText}
             onChange={(value) => {
               setSearchText(value);
@@ -349,7 +351,7 @@ export default function HomePage() {
         </div>
 
         <section className="space-y-3">
-          <h3 className="text-[24px] font-bold text-[#111827]">Vị trí hiện tại</h3>
+          <h3 className="text-[24px] font-bold text-[#111827]">{t("home.currentLocation")}</h3>
           {previewCenter ? (
             <div className="ios-card overflow-hidden rounded-[20px] p-0">
               <div className="relative h-[200px]">
@@ -365,7 +367,7 @@ export default function HomePage() {
                   className="absolute right-3 top-3 flex h-[54px] w-[54px] items-center justify-center rounded-[18px] bg-white shadow-[0_10px_18px_rgba(0,0,0,0.08)]"
                   onClick={() => router.push("/map")}
                 >
-                  <img src="/assets/location.png" alt="Location" className="h-[26px] w-[26px]" />
+                  <img src="/assets/location.png" alt={t("detail.location")} className="h-[26px] w-[26px]" />
                 </button>
               </div>
             </div>
@@ -375,7 +377,7 @@ export default function HomePage() {
         <section className="space-y-4">
           <div className="flex items-center justify-between">
             <button type="button" className="flex items-center gap-2" onClick={() => setShowFilterSheet(true)}>
-              <h3 className="text-[24px] font-bold text-[#111827]">{filter}</h3>
+              <h3 className="text-[24px] font-bold text-[#111827]">{filter === "nearby" ? t("home.filter.nearby") : filter === "free" ? t("home.filter.free") : t("home.filter.all")}</h3>
               <img src="/assets/dropdown.png" alt="Dropdown" className="h-[14px] w-[14px]" />
             </button>
             <button
@@ -388,13 +390,13 @@ export default function HomePage() {
               onClick={() => setShowSortSheet(true)}
             >
               <img src={sortBy === "distance" && sortAscending ? "/assets/sort.png" : "/assets/sort_active.png"} alt="Sort" className="h-[14px] w-[14px]" />
-              <span>Sắp xếp</span>
+              <span>{t("home.sort")}</span>
             </button>
           </div>
 
           {isLoading ? (
             <div className="ios-card rounded-[20px] px-4 py-5 text-[14px] text-[#6B7280]">
-              Đang tải danh sách địa điểm...
+              {t("home.loadingPois")}
             </div>
           ) : null}
 
@@ -439,7 +441,7 @@ export default function HomePage() {
                   <button type="button" className="min-w-0 text-left" onClick={() => router.push(`/detail?poiId=${poi.id}`)}>
                     <p className="truncate text-[17px] font-bold text-[#111827]">{poi.name}</p>
                     <p className="mt-1 line-clamp-2 text-[14px] text-[#5B6474]">{poi.address}</p>
-                    <p className="mt-1 text-[13px] font-bold text-[#0F5BD7]">Xem chi tiết</p>
+                    <p className="mt-1 text-[13px] font-bold text-[#0F5BD7]">{t("home.viewDetail")}</p>
                   </button>
 
                   <button
@@ -463,9 +465,9 @@ export default function HomePage() {
       {showFilterSheet ? (
         <div className="fixed inset-0 z-40 bg-black/30" onClick={() => setShowFilterSheet(false)}>
           <div className="absolute bottom-0 left-0 right-0 mx-auto max-w-[540px] rounded-t-[20px] bg-white p-5" onClick={(event) => event.stopPropagation()}>
-            <h3 className="text-[18px] font-bold text-[#111827]">Chọn mục</h3>
+            <h3 className="text-[18px] font-bold text-[#111827]">{t("home.chooseCategory")}</h3>
             <div className="mt-4 grid gap-3">
-              {(["Gần bạn", "Tất cả", "Miễn phí"] as FilterOption[]).map((option) => (
+              {(["nearby", "all", "free"] as FilterOption[]).map((option) => (
                 <button
                   key={option}
                   type="button"
@@ -475,7 +477,7 @@ export default function HomePage() {
                     setShowFilterSheet(false);
                   }}
                 >
-                  {option}
+                  {option === "nearby" ? t("home.filter.nearby") : option === "free" ? t("home.filter.free") : t("home.filter.all")}
                 </button>
               ))}
             </div>
@@ -486,16 +488,16 @@ export default function HomePage() {
       {showSortSheet ? (
         <div className="fixed inset-0 z-40 bg-black/30" onClick={() => setShowSortSheet(false)}>
           <div className="absolute bottom-0 left-0 right-0 mx-auto max-w-[540px] rounded-t-[20px] bg-white p-5" onClick={(event) => event.stopPropagation()}>
-            <h3 className="text-[18px] font-bold text-[#111827]">Sắp xếp</h3>
+            <h3 className="text-[18px] font-bold text-[#111827]">{t("home.sort")}</h3>
             <p className="mt-1 text-[13px] text-[#6B7280]">{sortLabel}</p>
             <div className="mt-4 grid gap-3">
               {[
-                { label: "Khoảng cách ↑", key: "distance", asc: true },
-                { label: "Khoảng cách ↓", key: "distance", asc: false },
-                { label: "Nghe nhiều ↓", key: "listened", asc: false },
-                { label: "Nghe nhiều ↑", key: "listened", asc: true },
-                { label: "Tên A-Z", key: "name", asc: true },
-                { label: "Tên Z-A", key: "name", asc: false },
+                { label: t("home.sort.distanceAsc"), key: "distance", asc: true },
+                { label: t("home.sort.distanceDesc"), key: "distance", asc: false },
+                { label: t("home.sort.listenedDesc"), key: "listened", asc: false },
+                { label: t("home.sort.listenedAsc"), key: "listened", asc: true },
+                { label: t("home.sort.nameAsc"), key: "name", asc: true },
+                { label: t("home.sort.nameDesc"), key: "name", asc: false },
               ].map((option) => (
                 <button
                   key={option.label}

@@ -1,3 +1,5 @@
+import { useAppI18n } from "@/lib/i18n";
+
 type SearchBarProps = {
   value: string;
   placeholder: string;
@@ -7,6 +9,8 @@ type SearchBarProps = {
 };
 
 export default function SearchBar({ value, placeholder, active = true, onChange, onCancel }: SearchBarProps) {
+  const { t } = useAppI18n();
+
   return (
     <div className="rounded-[14px] border border-[#D1D5DB] bg-white px-3 py-0 shadow-[0_10px_20px_rgba(0,0,0,0.04)]">
       <div className="grid h-[60px] grid-cols-[40px,1fr,auto] items-center gap-2">
@@ -19,7 +23,7 @@ export default function SearchBar({ value, placeholder, active = true, onChange,
         />
         {active ? (
           <button type="button" onClick={onCancel} className="text-[14px] text-[#0F5BD7]">
-            Huỷ
+            {t("common.cancel")}
           </button>
         ) : (
           <div />

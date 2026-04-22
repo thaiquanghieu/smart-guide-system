@@ -12,6 +12,7 @@ public class AppDbContext : DbContext
     public DbSet<Device> Devices => Set<Device>();
     public DbSet<DeviceEntryGrant> DeviceEntryGrants => Set<DeviceEntryGrant>();
     public DbSet<PoiImage> PoiImages => Set<PoiImage>();
+    public DbSet<PoiTranslation> PoiTranslations => Set<PoiTranslation>();
     public DbSet<AudioGuide> AudioGuides => Set<AudioGuide>();
     public DbSet<Rating> Ratings => Set<Rating>();
     public DbSet<Plan> Plans => Set<Plan>();
@@ -26,6 +27,7 @@ public class AppDbContext : DbContext
     {
         modelBuilder.Entity<Poi>().ToTable("pois");
         modelBuilder.Entity<PoiImage>().ToTable("poi_images");
+        modelBuilder.Entity<PoiTranslation>().ToTable("poi_translations");
         modelBuilder.Entity<User>().ToTable("users");
         modelBuilder.Entity<Device>().ToTable("devices");
         modelBuilder.Entity<DeviceEntryGrant>().ToTable("device_entry_grants");

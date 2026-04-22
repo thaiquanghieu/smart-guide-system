@@ -4,6 +4,7 @@ import AppHeader from "@/components/AppHeader";
 import BottomNav from "@/components/BottomNav";
 import ToastBanner from "@/components/ToastBanner";
 import apiClient from "@/lib/api";
+import { useAppI18n } from "@/lib/i18n";
 import {
   ensureDeviceReady,
   getAppLanguage,
@@ -59,8 +60,9 @@ const languages = [
 
 export default function ProfilePage() {
   const router = useRouter();
+  const { lang, t } = useAppI18n();
   const [profile, setProfile] = useState<ProfileSummary | null>(null);
-  const [daysLeftText, setDaysLeftText] = useState("Đang kiểm tra...");
+  const [daysLeftText, setDaysLeftText] = useState(t("profile.checking"));
   const [showSettings, setShowSettings] = useState(false);
   const [showLanguage, setShowLanguage] = useState(false);
   const [toast, setToast] = useState("");
@@ -117,12 +119,12 @@ export default function ProfilePage() {
         if (paymentResponse.data?.isActive && paymentResponse.data?.expire) {
           const expireDate = new Date(paymentResponse.data.expire);
           const diffDays = Math.max(0, Math.ceil((expireDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24)));
-          setDaysLeftText(`Còn ${diffDays} ngày sử dụng`);
+          setDaysLeftText(t("profile.daysLeft", { count: diffDays }));
         } else {
-          setDaysLeftText("Chưa có gói hoạt động");
+          setDaysLeftText(t("profile.noPlan"));
         }
       } catch (error: any) {
-        setErrorMessage(error?.response?.data?.message || "Không thể tải hồ sơ.");
+        setErrorMessage(error?.response?.data?.message || t("profile.loadError"));
       }
     };
 
@@ -149,13 +151,20 @@ export default function ProfilePage() {
     return () => window.clearTimeout(timeout);
   }, [toast]);
 
+  useEffect(() => {
+    if (!showLanguage) return;
+    setAppLangState(getAppLanguage());
+    setAudioLangState(getAudioLanguage());
+    setAudioCustomState(getAudioCustom());
+  }, [showLanguage]);
+
   const menuItems = [
-    { icon: "history.png", label: "Lịch sử nghe" },
-    { icon: "favorite.png", label: "Địa điểm yêu thích" },
-    { icon: "settings.png", label: "Cài đặt", onClick: () => setShowSettings(true) },
-    { icon: "support.png", label: "Liên hệ hỗ trợ" },
-    { icon: "language.png", label: "Ngôn ngữ", onClick: () => setShowLanguage(true) },
-    { icon: "info.png", label: "Về ứng dụng" },
+    { icon: "history.png", label: t("profile.history") },
+    { icon: "favorite.png", label: t("profile.favoritePlaces") },
+    { icon: "settings.png", label: t("profile.settings"), onClick: () => setShowSettings(true) },
+    { icon: "support.png", label: t("profile.support") },
+    { icon: "language.png", label: t("profile.language"), onClick: () => setShowLanguage(true) },
+    { icon: "info.png", label: t("profile.about") },
   ];
 
   return (
@@ -164,7 +173,7 @@ export default function ProfilePage() {
 
       <main className="app-shell space-y-5">
         <AppHeader
-          actionLabel="Gia hạn"
+          actionLabel={t("profile.renew")}
           onActionClick={() => {
             setReturnTo("/profile");
             router.push("/paywall?returnTo=%2Fprofile");
@@ -193,11 +202,11 @@ export default function ProfilePage() {
         <section className="grid grid-cols-2 gap-[15px]">
           <div className="ios-card rounded-[16px] px-4 py-4 text-center">
             <div className="text-[22px] font-bold text-[#0F5BD7]">{profile?.favoriteCount ?? 0}</div>
-            <div className="mt-1 text-[12px] text-[#6B7280]">YÊU THÍCH</div>
+            <div className="mt-1 text-[12px] text-[#6B7280]">{t("profile.favoriteCount")}</div>
           </div>
           <div className="ios-card rounded-[16px] px-4 py-4 text-center">
             <div className="text-[22px] font-bold text-[#0F5BD7]">{profile?.listenedPoiCount ?? 0}</div>
-            <div className="mt-1 text-[12px] text-[#6B7280]">ĐIỂM ĐÃ NGHE</div>
+            <div className="mt-1 text-[12px] text-[#6B7280]">{t("profile.listenedCount")}</div>
           </div>
         </section>
 
@@ -235,7 +244,7 @@ export default function ProfilePage() {
           <div className="flex h-10 w-10 items-center justify-center rounded-[12px] bg-[#F9FAFB]">
             <img src="/assets/logout.png" alt="Delete" className="h-5 w-5" />
           </div>
-          <span className="text-[16px] text-[#EF4444]">Xóa thiết bị</span>
+          <span className="text-[16px] text-[#EF4444]">{t("profile.deleteDevice")}</span>
         </button>
 
         <section className="pb-4 text-center text-[12px] text-[#9CA3AF]">
@@ -247,13 +256,14 @@ export default function ProfilePage() {
       </main>
 
       {showSettings ? (
-        <div className="fixed inset-0 z-30 bg-black/40">
+        <div className="fixed inset-0 z-30 bg-black/40" onClick={() => setShowSettings(false)}>
           <div className="absolute bottom-0 left-0 right-0 mx-auto max-w-[540px] rounded-t-[20px] bg-white px-5 pb-6 pt-5">
-            <h3 className="text-[18px] font-bold text-[#111827]">Cài đặt</h3>
+            <div onClick={(event) => event.stopPropagation()}>
+            <h3 className="text-[18px] font-bold text-[#111827]">{t("profile.settingsTitle")}</h3>
 
             <div className="mt-6 space-y-6">
               <div className="flex items-center justify-between">
-                <span>Tự động phát audio</span>
+                <span>{t("profile.autoPlay")}</span>
                 <button
                   type="button"
                   className={`flex h-8 w-[52px] rounded-full p-1 ${autoPlay ? "justify-end bg-[#0F5BD7]" : "justify-start bg-[#E5E7EB]"}`}
@@ -268,7 +278,7 @@ export default function ProfilePage() {
               </div>
 
               <div className="flex items-center justify-between">
-                <span>Tiết kiệm pin</span>
+                <span>{t("profile.batterySaver")}</span>
                 <button
                   type="button"
                   className={`flex h-8 w-[52px] rounded-full p-1 ${batterySaver ? "justify-end bg-[#0F5BD7]" : "justify-start bg-[#E5E7EB]"}`}
@@ -287,7 +297,7 @@ export default function ProfilePage() {
               </div>
 
               <div>
-                <p className="text-[13px] text-[#9CA3AF]">Bán kính nhận diện</p>
+                <p className="text-[13px] text-[#9CA3AF]">{t("profile.detectRadius")}</p>
                 <input
                   type="range"
                   min={0}
@@ -306,7 +316,7 @@ export default function ProfilePage() {
               </div>
 
               <div>
-                <p className="text-[13px] text-[#9CA3AF]">Tần suất quét</p>
+                <p className="text-[13px] text-[#9CA3AF]">{t("profile.scanRate")}</p>
                 <input
                   type="range"
                   min={0}
@@ -322,9 +332,7 @@ export default function ProfilePage() {
                   className="mt-4 w-full accent-[#0F5BD7]"
                 />
                 <p className="mt-2 text-[12px] text-[#9CA3AF]">{intervalValue / 1000} giây</p>
-                <p className="mt-2 text-[12px] text-[#9CA3AF]">
-                  Đang dùng: {Math.round(radiusValue * 1000)}m / {intervalValue / 1000} giây
-                </p>
+                <p className="mt-2 text-[12px] text-[#9CA3AF]">{t("profile.currentUsage", { radius: Math.round(radiusValue * 1000), seconds: intervalValue / 1000 })}</p>
               </div>
 
               <button
@@ -332,21 +340,23 @@ export default function ProfilePage() {
                 onClick={() => setShowSettings(false)}
                 className="w-full rounded-[12px] bg-[#0F5BD7] py-3 text-white"
               >
-                Đóng
+                {t("common.close")}
               </button>
+            </div>
             </div>
           </div>
         </div>
       ) : null}
 
       {showLanguage ? (
-        <div className="fixed inset-0 z-30 bg-black/40">
+        <div className="fixed inset-0 z-30 bg-black/40" onClick={() => setShowLanguage(false)}>
           <div className="absolute bottom-0 left-0 right-0 mx-auto max-w-[540px] rounded-t-[20px] bg-white px-5 pb-6 pt-5">
-            <h3 className="text-[18px] font-bold text-[#111827]">Ngôn ngữ</h3>
+            <div onClick={(event) => event.stopPropagation()}>
+            <h3 className="text-[18px] font-bold text-[#111827]">{t("profile.languageTitle")}</h3>
 
             <div className="mt-6 space-y-6">
               <div className="grid grid-cols-[1fr,160px] items-center gap-3">
-                <span>Ngôn ngữ ứng dụng</span>
+                <span>{t("profile.appLanguage")}</span>
                 <select
                   value={appLang}
                   onChange={(event) => {
@@ -367,7 +377,7 @@ export default function ProfilePage() {
               </div>
 
               <div className="flex items-center justify-between">
-                <span>Tùy chỉnh ngôn ngữ đọc</span>
+                <span>{t("profile.customAudioLanguage")}</span>
                 <button
                   type="button"
                   className={`flex h-8 w-[52px] rounded-full p-1 ${audioCustom ? "justify-end bg-[#0F5BD7]" : "justify-start bg-[#E5E7EB]"}`}
@@ -386,7 +396,7 @@ export default function ProfilePage() {
               </div>
 
               <div className="grid grid-cols-[1fr,160px] items-center gap-3">
-                <span>Ngôn ngữ thuyết minh</span>
+                <span>{t("profile.audioLanguage")}</span>
                 <select
                   value={audioLang}
                   disabled={!audioCustom}
@@ -407,8 +417,9 @@ export default function ProfilePage() {
                 onClick={() => setShowLanguage(false)}
                 className="w-full rounded-[12px] bg-[#0F5BD7] py-3 text-white"
               >
-                Đóng
+                {t("common.close")}
               </button>
+            </div>
             </div>
           </div>
         </div>

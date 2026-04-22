@@ -2,11 +2,13 @@ import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
 import apiClient from "@/lib/api";
 import { ensureDeviceReady, getDeviceId, saveEntryContext, setPendingPoiId, setReturnTo } from "@/lib/device";
+import { useAppI18n } from "@/lib/i18n";
 
 export default function EntryQrPage() {
   const router = useRouter();
-  const [message, setMessage] = useState("Dang xu ly ma QR...");
-  const [detail, setDetail] = useState("He thong dang kiem tra quyen truy cap va mo dung diem tham quan.");
+  const { t } = useAppI18n();
+  const [message, setMessage] = useState(t("qr.processing"));
+  const [detail, setDetail] = useState(t("qr.detail"));
 
   useEffect(() => {
     if (!router.isReady) return;
@@ -37,13 +39,13 @@ export default function EntryQrPage() {
         const target = targetPoiId ? `/map?poiId=${encodeURIComponent(targetPoiId)}` : "/map";
         router.replace(target);
       } catch (error: any) {
-        setMessage(error?.response?.data?.message || "Khong the xu ly ma QR.");
-        setDetail("Vui long thu quet lai ma hoac kiem tra ket noi internet.");
+        setMessage(error?.response?.data?.message || t("qr.error"));
+        setDetail(t("qr.retry"));
       }
     };
 
     run();
-  }, [router]);
+  }, [router, t]);
 
   return (
     <main className="app-shell flex items-center justify-center">

@@ -11,17 +11,26 @@ public class PoisController : ControllerBase
 {
     private readonly AppDbContext _db;
 
+    private static string NormalizeLanguage(string? lang)
+    {
+        return lang is "en" or "ja" or "ko" or "zh" ? lang : "vi";
+    }
+
     public PoisController(AppDbContext db)
     {
         _db = db;
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetPois([FromQuery] int deviceId)
+    public async Task<IActionResult> GetPois([FromQuery] int deviceId, [FromQuery] string? lang)
     {
+        var language = NormalizeLanguage(lang);
         var pois = await _db.Pois.ToListAsync();
         var poiImages = await _db.PoiImages.OrderBy(x => x.SortOrder).ToListAsync();
         var audioGuides = await _db.AudioGuides.ToListAsync();
+        var translations = language == "vi"
+            ? new List<PoiTranslation>()
+            : await _db.PoiTranslations.Where(x => x.LanguageCode == language).ToListAsync();
 
         var favoritePoiIds = deviceId == 0
             ? new HashSet<string>()
@@ -31,52 +40,61 @@ public class PoisController : ControllerBase
                 .ToListAsync())
             .ToHashSet();
 
-        var result = pois.Select(p => new
+        var result = pois.Select(p =>
         {
-            p.Id,
-            p.Name,
-            p.Category,
-            short_description = p.ShortDescription,
-            p.Description,
-            p.Address,
-            p.PriceText,
-            open_time = p.OpenTime,
-            close_time = p.CloseTime,
-            open_hours = $"{p.OpenTime} - {p.CloseTime}",
-            p.Latitude,
-            p.Longitude,
-            listened_count = p.ListenedCount,
-            rating_avg = p.RatingAvg,
-            rating_count = p.RatingCount,
-            is_favorite = favoritePoiIds.Contains(p.Id),
+            var translation = translations.FirstOrDefault(x => x.PoiId == p.Id);
 
-            images = poiImages
-                .Where(i => i.PoiId == p.Id)
-                .OrderBy(i => i.SortOrder)
-                .Select(i => i.ImageUrl)
-                .ToList(),
+            return new
+            {
+                p.Id,
+                Name = translation?.Name ?? p.Name,
+                Category = translation?.Category ?? p.Category,
+                short_description = translation?.ShortDescription ?? p.ShortDescription,
+                Description = translation?.Description ?? p.Description,
+                Address = translation?.Address ?? p.Address,
+                PriceText = translation?.PriceText ?? p.PriceText,
+                open_time = p.OpenTime,
+                close_time = p.CloseTime,
+                open_hours = $"{p.OpenTime} - {p.CloseTime}",
+                p.Latitude,
+                p.Longitude,
+                listened_count = p.ListenedCount,
+                rating_avg = p.RatingAvg,
+                rating_count = p.RatingCount,
+                is_favorite = favoritePoiIds.Contains(p.Id),
 
-            audios = audioGuides
-                .Where(a => a.PoiId == p.Id)
-                .Select(a => new
-                {
-                    a.Id,
-                    a.LanguageCode,
-                    a.LanguageName,
-                    a.VoiceName,
-                    a.ScriptText
-                })
-                .ToList()
+                images = poiImages
+                    .Where(i => i.PoiId == p.Id)
+                    .OrderBy(i => i.SortOrder)
+                    .Select(i => i.ImageUrl)
+                    .ToList(),
+
+                audios = audioGuides
+                    .Where(a => a.PoiId == p.Id)
+                    .Select(a => new
+                    {
+                        a.Id,
+                        a.LanguageCode,
+                        a.LanguageName,
+                        a.VoiceName,
+                        a.ScriptText
+                    })
+                    .ToList()
+            };
         });
 
         return Ok(result);
     }
 
     [HttpGet("{id}")]
-    public async Task<IActionResult> GetById(string id, [FromQuery] int deviceId)
+    public async Task<IActionResult> GetById(string id, [FromQuery] int deviceId, [FromQuery] string? lang)
     {
+        var language = NormalizeLanguage(lang);
         var poi = await _db.Pois.FirstOrDefaultAsync(x => x.Id == id);
         if (poi == null) return NotFound();
+        var translation = language == "vi"
+            ? null
+            : await _db.PoiTranslations.FirstOrDefaultAsync(x => x.PoiId == id && x.LanguageCode == language);
 
         var images = await _db.PoiImages
             .Where(i => i.PoiId == id)
@@ -109,12 +127,12 @@ public class PoisController : ControllerBase
         return Ok(new
         {
             poi.Id,
-            poi.Name,
-            poi.Category,
-            short_description = poi.ShortDescription,
-            poi.Description,
-            poi.Address,
-            poi.PriceText,
+            Name = translation?.Name ?? poi.Name,
+            Category = translation?.Category ?? poi.Category,
+            short_description = translation?.ShortDescription ?? poi.ShortDescription,
+            Description = translation?.Description ?? poi.Description,
+            Address = translation?.Address ?? poi.Address,
+            PriceText = translation?.PriceText ?? poi.PriceText,
             open_time = poi.OpenTime,
             close_time = poi.CloseTime,
             open_hours = $"{poi.OpenTime} - {poi.CloseTime}",

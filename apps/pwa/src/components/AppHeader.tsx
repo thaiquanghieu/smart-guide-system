@@ -1,3 +1,5 @@
+import { useAppI18n } from "@/lib/i18n";
+
 type AppHeaderProps = {
   showMenu?: boolean;
   showNotification?: boolean;
@@ -11,13 +13,15 @@ export default function AppHeader({
   actionLabel,
   onActionClick,
 }: AppHeaderProps) {
+  const { t } = useAppI18n();
+
   return (
     <div className="flex items-center justify-between gap-3">
       <div className="flex h-[42px] w-[42px] items-center justify-center">
         {showMenu ? <img src="/assets/menu.png" alt="Menu" className="h-7 w-7" /> : null}
       </div>
 
-      <h1 className="text-[25px] font-bold text-[#0B63E5]">Smart Guide</h1>
+      <h1 className="text-[25px] font-bold text-[#0B63E5]">{t("app.title")}</h1>
 
       <div className="flex h-[42px] min-w-[42px] items-center justify-end">
         {actionLabel ? (

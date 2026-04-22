@@ -2,6 +2,7 @@ import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
 import Head from "next/head";
 import apiClient from "@/lib/api";
+import { getPlanName, useAppI18n } from "@/lib/i18n";
 import {
   clearEntryContext,
   clearPendingPoiId,
@@ -24,8 +25,9 @@ type PaymentPreview = {
 
 export default function PaymentPage() {
   const router = useRouter();
+  const { lang, t } = useAppI18n();
   const [payment, setPayment] = useState<PaymentPreview | null>(null);
-  const [message, setMessage] = useState("Dang tao ma thanh toan...");
+  const [message, setMessage] = useState(t("common.loading"));
   const [isConfirming, setIsConfirming] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
 
@@ -42,12 +44,12 @@ export default function PaymentPage() {
         setPayment(response.data);
         setMessage("");
       } catch (error: any) {
-        setMessage(error?.response?.data?.message || "Khong tao duoc thanh toan.");
+        setMessage(error?.response?.data?.message || t("payment.createError"));
       }
     };
 
     load();
-  }, [router]);
+  }, [router, t]);
 
   const qrUrl =
     payment == null
@@ -64,7 +66,7 @@ export default function PaymentPage() {
           <button type="button" className="text-[26px]" onClick={() => router.back()}>
             ←
           </button>
-          <h1 className="text-center text-[22px] font-bold">Thanh toán</h1>
+          <h1 className="text-center text-[22px] font-bold">{t("payment.title")}</h1>
           <div />
         </div>
 
@@ -73,7 +75,7 @@ export default function PaymentPage() {
             <div className="rounded-[20px] border border-[#B9D8FF] bg-[#F4F9FF] p-4 text-[#111827]">
               <div className="grid grid-cols-[1fr,auto] gap-3">
                 <div>
-                  <p className="text-[18px] font-bold">{payment.plan.name}</p>
+                  <p className="text-[18px] font-bold">{getPlanName(payment.plan.id, lang)}</p>
                   <p className="text-[12px] text-[#6B7280]">/{payment.plan.days} ngày</p>
                 </div>
                 <p className="text-[18px] font-bold text-[#0F5BD7]">{payment.plan.price.toLocaleString("vi-VN")} đ</p>
@@ -86,14 +88,14 @@ export default function PaymentPage() {
               </div>
             </div>
 
-            <p className="text-center text-[#CFE3FF]">Hoặc chuyển khoản thủ công</p>
+            <p className="text-center text-[#CFE3FF]">{t("payment.manualTransfer")}</p>
 
             <div className="rounded-[16px] bg-[#F4F9FF] p-4 text-[#111827]">
               <div className="space-y-2">
                 <p>Techcombank</p>
                 <p>4001012005</p>
                 <p>THAI QUANG HIEU</p>
-                <p className="font-bold">Nội dung:</p>
+                <p className="font-bold">{t("payment.transferContent")}</p>
                 <p className="font-bold text-[#0F5BD7]">{payment.code}</p>
               </div>
             </div>
@@ -119,13 +121,13 @@ export default function PaymentPage() {
                   clearEntryContext();
                   router.replace(pendingPoiId ? `/map?poiId=${pendingPoiId}` : returnTo || "/map");
                 } catch (error: any) {
-                  setMessage(error?.response?.data?.message || "Xác nhận thanh toán thất bại.");
+                  setMessage(error?.response?.data?.message || t("payment.confirmError"));
                 } finally {
                   setIsConfirming(false);
                 }
               }}
             >
-              {isConfirming ? "Đang kiểm tra..." : "Tôi đã thanh toán"}
+              {isConfirming ? t("payment.confirming") : t("payment.confirm")}
             </button>
           </>
         ) : (
@@ -137,15 +139,15 @@ export default function PaymentPage() {
         <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/20 px-5">
           <div className="w-full max-w-[320px] overflow-hidden rounded-[18px] bg-white text-center text-[#111827]">
             <div className="px-5 pb-4 pt-5">
-              <h3 className="text-[18px] font-bold">Thành công</h3>
-              <p className="mt-2 text-[15px]">Gói của bạn đã được kích hoạt.</p>
+              <h3 className="text-[18px] font-bold">{t("payment.success")}</h3>
+              <p className="mt-2 text-[15px]">{t("payment.successMessage")}</p>
             </div>
             <button
               type="button"
               className="w-full border-t border-[#E5E7EB] py-3 text-[18px] font-bold text-[#0F5BD7]"
               onClick={() => setShowSuccess(false)}
             >
-              OK
+              {t("common.ok")}
             </button>
           </div>
         </div>
