@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/router";
 import AppHeader from "@/components/AppHeader";
 import BottomNav from "@/components/BottomNav";
@@ -9,6 +9,7 @@ import apiClient from "@/lib/api";
 import { playPoiAudio, stopSpeech } from "@/lib/audio";
 import { ensureDeviceReady, getDeviceId, setReturnTo } from "@/lib/device";
 import { calculateDistanceKm, type GeoPoint } from "@/lib/location";
+import { loadPageState, savePageState } from "@/lib/pageState";
 
 type Poi = {
   id: string;
@@ -44,8 +45,11 @@ let homeCache:
     }
   | null = null;
 
+const HOME_STATE_KEY = "page_state_home";
+
 export default function HomePage() {
   const router = useRouter();
+  const pendingRestoreScrollRef = useRef<number | null>(null);
   const [pois, setPois] = useState<Poi[]>([]);
   const [searchText, setSearchText] = useState("");
   const [userLocation, setUserLocation] = useState<GeoPoint | null>(null);
@@ -65,17 +69,19 @@ export default function HomePage() {
   useEffect(() => {
     const load = async () => {
       try {
-        if (homeCache?.hasLoaded) {
-          setPois(homeCache.pois);
-          setSearchText(homeCache.searchText);
-          setUserLocation(homeCache.userLocation);
-          setFilter(homeCache.filter);
-          setSortBy(homeCache.sortBy);
-          setSortAscending(homeCache.sortAscending);
-          setSubscriptionActive(homeCache.subscriptionActive);
-          setFreePlaysRemaining(homeCache.freePlaysRemaining);
+        const cachedState = homeCache?.hasLoaded ? homeCache : loadPageState<typeof homeCache>(HOME_STATE_KEY);
+
+        if (cachedState?.hasLoaded) {
+          setPois(cachedState.pois);
+          setSearchText(cachedState.searchText);
+          setUserLocation(cachedState.userLocation);
+          setFilter(cachedState.filter);
+          setSortBy(cachedState.sortBy);
+          setSortAscending(cachedState.sortAscending);
+          setSubscriptionActive(cachedState.subscriptionActive);
+          setFreePlaysRemaining(cachedState.freePlaysRemaining);
           setIsLoading(false);
-          requestAnimationFrame(() => window.scrollTo(0, homeCache?.scrollY || 0));
+          pendingRestoreScrollRef.current = cachedState.scrollY || 0;
           return;
         }
 
@@ -118,7 +124,7 @@ export default function HomePage() {
 
   useEffect(() => {
     const saveCache = () => {
-      homeCache = {
+      const nextState = {
         hasLoaded: !isLoading && !errorMessage && pois.length > 0,
         pois,
         searchText,
@@ -130,6 +136,9 @@ export default function HomePage() {
         freePlaysRemaining,
         scrollY: window.scrollY,
       };
+
+      homeCache = nextState;
+      savePageState(HOME_STATE_KEY, nextState);
     };
 
     saveCache();
@@ -198,6 +207,16 @@ export default function HomePage() {
 
     return result;
   }, [enrichedPois, filter, searchText, sortAscending, sortBy]);
+
+  useEffect(() => {
+    if (isLoading || !pois.length || pendingRestoreScrollRef.current == null) return;
+
+    const targetScrollY = pendingRestoreScrollRef.current;
+    pendingRestoreScrollRef.current = null;
+
+    const restore = () => window.scrollTo(0, targetScrollY);
+    requestAnimationFrame(() => requestAnimationFrame(restore));
+  }, [filteredPois.length, isLoading, pois.length]);
 
   const suggestions = useMemo(() => {
     const keyword = searchText.trim().toLowerCase();

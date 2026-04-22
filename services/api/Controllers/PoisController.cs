@@ -99,6 +99,13 @@ public class PoisController : ControllerBase
         var isFavorite = deviceId != 0 && await _db.Favorites
             .AnyAsync(x => x.DeviceId == deviceId && x.PoiId == id);
 
+        var userRating = deviceId == 0
+            ? 0
+            : await _db.Ratings
+                .Where(x => x.DeviceId == deviceId && x.PoiId == id)
+                .Select(x => (int?)x.RatingValue)
+                .FirstOrDefaultAsync() ?? 0;
+
         return Ok(new
         {
             poi.Id,
@@ -116,6 +123,7 @@ public class PoisController : ControllerBase
             listened_count = poi.ListenedCount,
             rating_avg = poi.RatingAvg,
             rating_count = poi.RatingCount,
+            user_rating = userRating,
             is_favorite = isFavorite,
             images,
             audios

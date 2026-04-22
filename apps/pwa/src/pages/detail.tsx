@@ -20,6 +20,8 @@ type Poi = {
   longitude: number;
   listened_count: number;
   rating_avg: number;
+  rating_count?: number;
+  user_rating?: number;
   is_favorite: boolean;
   images: string[];
   audios: { languageCode: string; languageName: string; voiceName: string; scriptText: string }[];
@@ -44,6 +46,8 @@ export default function DetailPage() {
   const [subscriptionActive, setSubscriptionActive] = useState(false);
   const [freePlaysRemaining, setFreePlaysRemaining] = useState(0);
   const [scriptOpen, setScriptOpen] = useState(false);
+  const [ratingValue, setRatingValue] = useState(0);
+  const [ratingLoading, setRatingLoading] = useState(false);
   const [toast, setToast] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -57,6 +61,7 @@ export default function DetailPage() {
 
         if (cached) {
           setPoi(cached.poi);
+          setRatingValue(Number(cached.poi.user_rating || 0));
           setSubscriptionActive(cached.subscriptionActive);
           setFreePlaysRemaining(cached.freePlaysRemaining);
           setImageIndex(cached.imageIndex);
@@ -81,6 +86,7 @@ export default function DetailPage() {
         }
 
         setPoi(poiResponse.data);
+        setRatingValue(Number(poiResponse.data?.user_rating || 0));
         setSubscriptionActive(hasActiveSubscription);
         setFreePlaysRemaining(remainingFreePlays);
       } catch (error: any) {
@@ -214,6 +220,56 @@ export default function DetailPage() {
     }
   };
 
+  const submitRating = async (nextRating: number) => {
+    if (!poi || ratingLoading) return;
+
+    const previousRating = ratingValue;
+    const previousAvg = poi.rating_avg || 0;
+    const previousCount = poi.rating_count || 0;
+    const safeCount = previousCount > 0 ? previousCount : (previousRating > 0 ? 1 : 0);
+    const totalScore = previousAvg * safeCount;
+    const nextCount = previousRating > 0 ? safeCount : safeCount + 1;
+    const nextAvg = nextCount > 0
+      ? Number(((totalScore - previousRating + nextRating) / nextCount).toFixed(2))
+      : nextRating;
+
+    setRatingLoading(true);
+    setRatingValue(nextRating);
+    setPoi({
+      ...poi,
+      user_rating: nextRating,
+      rating_avg: nextAvg,
+      rating_count: nextCount,
+    });
+
+    try {
+      const response = await apiClient.post("/ratings", {
+        poiId: poi.id,
+        deviceId: getDeviceId(),
+        ratingValue: nextRating,
+      });
+
+      setPoi((current) => current ? {
+        ...current,
+        user_rating: nextRating,
+        rating_avg: Number(response.data?.rating_avg || current.rating_avg || 0),
+        rating_count: Number(response.data?.rating_count || current.rating_count || 0),
+      } : current);
+      setToast(previousRating > 0 ? "Đã cập nhật đánh giá!" : "Đã gửi đánh giá!");
+    } catch {
+      setRatingValue(previousRating);
+      setPoi((current) => current ? {
+        ...current,
+        user_rating: previousRating,
+        rating_avg: previousAvg,
+        rating_count: previousCount,
+      } : current);
+      setToast("Không thể gửi đánh giá.");
+    } finally {
+      setRatingLoading(false);
+    }
+  };
+
   return (
     <>
       <ToastBanner message={toast} />
@@ -311,18 +367,18 @@ export default function DetailPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-3 gap-[10px]">
-          <div className="flex h-[50px] items-center justify-center rounded-[10px] bg-[#F3F4F6] px-2 text-[13px] text-[#374151] shadow-[0_4px_10px_rgba(15,23,42,0.05),inset_0_0_0_1px_rgba(209,213,219,0.75)]">
-            <img src="/assets/clock.png" alt="Clock" className="mr-2 h-[14px] w-[14px]" />
-            <span className="truncate">{poi.open_hours || "07:00 - 17:00"}</span>
+        <div className="grid grid-cols-[1.15fr_0.95fr_1fr] gap-[10px]">
+          <div className="flex h-[50px] items-center justify-center rounded-[10px] bg-[#F3F4F6] px-2.5 text-[12px] text-[#374151] shadow-[0_4px_10px_rgba(15,23,42,0.05),inset_0_0_0_1px_rgba(209,213,219,0.75)]">
+            <img src="/assets/clock.png" alt="Clock" className="mr-1.5 h-[14px] w-[14px] shrink-0" />
+            <span className="whitespace-nowrap">{poi.open_hours || "07:00 - 17:00"}</span>
           </div>
-          <div className="flex h-[50px] items-center justify-center rounded-[10px] bg-[#EEF4FF] px-2 text-[13px] font-bold text-[#365FA8] shadow-[0_4px_10px_rgba(15,23,42,0.05),inset_0_0_0_1px_rgba(191,219,254,0.9)]">
-            <img src="/assets/ticket.png" alt="Ticket" className="mr-2 h-[14px] w-[14px]" />
+          <div className="flex h-[50px] items-center justify-center rounded-[10px] bg-[#EEF4FF] px-2 text-[12px] font-bold text-[#365FA8] shadow-[0_4px_10px_rgba(15,23,42,0.05),inset_0_0_0_1px_rgba(191,219,254,0.9)]">
+            <img src="/assets/ticket.png" alt="Ticket" className="mr-1.5 h-[14px] w-[14px] shrink-0" />
             <span className="truncate">{poi.priceText}</span>
           </div>
           <button
             type="button"
-            className="h-[50px] rounded-[12px] bg-[#0F5BD7] text-[13px] font-bold text-white shadow-[0_6px_14px_rgba(15,91,215,0.22)]"
+            className="h-[50px] rounded-[12px] bg-[#0F5BD7] px-2 text-[12px] font-bold text-white shadow-[0_6px_14px_rgba(15,91,215,0.22)]"
             onClick={() => router.push(`/map?poiId=${poi.id}`)}
           >
             Hiện vị trí
@@ -364,6 +420,35 @@ export default function DetailPage() {
         <section className="space-y-[14px]">
           <h2 className="text-[24px] font-bold text-[#111827]">Giới thiệu</h2>
           <p className="text-[16px] leading-[1.45] text-[#111827]">{poi.description}</p>
+        </section>
+
+        <section className="ios-card rounded-[22px] px-5 py-5">
+          <h3 className="text-[18px] font-bold text-[#111827]">Đánh giá địa điểm</h3>
+          <p className="mt-1 text-[14px] text-[#6B7280]">
+            Chọn từ 1 đến 5 sao. Bạn có thể sửa lại đánh giá.
+          </p>
+
+          <div className="mt-4 flex items-center gap-3">
+            {[1, 2, 3, 4, 5].map((star) => (
+              <button
+                key={star}
+                type="button"
+                disabled={ratingLoading}
+                className="transition-transform disabled:opacity-60"
+                onClick={() => submitRating(star)}
+              >
+                <img
+                  src="/assets/star.png"
+                  alt={`${star} sao`}
+                  className={`h-8 w-8 object-contain ${star <= ratingValue ? "opacity-100" : "opacity-25 grayscale"}`}
+                />
+              </button>
+            ))}
+          </div>
+
+          <p className="mt-3 text-[13px] text-[#0F5BD7]">
+            {ratingValue > 0 ? `Bạn đã chọn ${ratingValue} sao` : "Bạn chưa đánh giá"}
+          </p>
         </section>
       </main>
 
