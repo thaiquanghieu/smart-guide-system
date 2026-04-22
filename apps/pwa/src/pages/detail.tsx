@@ -50,6 +50,9 @@ export default function DetailPage() {
   const [ratingLoading, setRatingLoading] = useState(false);
   const [toast, setToast] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+  const [nameExpanded, setNameExpanded] = useState(false);
+  const [addressExpanded, setAddressExpanded] = useState(false);
+  const [priceExpanded, setPriceExpanded] = useState(false);
 
   useEffect(() => {
     if (!router.isReady) return;
@@ -133,6 +136,12 @@ export default function DetailPage() {
       imageIndex,
     });
   }, [freePlaysRemaining, imageIndex, poi, router.query.poiId, subscriptionActive]);
+
+  useEffect(() => {
+    setNameExpanded(false);
+    setAddressExpanded(false);
+    setPriceExpanded(false);
+  }, [poi?.id]);
 
   const distanceText = useMemo(() => {
     if (!poi || !userLocation) return "2,4 km";
@@ -336,16 +345,26 @@ export default function DetailPage() {
 
               <div className="absolute bottom-[18px] left-[18px] right-[18px] flex items-end justify-between">
                 <div className="space-y-1 text-white">
-                  <p className="max-w-[230px] truncate text-[21px] font-bold drop-shadow-[0_2px_6px_rgba(15,23,42,0.24)]">{poi.name}</p>
+                  <button
+                    type="button"
+                    className={`max-w-[236px] text-left text-[21px] font-bold drop-shadow-[0_2px_6px_rgba(15,23,42,0.24)] ${nameExpanded ? "" : "truncate"}`}
+                    onClick={() => setNameExpanded((value) => !value)}
+                  >
+                    {poi.name}
+                  </button>
                   <div className="flex items-center gap-2 text-[14px] drop-shadow-[0_2px_6px_rgba(15,23,42,0.22)]">
                     <img src="/assets/listen.png" alt="Listen" className="h-[14px] w-[14px]" />
                     <span>{poi.listened_count}</span>
                     <img src="/assets/star.png" alt="Star" className="h-[14px] w-[14px]" />
                     <span>{(poi.rating_avg || 0).toFixed(1).replace(".", ",")}</span>
                   </div>
-                  <p className="max-w-[240px] text-[13px] leading-[1.35] text-white/95 drop-shadow-[0_2px_6px_rgba(15,23,42,0.22)]">
+                  <button
+                    type="button"
+                    className={`max-w-[244px] text-left text-[13px] leading-[1.35] text-white/95 drop-shadow-[0_2px_6px_rgba(15,23,42,0.22)] ${addressExpanded ? "" : "line-clamp-2"}`}
+                    onClick={() => setAddressExpanded((value) => !value)}
+                  >
                     {poi.address}
-                  </p>
+                  </button>
                 </div>
                 <button
                   type="button"
@@ -367,21 +386,25 @@ export default function DetailPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-[1.15fr_0.95fr_1fr] gap-[10px]">
+        <div className="grid grid-cols-[1.12fr_1.04fr_0.84fr] gap-[10px]">
           <div className="flex h-[50px] items-center justify-center rounded-[10px] bg-[#F3F4F6] px-2.5 text-[12px] text-[#374151] shadow-[0_4px_10px_rgba(15,23,42,0.05),inset_0_0_0_1px_rgba(209,213,219,0.75)]">
             <img src="/assets/clock.png" alt="Clock" className="mr-1.5 h-[14px] w-[14px] shrink-0" />
             <span className="whitespace-nowrap">{poi.open_hours || "07:00 - 17:00"}</span>
           </div>
-          <div className="flex h-[50px] items-center justify-center rounded-[10px] bg-[#EEF4FF] px-2 text-[12px] font-bold text-[#365FA8] shadow-[0_4px_10px_rgba(15,23,42,0.05),inset_0_0_0_1px_rgba(191,219,254,0.9)]">
+          <button
+            type="button"
+            className="flex h-[50px] items-center justify-center rounded-[10px] bg-[#EEF4FF] px-2 text-[12px] font-bold text-[#365FA8] shadow-[0_4px_10px_rgba(15,23,42,0.05),inset_0_0_0_1px_rgba(191,219,254,0.9)]"
+            onClick={() => setPriceExpanded((value) => !value)}
+          >
             <img src="/assets/ticket.png" alt="Ticket" className="mr-1.5 h-[14px] w-[14px] shrink-0" />
-            <span className="truncate">{poi.priceText}</span>
-          </div>
+            <span className={`${priceExpanded ? "whitespace-normal text-center leading-[1.15]" : "truncate"}`}>{poi.priceText}</span>
+          </button>
           <button
             type="button"
             className="h-[50px] rounded-[12px] bg-[#0F5BD7] px-2 text-[12px] font-bold text-white shadow-[0_6px_14px_rgba(15,91,215,0.22)]"
             onClick={() => router.push(`/map?poiId=${poi.id}`)}
           >
-            Hiện vị trí
+            Vị trí
           </button>
         </div>
 
