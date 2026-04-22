@@ -169,8 +169,8 @@ export default function ProfilePage() {
     { icon: "history.png", label: t("profile.history") },
     { icon: "favorite.png", label: t("profile.favoritePlaces") },
     { icon: "settings.png", label: t("profile.settings"), onClick: () => setShowSettings(true) },
-    { icon: "support.png", label: t("profile.support") },
     { icon: "language.png", label: t("profile.language"), onClick: () => setShowLanguage(true) },
+    { icon: "support.png", label: t("profile.support") },
     { icon: "info.png", label: t("profile.about") },
   ];
 

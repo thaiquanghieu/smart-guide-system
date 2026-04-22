@@ -13,7 +13,7 @@ export default function BottomNav() {
   const { t } = useAppI18n();
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-20 border-t border-[#E5E7EB] bg-white/95 pb-[max(10px,env(safe-area-inset-bottom))] pt-2 backdrop-blur">
+    <nav className="fixed bottom-0 left-0 right-0 z-20 border-t border-[#E5E7EB] bg-white pb-[max(10px,env(safe-area-inset-bottom))] pt-2">
       <div className="mx-auto flex w-full max-w-[540px] items-center justify-around px-6">
         {items.map((item) => {
           const active = router.pathname === item.href;

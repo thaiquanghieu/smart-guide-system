@@ -16,12 +16,15 @@ export default function AppHeader({
   const { t } = useAppI18n();
 
   return (
-    <div className="flex items-center justify-between gap-3">
+    <div className="relative flex min-h-[42px] items-center justify-between">
       <div className="flex h-[42px] w-[42px] items-center justify-center">
         {showMenu ? <img src="/assets/menu.png" alt="Menu" className="h-7 w-7" /> : null}
       </div>
 
-      <h1 className="text-[25px] font-bold text-[#0B63E5]" suppressHydrationWarning>
+      <h1
+        className="pointer-events-none absolute left-1/2 -translate-x-1/2 text-center text-[25px] font-bold text-[#0B63E5]"
+        suppressHydrationWarning
+      >
         {t("app.title")}
       </h1>
 
