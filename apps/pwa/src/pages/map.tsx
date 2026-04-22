@@ -63,6 +63,7 @@ export default function MapPage() {
   const [freePlaysRemaining, setFreePlaysRemaining] = useState(0);
   const [showDirections, setShowDirections] = useState(false);
   const [mapCenter, setMapCenter] = useState<GeoPoint | null>(null);
+  const [hasLoadedMap, setHasLoadedMap] = useState(false);
   const [toast, setToast] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const trackingTimerRef = useRef<number | null>(null);
@@ -78,30 +79,31 @@ export default function MapPage() {
             mapCache = null;
           } else {
             setPois(translatePois<Poi>(mapCache.pois, lang));
-          setSearchText(mapCache.searchText);
-          setUserLocation(mapCache.userLocation);
-          setTrackingEnabled(mapCache.trackingEnabled);
-          setSubscriptionActive(mapCache.subscriptionActive);
-          setFreePlaysRemaining(mapCache.freePlaysRemaining);
-          setMapCenter(
-            mapCache.mapCenter ||
-              mapCache.userLocation ||
-              (mapCache.pois[0]
-                ? { latitude: mapCache.pois[0].latitude, longitude: mapCache.pois[0].longitude }
-                : null)
-          );
+            setSearchText(mapCache.searchText);
+            setUserLocation(mapCache.userLocation);
+            setTrackingEnabled(mapCache.trackingEnabled);
+            setSubscriptionActive(mapCache.subscriptionActive);
+            setFreePlaysRemaining(mapCache.freePlaysRemaining);
+            setMapCenter(
+              mapCache.mapCenter ||
+                mapCache.userLocation ||
+                (mapCache.pois[0]
+                  ? { latitude: mapCache.pois[0].latitude, longitude: mapCache.pois[0].longitude }
+                  : null)
+            );
 
-          if (queryPoiId) {
-            const cachedSelectedPoi = mapCache.pois.find((item) => item.id === queryPoiId);
-            setSelectedPoiId(queryPoiId);
-            if (cachedSelectedPoi) {
-              setMapCenter({ latitude: cachedSelectedPoi.latitude, longitude: cachedSelectedPoi.longitude });
+            if (queryPoiId) {
+              const cachedSelectedPoi = mapCache.pois.find((item) => item.id === queryPoiId);
+              setSelectedPoiId(queryPoiId);
+              if (cachedSelectedPoi) {
+                setMapCenter({ latitude: cachedSelectedPoi.latitude, longitude: cachedSelectedPoi.longitude });
+              }
+            } else {
+              setSelectedPoiId("");
             }
-          } else {
-            setSelectedPoiId("");
-          }
 
-          return;
+            setHasLoadedMap(true);
+            return;
           }
         }
 
@@ -139,6 +141,7 @@ export default function MapPage() {
 
         setSubscriptionActive(hasActiveSubscription);
         setFreePlaysRemaining(remainingFreePlays);
+        setHasLoadedMap(true);
       } catch (error: any) {
         setErrorMessage(error?.response?.data?.message || t("map.loadError"));
       }
@@ -171,6 +174,8 @@ export default function MapPage() {
   }, [toast]);
 
   useEffect(() => {
+    if (!hasLoadedMap) return;
+
     mapCache = {
       hasLoaded: !errorMessage && pois.length > 0,
       pois,
@@ -181,7 +186,7 @@ export default function MapPage() {
       freePlaysRemaining,
       mapCenter,
     };
-  }, [freePlaysRemaining, mapCenter, pois, searchText, subscriptionActive, trackingEnabled, userLocation]);
+  }, [errorMessage, freePlaysRemaining, hasLoadedMap, mapCenter, pois, searchText, subscriptionActive, trackingEnabled, userLocation]);
 
   const enrichedPois = useMemo(() => {
     return pois.map((poi) => ({

@@ -41,9 +41,17 @@ export default function MapSurface({
   const leafletMapRef = useRef<any>(null);
   const markersRef = useRef<any[]>([]);
   const userMarkerRef = useRef<any>(null);
+  const lastSelectedPoiIdRef = useRef("");
+  const lastCenterRef = useRef<GeoPoint | null>(null);
   const [leafletReady, setLeafletReady] = useState(false);
   const [useFallbackMap, setUseFallbackMap] = useState(false);
   const [mapLoaded, setMapLoaded] = useState(false);
+
+  const getDistanceMeters = (from: GeoPoint, to: GeoPoint) => {
+    const latDiff = (from.latitude - to.latitude) * 111_320;
+    const lngDiff = (from.longitude - to.longitude) * 111_320 * Math.cos((from.latitude * Math.PI) / 180);
+    return Math.sqrt(latDiff * latDiff + lngDiff * lngDiff);
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -133,6 +141,7 @@ export default function MapSurface({
       zoomControl: false,
       attributionControl: false,
     }).setView([center.latitude, center.longitude], 15);
+    lastCenterRef.current = center;
 
     window.L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
       maxZoom: 19,
@@ -157,8 +166,15 @@ export default function MapSurface({
 
     const map = leafletMapRef.current;
     if (!map) return;
-    map.setView([center.latitude, center.longitude], map.getZoom() || 15, { animate: true });
-  }, [leafletReady, center.latitude, center.longitude]);
+    if (selectedPoiId) return;
+
+    const lastCenter = lastCenterRef.current;
+    const movedMeters = lastCenter ? getDistanceMeters(lastCenter, center) : Infinity;
+    if (movedMeters < 12) return;
+
+    lastCenterRef.current = center;
+    map.panTo([center.latitude, center.longitude], { animate: movedMeters > 30 });
+  }, [center, leafletReady, selectedPoiId]);
 
   useEffect(() => {
     if (!leafletReady) return;
@@ -190,15 +206,22 @@ export default function MapSurface({
   }, [leafletReady, onSelectPoi, pois, selectedPoiId]);
 
   useEffect(() => {
-    if (!leafletReady || !selectedPoiId) return;
+    if (!leafletReady || !selectedPoiId) {
+      lastSelectedPoiIdRef.current = "";
+      return;
+    }
 
     const map = leafletMapRef.current;
     const selectedPoi = pois.find((poi) => poi.id === selectedPoiId);
     if (!map || !selectedPoi) return;
 
+    if (lastSelectedPoiIdRef.current === selectedPoiId) return;
+    lastSelectedPoiIdRef.current = selectedPoiId;
+    lastCenterRef.current = { latitude: selectedPoi.latitude, longitude: selectedPoi.longitude };
+
     map.flyTo([selectedPoi.latitude, selectedPoi.longitude], Math.max(map.getZoom() || 15, 17), {
       animate: true,
-      duration: 0.55,
+      duration: 0.4,
     });
   }, [leafletReady, pois, selectedPoiId]);
 
