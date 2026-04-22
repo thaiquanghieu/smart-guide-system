@@ -22,6 +22,16 @@ public partial class App : Application
         _ = InitializeAsync();
     }
 
+    public async Task RestartDeviceFlowAsync()
+    {
+        MainThread.BeginInvokeOnMainThread(() =>
+        {
+            MainPage = new LoadingPage();
+        });
+
+        await InitializeAsync();
+    }
+
     private async Task InitializeAsync()
     {
         var api = new ApiService();

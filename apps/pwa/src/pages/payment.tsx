@@ -1,5 +1,6 @@
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
+import Head from "next/head";
 import apiClient from "@/lib/api";
 import {
   clearEntryContext,
@@ -54,7 +55,10 @@ export default function PaymentPage() {
       : `https://img.vietqr.io/image/TCB-4001012005-compact2.png?amount=${payment.plan.price}&addInfo=${payment.code}&accountName=THAI%20QUANG%20HIEU`;
 
   return (
-    <main className="min-h-screen bg-[#041B2D] px-5 pb-8 pt-5 text-white">
+    <main className="min-h-screen bg-[#041B2D] px-5 pb-8 text-white" style={{ paddingTop: "calc(env(safe-area-inset-top) + 20px)" }}>
+      <Head>
+        <meta name="theme-color" content="#041B2D" />
+      </Head>
       <div className="mx-auto max-w-[540px] space-y-4">
         <div className="grid grid-cols-[24px,1fr,24px] items-center">
           <button type="button" className="text-[26px]" onClick={() => router.back()}>
@@ -77,7 +81,9 @@ export default function PaymentPage() {
             </div>
 
             <div className="rounded-[16px] bg-white p-4">
-              <img src={qrUrl} alt="QR thanh toán" className="mx-auto h-[220px] w-[220px]" />
+              <div className="mx-auto aspect-square w-[220px] max-w-full">
+                <img src={qrUrl} alt="QR thanh toán" className="h-full w-full object-contain" />
+              </div>
             </div>
 
             <p className="text-center text-[#CFE3FF]">Hoặc chuyển khoản thủ công</p>

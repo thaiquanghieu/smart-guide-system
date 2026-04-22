@@ -5,6 +5,7 @@ export type PoiAudio = {
   languageCode: string;
   languageName: string;
   scriptText: string;
+  voiceName?: string;
 };
 
 export type PoiLike = {
@@ -13,12 +14,28 @@ export type PoiLike = {
   audios: PoiAudio[];
 };
 
+let stopRequested = false;
+
+function resolveSpeechLanguage(code?: string) {
+  if (!code) return "vi-VN";
+  if (code === "vi") return "vi-VN";
+  if (code === "en") return "en-US";
+  if (code === "ja") return "ja-JP";
+  if (code === "ko") return "ko-KR";
+  if (code === "zh") return "zh-CN";
+  return code;
+}
+
 export function stopSpeech() {
   if (typeof window === "undefined" || !window.speechSynthesis) return;
+  stopRequested = true;
   window.speechSynthesis.cancel();
 }
 
-export async function playPoiAudio(poi: PoiLike, options?: { consumeFreeListen?: boolean }) {
+export async function playPoiAudio(
+  poi: PoiLike,
+  options?: { consumeFreeListen?: boolean; onListenedCount?: (count: number) => void }
+) {
   if (typeof window === "undefined" || !window.speechSynthesis) {
     return { ok: false, message: "Thiết bị không hỗ trợ audio." };
   }
@@ -33,24 +50,70 @@ export async function playPoiAudio(poi: PoiLike, options?: { consumeFreeListen?:
     return { ok: false, message: "POI chưa có audio." };
   }
 
+  stopRequested = false;
+
+  const requests = [];
+
   if (options?.consumeFreeListen) {
-    await apiClient.post("/access/free-listen/consume", {
-      deviceId: getDeviceId(),
-      poiId: poi.id,
-    });
+    requests.push(
+      apiClient.post("/access/free-listen/consume", {
+        deviceId: getDeviceId(),
+        poiId: poi.id,
+      }).catch(() => null)
+    );
   }
 
-  await apiClient.post(`/pois/listened/${poi.id}?deviceId=${getDeviceId()}`);
+  const listenedPromise = apiClient
+    .post(`/pois/listened/${poi.id}?deviceId=${getDeviceId()}`)
+    .then((response) => {
+      const listenedCount = Number(response?.data?.listened_count || 0);
+      if (listenedCount) {
+        options?.onListenedCount?.(listenedCount);
+      }
+      return response;
+    })
+    .catch(() => null);
 
-  await new Promise<void>((resolve, reject) => {
+  requests.push(listenedPromise);
+
+  const speechPromise = new Promise<void>((resolve, reject) => {
     const utterance = new SpeechSynthesisUtterance(audio.scriptText);
-    utterance.lang = audio.languageCode === "vi" ? "vi-VN" : audio.languageCode;
+    const speechLang = resolveSpeechLanguage(audio.languageCode);
+    utterance.lang = speechLang;
     utterance.rate = 1;
+    utterance.pitch = 1;
+    utterance.volume = 1;
+
+    const voices = window.speechSynthesis.getVoices();
+    const matchedVoice =
+      voices.find((voice) => voice.lang === speechLang) ||
+      voices.find((voice) => voice.lang?.startsWith(audio.languageCode || ""));
+
+    if (matchedVoice) {
+      utterance.voice = matchedVoice;
+    }
+
     utterance.onend = () => resolve();
-    utterance.onerror = () => reject(new Error("Phát audio thất bại"));
+    utterance.onerror = () => {
+      if (stopRequested) {
+        resolve();
+        return;
+      }
+
+      reject(new Error("Phát audio thất bại"));
+    };
+
     window.speechSynthesis.cancel();
+    window.speechSynthesis.resume();
     window.speechSynthesis.speak(utterance);
   });
 
-  return { ok: true, message: "" };
+  const [, listenedResponse] = await Promise.all([
+    speechPromise,
+    Promise.all(requests).then((items) => items[items.length - 1]),
+  ]);
+
+  const listenedCount = Number((listenedResponse as any)?.data?.listened_count || 0);
+
+  return { ok: true, message: "", listenedCount };
 }

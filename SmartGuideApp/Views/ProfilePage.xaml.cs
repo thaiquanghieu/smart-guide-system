@@ -219,7 +219,15 @@ public partial class ProfilePage : ContentPage
         Preferences.Remove("device_id");
         Preferences.Remove("device_uuid");
         Preferences.Remove("subscription_active");
+        Preferences.Remove("tracking_enabled");
 
-        Application.Current!.MainPage = new LoadingPage();
+        if (Application.Current is App app)
+        {
+            await app.RestartDeviceFlowAsync();
+        }
+        else
+        {
+            Application.Current!.MainPage = new LoadingPage();
+        }
     }
 }

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
+import Head from "next/head";
 import apiClient from "@/lib/api";
 import { ensureDeviceReady, setReturnTo } from "@/lib/device";
 
@@ -33,9 +34,12 @@ export default function PaywallPage() {
   }, []);
 
   return (
-    <main className="min-h-screen bg-[#041B2D] px-5 pb-10 pt-[14px] text-white">
+    <main className="min-h-screen bg-[#041B2D] px-5 pb-10 text-white" style={{ paddingTop: "calc(env(safe-area-inset-top) + 14px)" }}>
+      <Head>
+        <meta name="theme-color" content="#041B2D" />
+      </Head>
       <div className="mx-auto max-w-[540px] space-y-[14px]">
-        <div className="h-[28px]" />
+        <div className="h-[18px]" />
 
         <img src="/assets/appiconfg.png" alt="Smart Guide" className="mx-auto -my-8 w-[220px]" />
 

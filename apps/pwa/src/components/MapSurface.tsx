@@ -1,4 +1,5 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { createEmbedMapUrl } from "@/lib/location";
 
 type GeoPoint = {
   latitude: number;
@@ -23,6 +24,7 @@ type MapSurfaceProps = {
 declare global {
   interface Window {
     L: any;
+    mapboxgl: any;
   }
 }
 
@@ -36,42 +38,154 @@ export default function MapSurface({
 }: MapSurfaceProps) {
   const mapRef = useRef<HTMLDivElement | null>(null);
   const leafletMapRef = useRef<any>(null);
+  const mapboxMapRef = useRef<any>(null);
   const markersRef = useRef<any[]>([]);
   const userMarkerRef = useRef<any>(null);
+  const [leafletReady, setLeafletReady] = useState(false);
+  const [useFallbackMap, setUseFallbackMap] = useState(false);
+  const [mapLoaded, setMapLoaded] = useState(false);
+  const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || "";
+  const useMapbox = !!mapboxToken;
 
   useEffect(() => {
-    if (!mapRef.current || !window.L || leafletMapRef.current) return undefined;
+    let frame = 0;
+    let cancelled = false;
+    const timeout = window.setTimeout(() => {
+      if (!leafletReady) {
+        setUseFallbackMap(true);
+      }
+    }, 1400);
+
+    const waitForLeaflet = () => {
+      if (cancelled) return;
+
+      if (typeof window !== "undefined" && ((useMapbox && window.mapboxgl) || (!useMapbox && window.L))) {
+        setLeafletReady(true);
+        setUseFallbackMap(false);
+        return;
+      }
+
+      frame = window.requestAnimationFrame(waitForLeaflet);
+    };
+
+    waitForLeaflet();
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timeout);
+      if (frame) window.cancelAnimationFrame(frame);
+    };
+  }, [leafletReady, useMapbox]);
+
+  const fallbackUrl = useMemo(() => {
+    return createEmbedMapUrl(center, selectedPoiId && pois.length
+      ? { latitude: pois.find((poi) => poi.id === selectedPoiId)?.latitude || center.latitude, longitude: pois.find((poi) => poi.id === selectedPoiId)?.longitude || center.longitude }
+      : undefined);
+  }, [center, pois, selectedPoiId]);
+
+  useEffect(() => {
+    if (!leafletReady || !mapRef.current) return undefined;
+
+    if (useMapbox) {
+      if (mapboxMapRef.current) return undefined;
+
+      window.mapboxgl.accessToken = mapboxToken;
+      const map = new window.mapboxgl.Map({
+        container: mapRef.current,
+        style: "mapbox://styles/mapbox/light-v11",
+        center: [center.longitude, center.latitude],
+        zoom: 15,
+        attributionControl: false,
+      });
+
+      mapboxMapRef.current = map;
+      map.on("load", () => setMapLoaded(true));
+
+      setTimeout(() => {
+        map.resize();
+      }, 80);
+
+      return () => {
+        map.remove();
+        mapboxMapRef.current = null;
+      };
+    }
+
+    if (leafletMapRef.current) return undefined;
 
     const map = window.L.map(mapRef.current, {
       zoomControl: false,
       attributionControl: false,
     }).setView([center.latitude, center.longitude], 15);
 
-    window.L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      maxZoom: 19,
+    window.L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
+      maxZoom: 20,
+      subdomains: "abcd",
     }).addTo(map);
 
     leafletMapRef.current = map;
+    map.whenReady(() => setMapLoaded(true));
+
+    setTimeout(() => {
+      map.invalidateSize();
+    }, 80);
 
     return () => {
       map.remove();
       leafletMapRef.current = null;
     };
-  }, [center.latitude, center.longitude]);
+  }, [leafletReady, center.latitude, center.longitude, mapboxToken, useMapbox]);
 
   useEffect(() => {
-    const map = leafletMapRef.current;
-    if (!map || !window.L) return;
+    if (!leafletReady) return;
 
+    if (useMapbox) {
+      const map = mapboxMapRef.current;
+      if (!map) return;
+      map.easeTo({
+        center: [center.longitude, center.latitude],
+        duration: 600,
+      });
+      return;
+    }
+
+    const map = leafletMapRef.current;
+    if (!map) return;
     map.setView([center.latitude, center.longitude], map.getZoom() || 15, { animate: true });
-  }, [center.latitude, center.longitude]);
+  }, [leafletReady, center.latitude, center.longitude, useMapbox]);
 
   useEffect(() => {
-    const map = leafletMapRef.current;
-    if (!map || !window.L) return;
+    if (!leafletReady) return;
 
     markersRef.current.forEach((marker) => marker.remove());
     markersRef.current = [];
+
+    if (useMapbox) {
+      const map = mapboxMapRef.current;
+      if (!map) return;
+
+      pois.forEach((poi) => {
+        const isActive = poi.id === selectedPoiId;
+        const markerElement = document.createElement("button");
+        markerElement.type = "button";
+        markerElement.className = isActive ? "poi-marker-active" : "poi-marker";
+        markerElement.addEventListener("click", () => onSelectPoi?.(poi.id));
+
+        const marker = new window.mapboxgl.Marker({
+          element: markerElement,
+          anchor: "bottom",
+        })
+          .setLngLat([poi.longitude, poi.latitude])
+          .addTo(map);
+
+        markersRef.current.push(marker);
+      });
+
+      return;
+    }
+
+    const map = leafletMapRef.current;
+    if (!map) return;
 
     pois.forEach((poi) => {
       const isActive = poi.id === selectedPoiId;
@@ -86,15 +200,33 @@ export default function MapSurface({
       marker.on("click", () => onSelectPoi?.(poi.id));
       markersRef.current.push(marker);
     });
-  }, [onSelectPoi, pois, selectedPoiId]);
+  }, [leafletReady, onSelectPoi, pois, selectedPoiId, useMapbox]);
 
   useEffect(() => {
-    const map = leafletMapRef.current;
-    if (!map || !window.L || !userLocation) return;
+    if (!leafletReady || !userLocation) return;
 
     if (userMarkerRef.current) {
       userMarkerRef.current.remove();
     }
+
+    if (useMapbox) {
+      const map = mapboxMapRef.current;
+      if (!map) return;
+
+      const markerElement = document.createElement("div");
+      markerElement.className = "user-marker";
+      userMarkerRef.current = new window.mapboxgl.Marker({
+        element: markerElement,
+        anchor: "center",
+      })
+        .setLngLat([userLocation.longitude, userLocation.latitude])
+        .addTo(map);
+
+      return;
+    }
+
+    const map = leafletMapRef.current;
+    if (!map) return;
 
     const icon = window.L.divIcon({
       className: "",
@@ -104,7 +236,24 @@ export default function MapSurface({
     });
 
     userMarkerRef.current = window.L.marker([userLocation.latitude, userLocation.longitude], { icon }).addTo(map);
-  }, [userLocation]);
+  }, [leafletReady, userLocation, useMapbox]);
 
-  return <div ref={mapRef} className={`w-full ${heightClassName}`} />;
+  if (useFallbackMap) {
+    return (
+      <iframe
+        src={fallbackUrl}
+        className={`w-full border-0 ${heightClassName}`}
+        loading="lazy"
+        referrerPolicy="no-referrer-when-downgrade"
+        onLoad={() => setMapLoaded(true)}
+      />
+    );
+  }
+
+  return (
+    <div className={`relative w-full ${heightClassName}`}>
+      {!mapLoaded ? <div className="absolute inset-0 z-10 bg-[#EAF0F8]" /> : null}
+      <div ref={mapRef} className={`w-full ${heightClassName} ${mapLoaded ? "opacity-100" : "opacity-0"}`} />
+    </div>
+  );
 }

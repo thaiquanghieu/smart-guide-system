@@ -1,15 +1,19 @@
 import { useRouter } from "next/router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import BottomNav from "@/components/BottomNav";
 import DirectionsSheet from "@/components/DirectionsSheet";
 import MapSurface from "@/components/MapSurface";
 import SearchBar from "@/components/SearchBar";
+import ToastBanner from "@/components/ToastBanner";
 import apiClient from "@/lib/api";
-import { playPoiAudio } from "@/lib/audio";
+import { playPoiAudio, stopSpeech } from "@/lib/audio";
 import {
   ensureDeviceReady,
+  getAutoPlay,
+  getBatterySaver,
   getDeviceId,
-  getPendingPoiId,
+  getTrackingIntervalMs,
+  getTrackingRadiusKm,
   setPendingPoiId,
   setReturnTo,
 } from "@/lib/device";
@@ -26,9 +30,22 @@ type Poi = {
   longitude: number;
   listened_count: number;
   rating_avg: number;
+  is_favorite?: boolean;
   images: string[];
   audios: { languageCode: string; languageName: string; scriptText: string }[];
 };
+
+let mapCache:
+  | {
+      pois: Poi[];
+      searchText: string;
+      userLocation: GeoPoint | null;
+      trackingEnabled: boolean;
+      subscriptionActive: boolean;
+      freePlaysRemaining: number;
+      mapCenter: GeoPoint | null;
+    }
+  | null = null;
 
 export default function MapPage() {
   const router = useRouter();
@@ -38,48 +55,78 @@ export default function MapPage() {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [userLocation, setUserLocation] = useState<GeoPoint | null>(null);
   const [trackingEnabled, setTrackingEnabled] = useState(false);
-  const [isPlaying, setIsPlaying] = useState(false);
+  const [playingPoiId, setPlayingPoiId] = useState("");
   const [subscriptionActive, setSubscriptionActive] = useState(false);
   const [freePlaysRemaining, setFreePlaysRemaining] = useState(0);
   const [showDirections, setShowDirections] = useState(false);
   const [mapCenter, setMapCenter] = useState<GeoPoint | null>(null);
+  const [toast, setToast] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
+  const trackingTimerRef = useRef<number | null>(null);
+  const lastTrackedPoiRef = useRef("");
 
   useEffect(() => {
     const load = async () => {
-      await ensureDeviceReady();
+      try {
+        const queryPoiId = typeof router.query.poiId === "string" ? router.query.poiId : "";
 
-      const deviceId = getDeviceId();
-      const [poiResponse, accessResponse] = await Promise.all([
-        apiClient.get(`/pois?deviceId=${deviceId}`),
-        apiClient.get(`/access/free-listen?deviceId=${deviceId}`),
-      ]);
+        if (mapCache) {
+          setPois(mapCache.pois);
+          setSearchText(mapCache.searchText);
+          setUserLocation(mapCache.userLocation);
+          setTrackingEnabled(mapCache.trackingEnabled);
+          setSubscriptionActive(mapCache.subscriptionActive);
+          setFreePlaysRemaining(mapCache.freePlaysRemaining);
+          setMapCenter(mapCache.mapCenter);
 
-      const items = poiResponse.data || [];
-      const hasActiveSubscription = !!accessResponse.data?.hasActiveSubscription;
-      const remainingFreePlays = Number(accessResponse.data?.freePlaysRemaining || 0);
+          if (queryPoiId) {
+            const cachedSelectedPoi = mapCache.pois.find((item) => item.id === queryPoiId);
+            setSelectedPoiId(queryPoiId);
+            if (cachedSelectedPoi) {
+              setMapCenter({ latitude: cachedSelectedPoi.latitude, longitude: cachedSelectedPoi.longitude });
+            }
+          } else {
+            setSelectedPoiId("");
+          }
 
-      if (!hasActiveSubscription && remainingFreePlays <= 0) {
-        const poiId = typeof router.query.poiId === "string" ? router.query.poiId : "";
-        const returnTo = poiId ? `/map?poiId=${encodeURIComponent(poiId)}` : "/map";
-        setReturnTo(returnTo);
-        router.replace(`/paywall?returnTo=${encodeURIComponent(returnTo)}`);
-        return;
+          return;
+        }
+
+        await ensureDeviceReady();
+
+        const deviceId = getDeviceId();
+        const [poiResponse, accessResponse] = await Promise.all([
+          apiClient.get(`/pois?deviceId=${deviceId}`),
+          apiClient.get(`/access/free-listen?deviceId=${deviceId}`),
+        ]);
+
+        const items = poiResponse.data || [];
+        const hasActiveSubscription = !!accessResponse.data?.hasActiveSubscription;
+        const remainingFreePlays = Number(accessResponse.data?.freePlaysRemaining || 0);
+
+        if (!hasActiveSubscription && remainingFreePlays <= 0) {
+          const poiId = typeof router.query.poiId === "string" ? router.query.poiId : "";
+          const returnTo = poiId ? `/map?poiId=${encodeURIComponent(poiId)}` : "/map";
+          setReturnTo(returnTo);
+          router.replace(`/paywall?returnTo=${encodeURIComponent(returnTo)}`);
+          return;
+        }
+
+        setPois(items);
+
+        const poiId = queryPoiId;
+        const selectedPoi = poiId ? items.find((item: Poi) => item.id === poiId) : null;
+
+        if (selectedPoi) {
+          setSelectedPoiId(selectedPoi.id);
+          setMapCenter({ latitude: selectedPoi.latitude, longitude: selectedPoi.longitude });
+        }
+
+        setSubscriptionActive(hasActiveSubscription);
+        setFreePlaysRemaining(remainingFreePlays);
+      } catch (error: any) {
+        setErrorMessage(error?.response?.data?.message || "Không thể tải bản đồ.");
       }
-
-      setPois(items);
-
-      const poiId = typeof router.query.poiId === "string" ? router.query.poiId : getPendingPoiId();
-      const selectedPoi = poiId
-        ? items.find((item: Poi) => item.id === poiId)
-        : items[0];
-
-      if (selectedPoi) {
-        setSelectedPoiId(selectedPoi.id);
-        setMapCenter({ latitude: selectedPoi.latitude, longitude: selectedPoi.longitude });
-      }
-
-      setSubscriptionActive(hasActiveSubscription);
-      setFreePlaysRemaining(remainingFreePlays);
     };
 
     load();
@@ -102,6 +149,24 @@ export default function MapPage() {
     );
   }, []);
 
+  useEffect(() => {
+    if (!toast) return undefined;
+    const timeout = window.setTimeout(() => setToast(""), 2200);
+    return () => window.clearTimeout(timeout);
+  }, [toast]);
+
+  useEffect(() => {
+    mapCache = {
+      pois,
+      searchText,
+      userLocation,
+      trackingEnabled,
+      subscriptionActive,
+      freePlaysRemaining,
+      mapCenter,
+    };
+  }, [freePlaysRemaining, mapCenter, pois, searchText, subscriptionActive, trackingEnabled, userLocation]);
+
   const enrichedPois = useMemo(() => {
     return pois.map((poi) => ({
       ...poi,
@@ -111,6 +176,15 @@ export default function MapPage() {
     }));
   }, [pois, userLocation]);
 
+  const updatePoi = (poiId: string, updater: (poi: Poi) => Poi) => {
+    setPois((current) => current.map((poi) => (poi.id === poiId ? updater(poi) : poi)));
+  };
+
+  const selectedPoi = useMemo(
+    () => enrichedPois.find((poi) => poi.id === selectedPoiId) || null,
+    [enrichedPois, selectedPoiId]
+  );
+
   const suggestions = useMemo(() => {
     const keyword = searchText.trim().toLowerCase();
     if (!keyword) return [];
@@ -118,28 +192,99 @@ export default function MapPage() {
     return enrichedPois.filter((poi) => [poi.name, poi.address].join(" ").toLowerCase().includes(keyword));
   }, [enrichedPois, searchText]);
 
-  const selectedPoi = useMemo(
-    () => enrichedPois.find((poi) => poi.id === selectedPoiId) || null,
-    [enrichedPois, selectedPoiId]
-  );
-
   const selectedDistance = useMemo(() => {
     if (!selectedPoi) return "";
-
     if (selectedPoi.distanceKm < 1 && selectedPoi.distanceKm > 0) {
       return `${Math.round(selectedPoi.distanceKm * 1000)} m`;
     }
-
     return `${selectedPoi.distanceKm.toFixed(1).replace(".", ",")} km`;
   }, [selectedPoi]);
 
+  useEffect(() => {
+    if (!trackingEnabled || !navigator.geolocation || !enrichedPois.length) return undefined;
+
+    const radiusKm = getBatterySaver() ? 0.3 : getTrackingRadiusKm();
+    const intervalMs = getBatterySaver() ? 10000 : getTrackingIntervalMs();
+
+    const tick = () => {
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          const currentLocation = {
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+          };
+          setUserLocation(currentLocation);
+
+          const nearestPoi = [...enrichedPois]
+            .map((poi) => ({
+              ...poi,
+              distanceKm: calculateDistanceKm(currentLocation, { latitude: poi.latitude, longitude: poi.longitude }),
+            }))
+            .filter((poi) => poi.distanceKm <= radiusKm)
+            .sort((left, right) => left.distanceKm - right.distanceKm)[0];
+
+          if (!nearestPoi) return;
+
+          setSelectedPoiId(nearestPoi.id);
+          setMapCenter({ latitude: nearestPoi.latitude, longitude: nearestPoi.longitude });
+
+          if (getAutoPlay() && lastTrackedPoiRef.current !== nearestPoi.id && !playingPoiId) {
+            lastTrackedPoiRef.current = nearestPoi.id;
+            setPlayingPoiId(nearestPoi.id);
+
+            try {
+              updatePoi(nearestPoi.id, (current) => ({ ...current, listened_count: current.listened_count + 1 }));
+              const result = await playPoiAudio(nearestPoi, {
+                consumeFreeListen: !subscriptionActive,
+                onListenedCount: (count) => {
+                  updatePoi(nearestPoi.id, (current) => ({ ...current, listened_count: count }));
+                },
+              });
+              if (result.listenedCount) {
+                updatePoi(nearestPoi.id, (current) => ({ ...current, listened_count: result.listenedCount || current.listened_count }));
+              }
+            } finally {
+              setPlayingPoiId("");
+            }
+          }
+        },
+        () => undefined,
+        { enableHighAccuracy: true }
+      );
+    };
+
+    tick();
+    trackingTimerRef.current = window.setInterval(tick, intervalMs);
+
+    return () => {
+      if (trackingTimerRef.current) {
+        window.clearInterval(trackingTimerRef.current);
+        trackingTimerRef.current = null;
+      }
+    };
+  }, [enrichedPois, playingPoiId, subscriptionActive, trackingEnabled]);
+
   const visibleCenter = mapCenter || userLocation;
+  const trackingBottom = selectedPoi
+    ? "calc(env(safe-area-inset-bottom) + 348px)"
+    : "calc(env(safe-area-inset-bottom) + 112px)";
 
   return (
     <>
-      <main className="relative min-h-screen bg-[#F4F7FB] pb-[110px]">
-        <div className="absolute left-0 right-0 top-0 z-10 h-[70px] bg-[#F4F7FB]" />
-        <div className="absolute left-0 right-0 top-[20px] z-20 text-center text-[22px] font-bold text-[#0F5BD7]">
+      <ToastBanner message={toast} />
+
+      <main
+        className="relative min-h-screen bg-[#F4F7FB]"
+        style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 92px)" }}
+      >
+        <div
+          className="absolute left-0 right-0 top-0 z-10 bg-[#F4F7FB]"
+          style={{ height: "calc(env(safe-area-inset-top) + 70px)" }}
+        />
+        <div
+          className="absolute left-0 right-0 z-20 text-center text-[22px] font-bold text-[#0F5BD7]"
+          style={{ top: "calc(env(safe-area-inset-top) + 20px)" }}
+        >
           Smart Guide
         </div>
 
@@ -162,7 +307,7 @@ export default function MapPage() {
           </div>
         ) : null}
 
-        <div className="absolute inset-x-4 top-20 z-20">
+        <div className="absolute inset-x-4 z-20" style={{ top: "calc(env(safe-area-inset-top) + 80px)" }}>
           <SearchBar
             value={searchText}
             placeholder="Tìm kiếm địa điểm..."
@@ -193,7 +338,7 @@ export default function MapPage() {
                 }}
               >
                 <div>
-                  <p className="text-[15px] font-bold text-[#111827]">{poi.name}</p>
+                  <p className="truncate text-[15px] font-bold text-[#111827]">{poi.name}</p>
                   <p className="mt-1 truncate text-[12px] text-[#6B7280]">{poi.address}</p>
                 </div>
                 <div className="text-right text-[12px] text-[#6B7280]">
@@ -206,7 +351,8 @@ export default function MapPage() {
 
         <button
           type="button"
-          className="absolute right-4 top-[190px] z-20 flex h-[54px] w-[54px] items-center justify-center rounded-[18px] bg-white shadow-[0_10px_18px_rgba(0,0,0,0.08)]"
+          className="absolute right-4 z-20 flex h-[54px] w-[54px] items-center justify-center rounded-[18px] bg-white shadow-[0_10px_18px_rgba(0,0,0,0.08)]"
+          style={{ top: "calc(env(safe-area-inset-top) + 190px)" }}
           onClick={() => {
             if (userLocation) {
               setMapCenter(userLocation);
@@ -219,7 +365,8 @@ export default function MapPage() {
 
         <button
           type="button"
-          className="absolute bottom-[100px] right-4 z-20 flex h-20 w-20 flex-col items-center justify-center rounded-full bg-[#374151] text-white shadow-[0_10px_18px_rgba(0,0,0,0.18)]"
+          className="absolute right-4 z-20 flex h-20 w-20 flex-col items-center justify-center rounded-full bg-[#374151] text-white shadow-[0_10px_18px_rgba(0,0,0,0.18)] transition-all duration-200"
+          style={{ bottom: trackingBottom }}
           onClick={() => setTrackingEnabled((value) => !value)}
         >
           <img
@@ -231,18 +378,25 @@ export default function MapPage() {
         </button>
 
         {selectedPoi ? (
-          <div className="absolute inset-x-4 bottom-[86px] z-20 rounded-[22px] border border-[#E5E7EB] bg-white p-4 shadow-[0_10px_24px_rgba(0,0,0,0.08)]">
-            <div className="grid grid-cols-[100px,1fr,36px] gap-3">
-              <div className="overflow-hidden rounded-[18px] border border-[#E5E7EB]">
+          <div
+            className="absolute inset-x-4 z-20 rounded-[22px] border border-[#E5E7EB] bg-white p-4 shadow-[0_10px_24px_rgba(0,0,0,0.08)]"
+            style={{ bottom: "calc(env(safe-area-inset-bottom) + 76px)" }}
+          >
+            <div className="grid grid-cols-[108px,1fr,40px] gap-3">
+              <button
+                type="button"
+                className="relative aspect-square overflow-hidden rounded-[18px] border border-[#E5E7EB] bg-[#F3F4F6]"
+                onClick={() => router.push(`/detail?poiId=${selectedPoi.id}`)}
+              >
                 <img
                   src={selectedPoi.images?.[0] || "/assets/appiconfg.png"}
                   alt={selectedPoi.name}
-                  className="h-[100px] w-[100px] object-cover"
+                  className="absolute inset-0 h-full w-full object-cover"
                 />
-              </div>
-              <div className="space-y-1">
-                <p className="text-[12px] text-[#0F5BD7]">{selectedPoi.category?.toUpperCase()}</p>
-                <p className="line-clamp-2 text-[18px] font-bold text-[#111827]">{selectedPoi.name}</p>
+              </button>
+              <button type="button" className="space-y-1 min-w-0 text-left" onClick={() => router.push(`/detail?poiId=${selectedPoi.id}`)}>
+                <p className="truncate text-[12px] text-[#0F5BD7]">{selectedPoi.category?.toUpperCase()}</p>
+                <p className="line-clamp-2 text-[15px] font-bold leading-[1.25] text-[#111827]">{selectedPoi.name}</p>
                 <div className="flex items-center gap-2 text-[13px] text-[#111827]">
                   <img src="/assets/listen2.png" alt="Listen" className="h-[14px] w-[14px]" />
                   <span>{selectedPoi.listened_count}</span>
@@ -251,11 +405,17 @@ export default function MapPage() {
                 </div>
                 <p className="text-[14px] text-[#0F5BD7]">{selectedDistance}</p>
                 <p className="line-clamp-2 text-[12px] text-[#6B7280]">{selectedPoi.address}</p>
-              </div>
+              </button>
               <button
                 type="button"
                 className="flex h-9 w-9 items-center justify-center self-start rounded-full bg-[#D1D5DB]"
                 onClick={async () => {
+                  if (playingPoiId === selectedPoi.id) {
+                    stopSpeech();
+                    setPlayingPoiId("");
+                    return;
+                  }
+
                   if (!subscriptionActive && freePlaysRemaining <= 0) {
                     setReturnTo(`/map?poiId=${selectedPoi.id}`);
                     router.push(`/paywall?returnTo=${encodeURIComponent(`/map?poiId=${selectedPoi.id}`)}`);
@@ -263,12 +423,21 @@ export default function MapPage() {
                   }
 
                   setPendingPoiId(selectedPoi.id);
-                  setIsPlaying(true);
+                  setPlayingPoiId(selectedPoi.id);
+                  updatePoi(selectedPoi.id, (current) => ({ ...current, listened_count: current.listened_count + 1 }));
 
                   try {
-                    await playPoiAudio(selectedPoi, { consumeFreeListen: !subscriptionActive });
+                    const result = await playPoiAudio(selectedPoi, {
+                      consumeFreeListen: !subscriptionActive,
+                      onListenedCount: (count) => {
+                        updatePoi(selectedPoi.id, (current) => ({ ...current, listened_count: count }));
+                      },
+                    });
+                    if (result.listenedCount) {
+                      updatePoi(selectedPoi.id, (current) => ({ ...current, listened_count: result.listenedCount || current.listened_count }));
+                    }
                   } finally {
-                    setIsPlaying(false);
+                    setPlayingPoiId("");
                   }
 
                   if (!subscriptionActive) {
@@ -278,7 +447,7 @@ export default function MapPage() {
                   }
                 }}
               >
-                <img src={isPlaying ? "/assets/audio.png" : "/assets/audio2.png"} alt="Audio" className="h-[18px] w-[18px]" />
+                <img src={playingPoiId === selectedPoi.id ? "/assets/audio.png" : "/assets/audio2.png"} alt="Audio" className="h-[18px] w-[18px]" />
               </button>
             </div>
 
@@ -294,6 +463,12 @@ export default function MapPage() {
                 Chi tiết
               </button>
             </div>
+          </div>
+        ) : null}
+
+        {errorMessage ? (
+          <div className="absolute inset-x-4 bottom-[116px] z-20 rounded-[18px] bg-white px-4 py-4 text-[14px] text-[#DC2626] shadow-[0_10px_24px_rgba(0,0,0,0.08)]">
+            {errorMessage}
           </div>
         ) : null}
       </main>

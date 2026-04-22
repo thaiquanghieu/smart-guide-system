@@ -1,11 +1,13 @@
 {
-  "name": "Smart Guide PWA",
-  "short_name": "SmartGuide",
+  "name": "Smart Guide",
+  "short_name": "Smart Guide",
+  "id": "/",
+  "scope": "/",
   "description": "Ban do va audio guide tren mobile web",
-  "start_url": "/",
+  "start_url": "/?source=pwa",
   "display": "standalone",
-  "background_color": "#07131f",
-  "theme_color": "#0f5bd7",
+  "background_color": "#f4f7fb",
+  "theme_color": "#f4f7fb",
   "orientation": "portrait",
   "icons": [
     {
