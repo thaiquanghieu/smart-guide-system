@@ -87,6 +87,7 @@ export default function ProfilePage() {
   const [showLanguage, setShowLanguage] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [showFavorites, setShowFavorites] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [toast, setToast] = useState("");
   const [appLang, setAppLangState] = useState("vi");
   const [audioLang, setAudioLangState] = useState("vi");
@@ -197,7 +198,7 @@ export default function ProfilePage() {
   }, [toast]);
 
   useEffect(() => {
-    const hasOverlay = showSettings || showLanguage || showHistory || showFavorites;
+    const hasOverlay = showSettings || showLanguage || showHistory || showFavorites || showDeleteConfirm;
     if (!hasOverlay) return undefined;
 
     const previousOverflow = document.body.style.overflow;
@@ -209,7 +210,7 @@ export default function ProfilePage() {
       document.body.style.overflow = previousOverflow;
       document.body.style.touchAction = previousTouchAction;
     };
-  }, [showFavorites, showHistory, showLanguage, showSettings]);
+  }, [showDeleteConfirm, showFavorites, showHistory, showLanguage, showSettings]);
 
   useEffect(() => {
     if (!showLanguage) return;
@@ -357,15 +358,7 @@ export default function ProfilePage() {
         <button
           type="button"
           className="ios-card grid grid-cols-[60px,1fr] items-center rounded-[20px] px-4 py-4 text-left"
-          onClick={async () => {
-            const deviceId = getDeviceId();
-            if (deviceId) {
-              await apiClient.delete(`/devices/${deviceId}`).catch(() => undefined);
-            }
-            resetDeviceIdentity();
-            profileCache = null;
-            router.replace("/paywall?returnTo=%2F");
-          }}
+          onClick={() => setShowDeleteConfirm(true)}
         >
           <div className="flex h-10 w-10 items-center justify-center rounded-[12px] bg-[#F9FAFB]">
             <img src="/assets/logout.png" alt="Delete" className="h-5 w-5" />
@@ -674,6 +667,45 @@ export default function ProfilePage() {
               >
                 {t("common.close")}
               </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {showDeleteConfirm ? (
+        <div className="fixed inset-0 z-30 bg-black/40" onClick={() => setShowDeleteConfirm(false)}>
+          <div className="absolute bottom-0 left-0 right-0 mx-auto max-w-[540px] rounded-t-[20px] bg-white px-5 pb-6 pt-5">
+            <div onClick={(event) => event.stopPropagation()}>
+              <h3 className="text-[18px] font-bold text-[#111827]">{t("profile.deleteDevice")}</h3>
+              <p className="mt-3 text-[14px] leading-[1.5] text-[#6B7280]">
+                Thiết bị sẽ bị xóa, gói đã mua sẽ mất và khi vào lại sẽ như máy mới. Bạn có chắc muốn tiếp tục?
+              </p>
+
+              <div className="mt-6 grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowDeleteConfirm(false)}
+                  className="rounded-[12px] bg-[#F3F4F6] py-3 font-semibold text-[#111827]"
+                >
+                  {t("common.cancel")}
+                </button>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const deviceId = getDeviceId();
+                    if (deviceId) {
+                      await apiClient.delete(`/devices/${deviceId}`).catch(() => undefined);
+                    }
+                    setShowDeleteConfirm(false);
+                    resetDeviceIdentity();
+                    profileCache = null;
+                    router.replace("/paywall?returnTo=%2F");
+                  }}
+                  className="rounded-[12px] bg-[#EF4444] py-3 font-semibold text-white"
+                >
+                  {t("common.ok")}
+                </button>
+              </div>
             </div>
           </div>
         </div>

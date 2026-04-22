@@ -84,10 +84,12 @@ export function getDeviceUuid() {
   const storage = getStorage();
   if (!storage) return "";
 
-  const stableUuid = hashToUuid(getBrowserFingerprint());
-  storage.setItem(DEVICE_UUID_KEY, stableUuid);
+  const existingUuid = storage.getItem(DEVICE_UUID_KEY);
+  if (existingUuid) return existingUuid;
 
-  return stableUuid;
+  const nextUuid = generateUuid();
+  storage.setItem(DEVICE_UUID_KEY, nextUuid);
+  return nextUuid;
 }
 
 export function resetDeviceIdentity() {

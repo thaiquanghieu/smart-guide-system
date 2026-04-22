@@ -121,8 +121,20 @@ public class DevicesController : ControllerBase
         if (device == null)
             return NotFound(new { message = "Không tìm thấy thiết bị" });
 
+        var now = DateTime.UtcNow;
+
         device.IsActive = false;
-        device.LastSeen = DateTime.UtcNow;
+        device.LastSeen = now;
+
+        var subscriptions = await _db.Subscriptions
+            .Where(x => x.DeviceId == deviceId && x.ExpireAt > now)
+            .ToListAsync();
+
+        foreach (var subscription in subscriptions)
+        {
+            subscription.ExpireAt = now;
+        }
+
         await _db.SaveChangesAsync();
 
         return Ok(new { message = "Đã xóa thiết bị" });
