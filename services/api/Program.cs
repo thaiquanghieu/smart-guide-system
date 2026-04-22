@@ -62,7 +62,10 @@ static string ToNpgsqlConnectionString(string value)
     var username = Uri.UnescapeDataString(userInfo[0]);
     var password = userInfo.Length > 1 ? Uri.UnescapeDataString(userInfo[1]) : "";
     var database = uri.AbsolutePath.Trim('/');
+    var sslMode = uri.Host.Contains("railway.internal", StringComparison.OrdinalIgnoreCase)
+        ? "Disable"
+        : "Require";
 
-    return $"Host={uri.Host};Port={uri.Port};Database={database};Username={username};Password={password};SSL Mode=Require;Trust Server Certificate=true";
+    return $"Host={uri.Host};Port={uri.Port};Database={database};Username={username};Password={password};SSL Mode={sslMode};Trust Server Certificate=true";
 }
 
