@@ -62,6 +62,7 @@ export default function ProfilePage() {
   const [profile, setProfile] = useState<ProfileSummary | null>(null);
   const [daysLeftText, setDaysLeftText] = useState("Đang kiểm tra...");
   const [showSettings, setShowSettings] = useState(false);
+  const [showLanguage, setShowLanguage] = useState(false);
   const [toast, setToast] = useState("");
   const [appLang, setAppLangState] = useState("vi");
   const [audioLang, setAudioLangState] = useState("vi");
@@ -153,7 +154,7 @@ export default function ProfilePage() {
     { icon: "favorite.png", label: "Địa điểm yêu thích" },
     { icon: "settings.png", label: "Cài đặt", onClick: () => setShowSettings(true) },
     { icon: "support.png", label: "Liên hệ hỗ trợ" },
-    { icon: "language.png", label: "Ngôn ngữ" },
+    { icon: "language.png", label: "Ngôn ngữ", onClick: () => setShowLanguage(true) },
     { icon: "info.png", label: "Về ứng dụng" },
   ];
 
@@ -326,68 +327,84 @@ export default function ProfilePage() {
                 </p>
               </div>
 
-              <div className="space-y-4">
-                <h4 className="text-[14px] font-bold">Ngôn ngữ</h4>
-                <div className="grid grid-cols-[1fr,160px] items-center gap-3">
-                  <span>Ngôn ngữ ứng dụng</span>
-                  <select
-                    value={appLang}
-                    onChange={(event) => {
-                      const nextValue = event.target.value;
-                      setAppLangState(nextValue);
-                      setAppLanguage(nextValue);
-                      if (!audioCustom) {
-                        setAudioLangState(nextValue);
-                        setAudioLanguage(nextValue);
-                      }
-                    }}
-                    className="rounded-[10px] border border-[#E5E7EB] px-3 py-3 text-[#6B7280]"
-                  >
-                    {languages.map((language) => (
-                      <option key={language.code} value={language.code}>{language.name}</option>
-                    ))}
-                  </select>
-                </div>
+              <button
+                type="button"
+                onClick={() => setShowSettings(false)}
+                className="w-full rounded-[12px] bg-[#0F5BD7] py-3 text-white"
+              >
+                Đóng
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
-                <div className="flex items-center justify-between">
-                  <span>Tùy chỉnh ngôn ngữ đọc</span>
-                  <button
-                    type="button"
-                    className={`flex h-8 w-[52px] rounded-full p-1 ${audioCustom ? "justify-end bg-[#0F5BD7]" : "justify-start bg-[#E5E7EB]"}`}
-                    onClick={() => {
-                      const nextValue = !audioCustom;
-                      setAudioCustomState(nextValue);
-                      setAudioCustom(nextValue);
-                      if (!nextValue) {
-                        setAudioLangState(appLang);
-                      }
-                    }}
-                  >
-                    <span className="h-6 w-6 rounded-full bg-white" />
-                  </button>
-                </div>
+      {showLanguage ? (
+        <div className="fixed inset-0 z-30 bg-black/40">
+          <div className="absolute bottom-0 left-0 right-0 mx-auto max-w-[540px] rounded-t-[20px] bg-white px-5 pb-6 pt-5">
+            <h3 className="text-[18px] font-bold text-[#111827]">Ngôn ngữ</h3>
 
-                <div className="grid grid-cols-[1fr,160px] items-center gap-3">
-                  <span>Ngôn ngữ thuyết minh</span>
-                  <select
-                    value={audioLang}
-                    disabled={!audioCustom}
-                    onChange={(event) => {
-                      setAudioLangState(event.target.value);
-                      setAudioLanguage(event.target.value);
-                    }}
-                    className="rounded-[10px] border border-[#E5E7EB] px-3 py-3 text-[#6B7280] disabled:bg-[#F3F4F6]"
-                  >
-                    {languages.map((language) => (
-                      <option key={language.code} value={language.code}>{language.name}</option>
-                    ))}
-                  </select>
-                </div>
+            <div className="mt-6 space-y-6">
+              <div className="grid grid-cols-[1fr,160px] items-center gap-3">
+                <span>Ngôn ngữ ứng dụng</span>
+                <select
+                  value={appLang}
+                  onChange={(event) => {
+                    const nextValue = event.target.value;
+                    setAppLangState(nextValue);
+                    setAppLanguage(nextValue);
+                    if (!audioCustom) {
+                      setAudioLangState(nextValue);
+                      setAudioLanguage(nextValue);
+                    }
+                  }}
+                  className="rounded-[10px] border border-[#E5E7EB] px-3 py-3 text-[#6B7280]"
+                >
+                  {languages.map((language) => (
+                    <option key={language.code} value={language.code}>{language.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <span>Tùy chỉnh ngôn ngữ đọc</span>
+                <button
+                  type="button"
+                  className={`flex h-8 w-[52px] rounded-full p-1 ${audioCustom ? "justify-end bg-[#0F5BD7]" : "justify-start bg-[#E5E7EB]"}`}
+                  onClick={() => {
+                    const nextValue = !audioCustom;
+                    setAudioCustomState(nextValue);
+                    setAudioCustom(nextValue);
+                    if (!nextValue) {
+                      setAudioLangState(appLang);
+                      setAudioLanguage(appLang);
+                    }
+                  }}
+                >
+                  <span className="h-6 w-6 rounded-full bg-white" />
+                </button>
+              </div>
+
+              <div className="grid grid-cols-[1fr,160px] items-center gap-3">
+                <span>Ngôn ngữ thuyết minh</span>
+                <select
+                  value={audioLang}
+                  disabled={!audioCustom}
+                  onChange={(event) => {
+                    setAudioLangState(event.target.value);
+                    setAudioLanguage(event.target.value);
+                  }}
+                  className="rounded-[10px] border border-[#E5E7EB] px-3 py-3 text-[#6B7280] disabled:bg-[#F3F4F6]"
+                >
+                  {languages.map((language) => (
+                    <option key={language.code} value={language.code}>{language.name}</option>
+                  ))}
+                </select>
               </div>
 
               <button
                 type="button"
-                onClick={() => setShowSettings(false)}
+                onClick={() => setShowLanguage(false)}
                 className="w-full rounded-[12px] bg-[#0F5BD7] py-3 text-white"
               >
                 Đóng
