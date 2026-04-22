@@ -81,6 +81,16 @@ INSERT INTO pois (
 ON CONFLICT (id) DO NOTHING;
 
 -- =========================
+-- QR ENTRIES
+-- =========================
+INSERT INTO qr_entries (
+  owner_id, poi_id, name, entry_code, total_scans, used_scans, status
+) VALUES
+(1, '4', 'QR Hội chợ SGU', 'FAIR2026', 50, 0, 'active'),
+(2, '5', 'QR Bệnh viện Mắt', 'EYEHOSP5', 30, 0, 'active')
+ON CONFLICT (entry_code) DO NOTHING;
+
+-- =========================
 -- POI IMAGES
 -- =========================
 INSERT INTO poi_images (poi_id, image_url, sort_order) VALUES

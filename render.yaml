@@ -10,13 +10,3 @@ services:
         value: Production
       - key: DATABASE_URL
         sync: false
-
-  - type: web
-    name: smartguide-pwa
-    runtime: node
-    rootDir: apps/pwa
-    buildCommand: npm install && npm run build
-    startCommand: npm run start
-    envVars:
-      - key: NEXT_PUBLIC_API_URL
-        sync: false

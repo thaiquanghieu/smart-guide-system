@@ -35,7 +35,7 @@ export default function App({ Component, pageProps }: AppProps) {
         <link rel="manifest" href="/manifest.webmanifest" />
         <link rel="apple-touch-icon" sizes="180x180" href="/icon-192.png" />
       </Head>
-      {mounted ? <Component {...pageProps} /> : <div className="min-h-screen bg-[#F4F7FB]" />}
+      <Component {...pageProps} />
     </>
   );
 }

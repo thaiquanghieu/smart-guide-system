@@ -47,56 +47,132 @@ public class AccessController : ControllerBase
 
         var now = DateTime.UtcNow;
         var hasActiveSubscription = await HasActiveSubscriptionAsync(request.DeviceId, now);
+        var normalizedCode = request.EntryCode.Trim();
+        var qrEntry = await _db.QrEntries.FirstOrDefaultAsync(x => x.EntryCode == normalizedCode);
+
+        if (qrEntry == null)
+            return BadRequest(new { message = "QR không tồn tại" });
+
+        if (qrEntry.Status != "active")
+            return BadRequest(new { message = "QR hiện không khả dụng" });
+
+        if (qrEntry.ExpiresAt.HasValue && qrEntry.ExpiresAt.Value <= now)
+        {
+            qrEntry.Status = "expired";
+            await _db.SaveChangesAsync();
+            return BadRequest(new { message = "QR đã hết hạn" });
+        }
+
+        var poiId = !string.IsNullOrWhiteSpace(request.PoiId) ? request.PoiId.Trim() : qrEntry.PoiId;
 
         if (hasActiveSubscription)
         {
+            _db.QrLogs.Add(new QrLog
+            {
+                QrEntryId = qrEntry.Id,
+                DeviceId = request.DeviceId,
+                PoiId = poiId,
+                Code = normalizedCode,
+                GrantedFreeListen = false,
+                ScanStatus = "subscription_active",
+                ScannedAt = now
+            });
+            await _db.SaveChangesAsync();
+
             return Ok(new
             {
                 hasActiveSubscription = true,
                 granted = false,
                 freePlaysRemaining = 0,
-                poiId = request.PoiId
+                poiId
             });
         }
 
-        var normalizedCode = request.EntryCode.Trim();
-
         var latestGrant = await _db.DeviceEntryGrants
-            .Where(x => x.DeviceId == request.DeviceId && x.EntryCode == normalizedCode)
+            .Where(x => x.DeviceId == request.DeviceId && x.QrEntryId == qrEntry.Id)
             .OrderByDescending(x => x.GrantedAt)
             .FirstOrDefaultAsync();
 
-        DeviceEntryGrant grant;
-
         if (latestGrant != null && now - latestGrant.GrantedAt < EntryGrantCooldown)
         {
-            grant = latestGrant;
-        }
-        else
-        {
-            grant = new DeviceEntryGrant
+            _db.QrLogs.Add(new QrLog
             {
+                QrEntryId = qrEntry.Id,
                 DeviceId = request.DeviceId,
-                EntryCode = normalizedCode,
-                PoiId = string.IsNullOrWhiteSpace(request.PoiId) ? null : request.PoiId.Trim(),
-                FreePlaysTotal = 1,
-                FreePlaysUsed = 0,
-                GrantedAt = now,
-                ExpiresAt = now.Add(EntryGrantExpiry)
-            };
-
-            _db.DeviceEntryGrants.Add(grant);
+                PoiId = poiId,
+                Code = normalizedCode,
+                GrantedFreeListen = false,
+                ScanStatus = "duplicate_device",
+                ScannedAt = now
+            });
             await _db.SaveChangesAsync();
+
+            return Ok(new
+            {
+                hasActiveSubscription = false,
+                granted = false,
+                freePlaysRemaining = Math.Max(0, latestGrant.FreePlaysTotal - latestGrant.FreePlaysUsed),
+                poiId
+            });
         }
 
-        var remaining = Math.Max(0, grant.FreePlaysTotal - grant.FreePlaysUsed);
+        if (qrEntry.UsedScans >= qrEntry.TotalScans)
+        {
+            _db.QrLogs.Add(new QrLog
+            {
+                QrEntryId = qrEntry.Id,
+                DeviceId = request.DeviceId,
+                PoiId = poiId,
+                Code = normalizedCode,
+                GrantedFreeListen = false,
+                ScanStatus = "quota_exceeded",
+                ScannedAt = now
+            });
+            await _db.SaveChangesAsync();
+
+            return Ok(new
+            {
+                hasActiveSubscription = false,
+                granted = false,
+                freePlaysRemaining = 0,
+                poiId
+            });
+        }
+
+        var grant = new DeviceEntryGrant
+        {
+            QrEntryId = qrEntry.Id,
+            DeviceId = request.DeviceId,
+            EntryCode = normalizedCode,
+            PoiId = poiId,
+            FreePlaysTotal = 1,
+            FreePlaysUsed = 0,
+            GrantedAt = now,
+            ExpiresAt = now.Add(EntryGrantExpiry)
+        };
+
+        qrEntry.UsedScans += 1;
+        qrEntry.UpdatedAt = now;
+
+        _db.DeviceEntryGrants.Add(grant);
+        _db.QrLogs.Add(new QrLog
+        {
+            QrEntryId = qrEntry.Id,
+            DeviceId = request.DeviceId,
+            PoiId = poiId,
+            Code = normalizedCode,
+            GrantedFreeListen = true,
+            ScanStatus = "granted",
+            ScannedAt = now
+        });
+        await _db.SaveChangesAsync();
 
         return Ok(new
         {
             hasActiveSubscription = false,
-            granted = remaining > 0,
-            freePlaysRemaining = remaining,
-            poiId = grant.PoiId ?? request.PoiId
+            granted = true,
+            freePlaysRemaining = 1,
+            poiId
         });
     }
 

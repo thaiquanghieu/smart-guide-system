@@ -24,7 +24,6 @@ public class OwnerPoisController : ControllerBase
     {
         var pois = await _db.Pois
             .Where(x => x.OwnerId == ownerId)
-            .Include(p => p.OwnerId)
             .ToListAsync();
 
         var poiImages = await _db.PoiImages.OrderBy(x => x.SortOrder).ToListAsync();

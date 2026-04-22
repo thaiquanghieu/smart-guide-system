@@ -10,6 +10,9 @@ public class DeviceEntryGrant
     [Column("id")]
     public int Id { get; set; }
 
+    [Column("qr_entry_id")]
+    public int? QrEntryId { get; set; }
+
     [Column("device_id")]
     public int DeviceId { get; set; }
 

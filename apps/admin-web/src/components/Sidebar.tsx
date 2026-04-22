@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { useRouter } from 'next/router'
 import { useAdminStore } from '@/lib/store'
-import { LogOut, LayoutDashboard, CheckCircle, Users, BarChart3 } from 'lucide-react'
+import { LogOut, LayoutDashboard, CheckCircle, Users, BarChart3, QrCode } from 'lucide-react'
 
 export default function Sidebar() {
   const router = useRouter()
@@ -11,6 +11,7 @@ export default function Sidebar() {
     { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { href: '/users', label: 'Quản lý tài khoản', icon: Users },
     { href: '/pois', label: 'Duyệt POI', icon: CheckCircle },
+    { href: '/qr', label: 'Quản lý QR', icon: QrCode },
     { href: '/analytics', label: 'Thống kê', icon: BarChart3 },
   ]
 

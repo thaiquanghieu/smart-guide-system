@@ -27,13 +27,17 @@ http://localhost:3002
 - Nghe xong hien `paywall`
 - Mua xong quay lai dung `POI` dang cho
 
-## Render
+## Deploy PWA len Vercel
 
-- Dat `NEXT_PUBLIC_API_URL` tro den backend Render, vi du:
+- Import project tu GitHub
+- Chon `Root Directory` la `apps/pwa`
+- Dat env:
 
 ```text
-https://smartguide-api.onrender.com/api
+NEXT_PUBLIC_API_URL=https://smartguide-api.onrender.com/api
 ```
+
+Khong can `API_PROXY_TARGET` khi deploy len Vercel.
 
 ## Test tren dien thoai bang ngrok
 
