@@ -172,7 +172,8 @@ public class PoisController : ControllerBase
                 _db.Favorites.Add(new Favorite
                 {
                     DeviceId = deviceId,
-                    PoiId = poiId
+                    PoiId = poiId,
+                    CreatedAt = DateTime.UtcNow
                 });
             }
         }
