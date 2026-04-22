@@ -1,0 +1,383 @@
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:viewmodels="clr-namespace:SmartGuideApp.ViewModels"
+             x:Class="SmartGuideApp.Views.DetailPage"
+             BackgroundColor="#F4F7FC">
+
+    <ContentPage.BindingContext>
+        <viewmodels:DetailViewModel />
+    </ContentPage.BindingContext>
+
+    <Grid>
+        <ScrollView>
+            <VerticalStackLayout Padding="0,0,0,24" Spacing="18">
+
+                <!-- HEADER -->
+                <Grid Padding="20,16,20,0" ColumnDefinitions="Auto,*,Auto,Auto">
+                    <Image Source="back.png"
+                           WidthRequest="24"
+                           HeightRequest="24">
+                        <Image.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="OnBackTapped" />
+                        </Image.GestureRecognizers>
+                    </Image>
+
+                    <Label Grid.Column="1"
+                           Text="Smart Guide"
+                           HorizontalOptions="Center"
+                           FontSize="22"
+                           FontAttributes="Bold"
+                           TextColor="#0058BC" />
+
+                    <!-- SHARE -->
+                    <Image Grid.Column="3"
+                        Source="share.png"
+                        WidthRequest="28"
+                        HeightRequest="28"
+                        HorizontalOptions="End">
+                        <Image.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="OnShareTapped" />
+                        </Image.GestureRecognizers>
+                    </Image>
+                </Grid>
+
+                <!-- IMAGE HERO -->
+                <Frame Margin="20,0,20,0"
+                       Padding="0"
+                       CornerRadius="30"
+                       BackgroundColor="White"
+                       HasShadow="False">
+                    <Grid HeightRequest="420">
+
+                        <CarouselView ItemsSource="{Binding Images}"
+                                    Position="{Binding CurrentImageIndex, Mode=TwoWay}"
+                                    IsSwipeEnabled="True">
+
+                            <CarouselView.ItemTemplate>
+                                <DataTemplate>
+                                    <Image Source="{Binding .}"
+                                        Aspect="AspectFill" />
+                                </DataTemplate>
+                            </CarouselView.ItemTemplate>
+
+                        </CarouselView>
+
+                        <Grid Padding="18"
+                              RowDefinitions="Auto,*,Auto"
+                              BackgroundColor="#22000000">
+
+                            <!-- TOP -->
+                            <Grid ColumnDefinitions="Auto,Auto,*,Auto"
+                                  VerticalOptions="Start">
+
+                                <Frame Padding="12,6"
+                                       CornerRadius="12"
+                                       BackgroundColor="#0058BC"
+                                       HasShadow="False"
+                                       VerticalOptions="Start">
+                                    <Label Text="{Binding Category}"
+                                           FontSize="12"
+                                           FontAttributes="Bold"
+                                           TextColor="White"
+                                           LineBreakMode="NoWrap" />
+                                </Frame>
+
+                                <Frame Grid.Column="1"
+                                       Margin="8,0,0,0"
+                                       Padding="12,6"
+                                       CornerRadius="12"
+                                       BackgroundColor="#805F4635"
+                                       HasShadow="False"
+                                       VerticalOptions="Start">
+                                    <Label Text="{Binding DistanceText}"
+                                           FontSize="12"
+                                           FontAttributes="Bold"
+                                           TextColor="White"
+                                           LineBreakMode="NoWrap" />
+                                </Frame>
+
+                                <Image Grid.Column="3"
+                                       Source="{Binding AudioToggleIcon}"
+                                       WidthRequest="30"
+                                       HeightRequest="30"
+                                       HorizontalOptions="End"
+                                       VerticalOptions="Start"
+                                       Opacity="0.95">
+                                    <Image.Shadow>
+                                        <Shadow Brush="#55000000"
+                                                Offset="0,2"
+                                                Radius="4"
+                                                Opacity="0.5" />
+                                    </Image.Shadow>
+                                    <Image.GestureRecognizers>
+                                        <TapGestureRecognizer Tapped="OnAudioTapped" />
+                                    </Image.GestureRecognizers>
+                                </Image>
+                            </Grid>
+
+                            <!-- ARROWS -->
+                            <Grid Grid.Row="1"
+                                  ColumnDefinitions="Auto,*,Auto"
+                                  VerticalOptions="Center">
+
+                                <Image Source="arrow_left.png"
+                                       WidthRequest="24"
+                                       HeightRequest="24"
+                                       Opacity="0.45"
+                                       IsVisible="{Binding CanGoPreviousImage}"
+                                       VerticalOptions="Center"
+                                       HorizontalOptions="Start">
+                                    <Image.GestureRecognizers>
+                                        <TapGestureRecognizer Command="{Binding PreviousImageCommand}" />
+                                    </Image.GestureRecognizers>
+                                </Image>
+
+                                <Image Grid.Column="2"
+                                       Source="arrow_right.png"
+                                       WidthRequest="24"
+                                       HeightRequest="24"
+                                       Opacity="0.45"
+                                       IsVisible="{Binding CanGoNextImage}"
+                                       VerticalOptions="Center"
+                                       HorizontalOptions="End">
+                                    <Image.GestureRecognizers>
+                                        <TapGestureRecognizer Command="{Binding NextImageCommand}" />
+                                    </Image.GestureRecognizers>
+                                </Image>
+                            </Grid>
+
+                            <!-- BOTTOM -->
+                            <Grid Grid.Row="2"
+                                  ColumnDefinitions="*,Auto"
+                                  ColumnSpacing="12"
+                                  VerticalOptions="End">
+
+                                <VerticalStackLayout Spacing="6"
+                                                     IsVisible="{Binding IsFirstImage}">
+                                    <Label Text="{Binding Title}"
+                                           FontSize="34"
+                                           FontAttributes="Bold"
+                                           TextColor="White"
+                                           LineBreakMode="TailTruncation"
+                                           MaxLines="1" />
+
+                                    <HorizontalStackLayout Spacing="6">
+                         <!-- Listen (icon + count) -->
+                         <HorizontalStackLayout Spacing="6"
+                                    VerticalOptions="Center">
+                          <Image Source="listen.png"
+                              WidthRequest="14"
+                              HeightRequest="14"
+                              VerticalOptions="Center" />
+
+                          <Label Text="{Binding ListenedCountText}"
+                              FontSize="14"
+                              TextColor="White"
+                              VerticalOptions="Center" />
+                         </HorizontalStackLayout>
+
+                         <Image Source="star.png"
+                             WidthRequest="14"
+                             HeightRequest="14"
+                             VerticalOptions="Center" />
+
+                         <Label Text="{Binding RatingText}"
+                             FontSize="14"
+                             TextColor="White"
+                             VerticalOptions="Center" />
+                                    </HorizontalStackLayout>
+
+                                    <Label Text="{Binding Address}"
+                                           FontSize="14"
+                                           TextColor="White"
+                                           LineBreakMode="TailTruncation" />
+                                </VerticalStackLayout>
+
+                                <Image Grid.Column="1"
+                                       Source="{Binding FavoriteIcon}"
+                                       WidthRequest="28"
+                                       HeightRequest="28"
+                                       HorizontalOptions="End"
+                                       VerticalOptions="End">
+                                    <Image.GestureRecognizers>
+                                        <TapGestureRecognizer Tapped="OnFavoriteTapped" />
+                                    </Image.GestureRecognizers>
+                                </Image>
+                            </Grid>
+
+                            <!-- COUNTER -->
+                            <Label Grid.Row="2"
+                                   Text="{Binding ImageCounterText}"
+                                   HorizontalOptions="Center"
+                                   VerticalOptions="End"
+                                   Margin="0,0,0,-15"
+                                   FontSize="12"
+                                   TextColor="White"
+                                   Opacity="0.8" />
+                        </Grid>
+                    </Grid>
+                </Frame>
+
+                <!-- INFO ROW -->
+                <Grid Margin="20,12,20,0"
+                    ColumnDefinitions="*,*,*"
+                    ColumnSpacing="10">
+
+                     <!-- GIỜ -->
+                     <Frame Grid.Column="0"
+                            Padding="0"
+                            CornerRadius="10"
+                            BackgroundColor="#F3F4F6"
+                            HasShadow="False">
+
+                            <Grid VerticalOptions="Center">
+                            <HorizontalStackLayout Spacing="6"
+                                                        HorizontalOptions="Center"
+                                                        VerticalOptions="Center">
+                                   <Image Source="clock.png"
+                                          WidthRequest="14"/>
+                                   <Label Text="{Binding OpenHours}"
+                                          FontSize="13"
+                                          TextColor="#374151"/>
+                            </HorizontalStackLayout>
+                            </Grid>
+                     </Frame>
+
+                     <!-- GIÁ -->
+                     <Frame Grid.Column="1"
+                            Padding="0"
+                            CornerRadius="10"
+                            BackgroundColor="#EEF4FF"
+                            HasShadow="False">
+
+                            <Grid VerticalOptions="Center">
+                            <HorizontalStackLayout Spacing="6"
+                                                        HorizontalOptions="Center"
+                                                        VerticalOptions="Center">
+                                   <Image Source="ticket.png"
+                                          WidthRequest="14"/>
+                                   <Label Text="{Binding PriceText}"
+                                          FontSize="13"
+                                          FontAttributes="Bold"
+                                          TextColor="#365FA8"/>
+                            </HorizontalStackLayout>
+                            </Grid>
+                     </Frame>
+
+                     <Button Grid.Column="2"
+                            Text="Hiện vị trí"
+                            FontSize="13"
+                            FontAttributes="Bold"
+                            TextColor="White"
+                            BackgroundColor="#0F5BD7"
+                            CornerRadius="12"
+                            Clicked="OnShowOnMapClicked"/>
+                </Grid>
+
+                <!-- AUDIO BOX -->
+                <Frame Margin="20,0,20,0"
+                       Padding="20"
+                       CornerRadius="26"
+                       BackgroundColor="White"
+                       HasShadow="False">
+                    <VerticalStackLayout Spacing="16">
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <VerticalStackLayout Spacing="6">
+                                <Label Text="Nghe thuyết minh"
+                                       FontSize="18"
+                                       FontAttributes="Bold"
+                                       TextColor="#111827" />
+
+                                <Label Text="{Binding AudioVoice, StringFormat='Giọng đọc: {0}'}"
+                                       FontSize="14"
+                                       TextColor="#475569" />
+                            </VerticalStackLayout>
+
+                            <Frame Grid.Column="1"
+                                   WidthRequest="36"
+                                   HeightRequest="36"
+                                   CornerRadius="18"
+                                   BackgroundColor="#D1D5DB"
+                                   Padding="0"
+                                   HasShadow="False"
+                                   VerticalOptions="Center">
+                                <Image Source="{Binding AudioToggleIcon}"
+                                       WidthRequest="18"
+                                       HeightRequest="18"
+                                       HorizontalOptions="Center"
+                                       VerticalOptions="Center">
+                                    <Image.GestureRecognizers>
+                                        <TapGestureRecognizer Tapped="OnAudioTapped" />
+                                    </Image.GestureRecognizers>
+                                </Image>
+                            </Frame>
+                        </Grid>
+
+                        <VerticalStackLayout Spacing="6">
+                            <Slider Minimum="0"
+                                    Maximum="100"
+                                    Value="{Binding PlaybackProgress, Mode=TwoWay}"
+                                    MinimumTrackColor="#0058BC"
+                                    MaximumTrackColor="#D1D5DB"
+                                    DragCompleted="OnTimelineDragCompleted" />
+
+                            <Grid ColumnDefinitions="Auto,*,Auto">
+                                <Label Text="{Binding CurrentTimeText}"
+                                       FontSize="12"
+                                       TextColor="#64748B" />
+
+                                <Label Grid.Column="2"
+                                       Text="{Binding RemainingTimeText}"
+                                       FontSize="12"
+                                       TextColor="#64748B"
+                                       HorizontalOptions="End" />
+                            </Grid>
+                        </VerticalStackLayout>
+
+                        <Button Text="Xem lời thuyết minh"
+                                CornerRadius="18"
+                                BackgroundColor="#EEF4FF"
+                                TextColor="#0058BC"
+                                Clicked="OnShowScriptClicked" />
+                    </VerticalStackLayout>
+                </Frame>
+
+                <!-- DESCRIPTION -->
+                <VerticalStackLayout Padding="20,0,20,0"
+                                     Spacing="14">
+                    <Label Text="Giới thiệu"
+                           FontSize="28"
+                           FontAttributes="Bold"
+                           TextColor="#111827" />
+
+                    <Label Text="{Binding Description}"
+                           FontSize="17"
+                           TextColor="#111827"
+                           LineHeight="1.4" />
+                </VerticalStackLayout>
+
+            </VerticalStackLayout>
+        </ScrollView>
+
+        <!-- TOAST -->
+        <Frame x:Name="ToastView"
+               IsVisible="False"
+               VerticalOptions="Start"
+               HorizontalOptions="Center"
+               Margin="0,60,0,0"
+               Padding="16,10"
+               BackgroundColor="#CCEEF4FF"
+               BorderColor="#8CB7FF"
+               Opacity="0"
+               TranslationY="-20"
+               CornerRadius="12"
+               HasShadow="False"
+               ZIndex="10">
+            <Label x:Name="ToastText"
+                   TextColor="#0F5BD7"
+                   FontSize="14"
+                   FontAttributes="Bold" />
+        </Frame>
+    </Grid>
+</ContentPage>

@@ -1,0 +1,452 @@
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:viewmodels="clr-namespace:SmartGuideApp.ViewModels"
+             x:Class="SmartGuideApp.Views.ProfilePage"
+             BackgroundColor="#F4F7FB">
+
+    <ContentPage.BindingContext>
+        <viewmodels:ProfileViewModel />
+    </ContentPage.BindingContext>
+    
+    <Grid>
+    <ScrollView>
+        <VerticalStackLayout Padding="20" Spacing="20">
+
+            <!-- HEADER -->
+            <Grid>
+                <!-- TITLE -->
+                <Label Text="Smart Guide"
+                    HorizontalOptions="Center"
+                    FontSize="22"
+                    FontAttributes="Bold"
+                    TextColor="#0F5BD7">
+                    <Label.Shadow>
+                        <Shadow Brush="#00000022" Offset="0,2" Radius="6"/>
+                    </Label.Shadow>
+                </Label>
+
+                <!-- NÚT GIA HẠN -->
+                <Frame HorizontalOptions="End"
+                    VerticalOptions="Center"
+                    Padding="12,5"
+                    CornerRadius="14"
+                    BackgroundColor="#0F5BD7"
+                    HasShadow="False"
+                    Margin="0,0,10,0">
+
+                    <Frame.GestureRecognizers>
+                        <TapGestureRecognizer Tapped="OnGoToPaywall"/>
+                    </Frame.GestureRecognizers>
+
+                    <Label Text="Gia hạn"
+                        FontSize="13"
+                        TextColor="White"
+                        FontAttributes="Bold"
+                        HorizontalOptions="Center"
+                        VerticalOptions="Center"/>
+                </Frame>
+
+            </Grid>
+
+            <!-- AVATAR -->
+            <Grid HorizontalOptions="Center">
+
+                <Frame WidthRequest="120"
+                       HeightRequest="120"
+                       CornerRadius="60"
+                       Padding="3"
+                       BackgroundColor="#0F5BD7"
+                       HasShadow="True">
+
+                    <Frame WidthRequest="114"
+                           HeightRequest="114"
+                           CornerRadius="57"
+                           Padding="0"
+                           IsClippedToBounds="True">
+
+                        <Image Source="{Binding AvatarUrl}"
+                               Aspect="AspectFill"/>
+                    </Frame>
+                </Frame>
+
+                <!-- EDIT -->
+                <Frame WidthRequest="36"
+                       HeightRequest="36"
+                       CornerRadius="18"
+                       BackgroundColor="#0F5BD7"
+                       HorizontalOptions="End"
+                       VerticalOptions="End"
+                       TranslationX="10"
+                       TranslationY="10"
+                       Padding="8">
+
+                    <Image Source="edit.png"
+                           WidthRequest="18"
+                           HeightRequest="18"
+                           Aspect="AspectFit"
+                           HorizontalOptions="Center"
+                           VerticalOptions="Center"/>
+                </Frame>
+
+            </Grid>
+
+            <!-- NAME -->
+            <VerticalStackLayout Spacing="4">
+                <Label Text="{Binding DeviceName}"
+                       FontSize="24"
+                       FontAttributes="Bold"
+                       HorizontalTextAlignment="Center"
+                       HorizontalOptions="Center"/>
+
+                <Label Text="{Binding DeviceDetails}"
+                       FontSize="14"
+                       TextColor="#6B7280"
+                       HorizontalTextAlignment="Center"
+                       HorizontalOptions="Center"/>
+
+                <Label Text="{Binding DaysLeftText}"
+                        FontSize="15"
+                        FontAttributes="Bold"
+                        TextColor="#0F5BD7"
+                        BackgroundColor="#E8F0FF"
+                        Padding="6,2"
+                        HorizontalOptions="Center"
+                        HorizontalTextAlignment="Center"/>
+            </VerticalStackLayout>
+
+            <!-- STATS -->
+            <Grid ColumnDefinitions="*,*" ColumnSpacing="15">
+
+              <Frame CornerRadius="16" Padding="16" BackgroundColor="White">
+                     <VerticalStackLayout Spacing="4">
+
+                     <Label Text="{Binding FavoriteCount}"
+                            FontSize="22"
+                            FontAttributes="Bold"
+                            TextColor="#0F5BD7"
+                            HorizontalOptions="Fill"
+                            HorizontalTextAlignment="Center"/>
+
+                     <Label Text="YÊU THÍCH"
+                            FontSize="12"
+                            TextColor="#6B7280"
+                            HorizontalOptions="Fill"
+                            HorizontalTextAlignment="Center"/>
+
+                     </VerticalStackLayout>
+              </Frame>
+
+              <Frame Grid.Column="1" CornerRadius="16" Padding="16" BackgroundColor="White">
+                     <VerticalStackLayout Spacing="4">
+
+                     <Label Text="{Binding ListenedPoiCount}"
+                            FontSize="22"
+                            FontAttributes="Bold"
+                            TextColor="#0F5BD7"
+                            HorizontalOptions="Fill"
+                            HorizontalTextAlignment="Center"/>
+
+                     <Label Text="ĐIỂM ĐÃ NGHE"
+                            FontSize="12"
+                            TextColor="#6B7280"
+                            HorizontalOptions="Fill"
+                            HorizontalTextAlignment="Center"/>
+
+                     </VerticalStackLayout>
+              </Frame>
+
+              </Grid>
+
+            <!-- MENU -->
+            <Frame CornerRadius="20" BackgroundColor="White" Padding="0">
+
+                <VerticalStackLayout>
+
+                    <!-- ITEM -->
+                    <Grid Padding="16" ColumnDefinitions="60,* ,Auto">
+                        <Frame WidthRequest="40" HeightRequest="40" CornerRadius="12" BackgroundColor="#F9FAFB">
+                            <Image Source="history.png"
+                                   WidthRequest="20"
+                                   HeightRequest="20"
+                                   Aspect="AspectFit"
+                                   HorizontalOptions="Center"
+                                   VerticalOptions="Center"/>
+                        </Frame>
+                        <Label Grid.Column="1" Text="Lịch sử nghe" VerticalOptions="Center"/>
+                        <Label Grid.Column="2" Text="›" FontSize="18" TextColor="#9CA3AF"/>
+                    </Grid>
+
+                    <BoxView HeightRequest="1" BackgroundColor="#E5E7EB"/>
+
+                    <Grid Padding="16" ColumnDefinitions="60,* ,Auto">
+                        <Frame WidthRequest="40" HeightRequest="40" CornerRadius="12" BackgroundColor="#F9FAFB">
+                            <Image Source="favorite.png"
+                                   WidthRequest="20"
+                                   HeightRequest="20"
+                                   Aspect="AspectFit"
+                                   HorizontalOptions="Center"
+                                   VerticalOptions="Center"/>
+                        </Frame>
+                        <Label Grid.Column="1" Text="Địa điểm yêu thích" VerticalOptions="Center"/>
+                        <Label Grid.Column="2" Text="›" FontSize="18" TextColor="#9CA3AF"/>
+                    </Grid>
+
+                    <BoxView HeightRequest="1" BackgroundColor="#E5E7EB"/>
+
+                    <Grid Padding="16" ColumnDefinitions="60,* ,Auto">
+                        <Grid.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="OnOpenSettingsTapped" />
+                        </Grid.GestureRecognizers>
+
+                        <Frame WidthRequest="40" HeightRequest="40" CornerRadius="12" BackgroundColor="#F9FAFB">
+                            <Image Source="settings.png"
+                                   WidthRequest="20"
+                                   HeightRequest="20"
+                                   Aspect="AspectFit"
+                                   HorizontalOptions="Center"
+                                   VerticalOptions="Center"/>
+                        </Frame>
+                        <Label Grid.Column="1" Text="Cài đặt" VerticalOptions="Center"/>
+                        <Label Grid.Column="2" Text="›" FontSize="18" TextColor="#9CA3AF"/>
+                    </Grid>
+
+                    <BoxView HeightRequest="1" BackgroundColor="#E5E7EB"/>
+
+                    <Grid Padding="16" ColumnDefinitions="60,* ,Auto">
+                        <Frame WidthRequest="40" HeightRequest="40" CornerRadius="12" BackgroundColor="#F9FAFB">
+                            <Image Source="support.png"
+                                   WidthRequest="20"
+                                   HeightRequest="20"
+                                   Aspect="AspectFit"
+                                   HorizontalOptions="Center"
+                                   VerticalOptions="Center"/>
+                        </Frame>
+                        <Label Grid.Column="1" Text="Liên hệ hỗ trợ" VerticalOptions="Center"/>
+                        <Label Grid.Column="2" Text="›" FontSize="18" TextColor="#9CA3AF"/>
+                    </Grid>
+
+                    <BoxView HeightRequest="1" BackgroundColor="#E5E7EB"/>
+
+                    <Grid Padding="16" ColumnDefinitions="60,* ,Auto">
+                        <Frame WidthRequest="40" HeightRequest="40" CornerRadius="12" BackgroundColor="#F9FAFB">
+                            <Image Source="language.png"
+                                   WidthRequest="20"
+                                   HeightRequest="20"
+                                   Aspect="AspectFit"
+                                   HorizontalOptions="Center"
+                                   VerticalOptions="Center"/>
+                        </Frame>
+                        <Label Grid.Column="1" Text="Ngôn ngữ" VerticalOptions="Center"/>
+                        <Label Grid.Column="2" Text="›" FontSize="18" TextColor="#9CA3AF"/>
+                    </Grid>
+
+                    <BoxView HeightRequest="1" BackgroundColor="#E5E7EB"/>
+
+                    <Grid Padding="16" ColumnDefinitions="60,* ,Auto">
+                        <Frame WidthRequest="40" HeightRequest="40" CornerRadius="12" BackgroundColor="#F9FAFB">
+                            <Image Source="info.png"
+                                   WidthRequest="20"
+                                   HeightRequest="20"
+                                   Aspect="AspectFit"
+                                   HorizontalOptions="Center"
+                                   VerticalOptions="Center"/>
+                        </Frame>
+                        <Label Grid.Column="1" Text="Về ứng dụng" VerticalOptions="Center"/>
+                        <Label Grid.Column="2" Text="›" FontSize="18" TextColor="#9CA3AF"/>
+                    </Grid>
+
+                </VerticalStackLayout>
+            </Frame>
+
+            <!-- RESET DEVICE -->
+            <Frame CornerRadius="20" BackgroundColor="White" Padding="16">
+                <Frame.GestureRecognizers>
+                    <TapGestureRecognizer Tapped="OnLogoutClicked"/>
+                </Frame.GestureRecognizers>
+
+                <Grid ColumnDefinitions="60,*">
+                    <Frame WidthRequest="40" HeightRequest="40" CornerRadius="12" BackgroundColor="#F9FAFB">
+                        <Image Source="logout.png"
+                            WidthRequest="20"
+                            HeightRequest="20"
+                            Aspect="AspectFit"
+                            HorizontalOptions="Center"
+                            VerticalOptions="Center"/>
+                    </Frame>
+
+                    <Label Grid.Column="1"
+                        Text="Đăng ký lại thiết bị"
+                        TextColor="#EF4444"
+                        VerticalOptions="Center"/>
+                </Grid>
+            </Frame>
+
+            <!-- FOOTER -->
+            <VerticalStackLayout Spacing="4" Padding="0,10" HorizontalOptions="Center">
+                <Label Text="Điều khoản   Bảo mật   Về chúng tôi"
+                       FontSize="12"
+                       TextColor="#6B7280"/>
+                <Label Text="© 2024 SMART GUIDE VIETNAM"
+                       FontSize="12"
+                       TextColor="#9CA3AF"/>
+                <Label Text="Version 2.4.0"
+                       FontSize="12"
+                       TextColor="#9CA3AF"/>
+            </VerticalStackLayout>
+
+        </VerticalStackLayout>
+        </ScrollView>
+
+    <!-- SETTINGS POPUP -->
+    <Grid x:Name="SettingsPopup"
+          ZIndex="10"
+          IsVisible="False"
+          BackgroundColor="#80000000">
+
+          <!-- removed overlay tap handler so popup only closes via the Close button -->
+
+        <Frame VerticalOptions="End"
+            CornerRadius="20"
+            Padding="20"
+            BackgroundColor="White"
+            Margin="0,0,0,0">
+
+            <VerticalStackLayout Spacing="20">
+
+                <Label Text="Cài đặt"
+                    FontSize="18"
+                    FontAttributes="Bold"/>
+
+                <!-- AUTO PLAY -->
+                <Grid ColumnDefinitions="*,Auto">
+                    <Label Text="Tự động phát audio"
+                        VerticalOptions="Center"/>
+
+                    <!-- Switch: use primary blue for On state and white thumb -->
+                    <Switch x:Name="AutoPlaySwitch"
+                            Grid.Column="1"
+                            Toggled="OnAutoPlayToggled"
+                            OnColor="#0F5BD7"
+                            ThumbColor="White" />
+                </Grid>
+
+                <!-- BATTERY SAVER -->
+                <Grid ColumnDefinitions="*,Auto">
+                    <Label Text="Tiết kiệm pin"
+                        VerticalOptions="Center"/>
+
+                    <Switch x:Name="BatterySaverSwitch"
+                            Grid.Column="1"
+                            Toggled="OnBatterySaverToggled"
+                            OnColor="#0F5BD7"
+                            ThumbColor="White"/>
+                </Grid>
+
+                <!-- RADIUS -->
+                <VerticalStackLayout Spacing="6">
+                    <Label Text="Bán kính nhận diện"
+                        FontSize="13"
+                        TextColor="#9CA3AF"/>
+
+                    <Slider x:Name="RadiusSlider"
+                            Minimum="0"
+                            Maximum="2"
+                            ValueChanged="OnRadiusSliderChanged"/>
+
+                    <Label x:Name="RadiusValueLabel"
+                        Text="200m"
+                        FontSize="12"
+                        TextColor="#9CA3AF"/>
+                </VerticalStackLayout>
+
+                <!-- INTERVAL -->
+                <VerticalStackLayout Spacing="6">
+                    <Label Text="Tần suất quét"
+                        FontSize="13"
+                        TextColor="#9CA3AF"/>
+
+                    <Slider x:Name="IntervalSlider"
+                            Minimum="0"
+                            Maximum="2"
+                            ValueChanged="OnIntervalSliderChanged"/>
+
+                    <Label x:Name="IntervalValueLabel"
+                        Text="5 giây"
+                        FontSize="12"
+                        TextColor="#9CA3AF"/>
+                </VerticalStackLayout>
+
+                <!-- STATUS -->
+                <Label x:Name="TrackingStatusLabel"
+                    Text="Đang dùng: 200m / 5 giây"
+                    FontSize="12"
+                    TextColor="#9CA3AF"/>
+
+
+                <!-- ===== LANGUAGE SETTINGS ===== -->
+
+                <BoxView HeightRequest="1" BackgroundColor="#E5E7EB"/>
+
+                <VerticalStackLayout Spacing="10">
+
+                    <Label Text="Ngôn ngữ"
+                        FontSize="14"
+                        FontAttributes="Bold"/>
+
+                    <!-- APP LANG -->
+                    <Grid ColumnDefinitions="*,Auto">
+                        <Label Text="Ngôn ngữ ứng dụng"
+                            VerticalOptions="Center"/>
+
+                        <Picker Grid.Column="1"
+                                WidthRequest="160"
+                                ItemsSource="{Binding LanguageOptions}"
+                                ItemDisplayBinding="{Binding Name}"
+                                SelectedItem="{Binding SelectedAppLanguageItem}"
+                                HorizontalOptions="Center"
+                                VerticalOptions="Center" />
+
+                    </Grid>
+
+                    <!-- CUSTOM AUDIO -->
+                    <Grid ColumnDefinitions="*,Auto">
+                        <Label Text="Tùy chỉnh ngôn ngữ đọc"
+                            VerticalOptions="Center"/>
+
+                        <Switch Grid.Column="1"
+                                IsToggled="{Binding IsAudioCustom}"
+                                OnColor="#0F5BD7"
+                                ThumbColor="White"/>
+                    </Grid>
+
+                    <!-- AUDIO LANG -->
+                    <Grid ColumnDefinitions="*,Auto">
+                        <Label Text="Ngôn ngữ thuyết minh"
+                            VerticalOptions="Center"
+                            TextColor="{Binding IsAudioCustom, Converter={StaticResource BoolToColorConverter}}"/>
+
+                        <Picker Grid.Column="1"
+                                WidthRequest="160"
+                                ItemsSource="{Binding LanguageOptions}"
+                                ItemDisplayBinding="{Binding Name}"
+                                SelectedItem="{Binding SelectedAudioLanguageItem}"
+                                IsEnabled="{Binding IsAudioCustom}"
+                                HorizontalOptions="Center"
+                                VerticalOptions="Center" />
+
+                    </Grid>
+
+                </VerticalStackLayout>
+
+        <Button Text="Đóng"
+            Clicked="OnCloseSettingsClicked"
+            BackgroundColor="#0F5BD7"
+            TextColor="White"
+            CornerRadius="12" />
+            </VerticalStackLayout>
+        </Frame>
+
+        
+    </Grid>
+</Grid>
+</ContentPage>

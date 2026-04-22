@@ -1,0 +1,328 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:maps="clr-namespace:Microsoft.Maui.Controls.Maps;assembly=Microsoft.Maui.Controls.Maps"
+             x:Class="SmartGuideApp.Views.MapPage"
+             BackgroundColor="#F4F7FB">
+
+    <Grid>
+
+        <!-- MAP -->
+        <maps:Map x:Name="MainMap"
+                  MapClicked="OnMapClicked"
+                  IsShowingUser="False" />
+
+        <!-- HEADER -->
+        <Grid VerticalOptions="Start"
+              HeightRequest="70"
+              InputTransparent="True"
+              ZIndex="2">
+
+            <BoxView Color="#F4F7FB"/>
+
+            <Label Text="Smart Guide"
+                   FontSize="22"
+                   FontAttributes="Bold"
+                   TextColor="#0F5BD7"
+                   HorizontalOptions="Center"
+                   VerticalOptions="Center"/>
+        </Grid>
+
+        <!-- SEARCH -->
+        <Frame Margin="16,80,16,0"
+               CornerRadius="22"
+               Padding="14,10"
+               BackgroundColor="White"
+               VerticalOptions="Start"
+               ZIndex="3">
+
+            <Frame.Shadow>
+                <Shadow Brush="#000000"
+                        Opacity="0.10"
+                        Radius="10"
+                        Offset="3,4"/>
+            </Frame.Shadow>
+
+            <Grid ColumnDefinitions="30,*,60">
+
+                <Image Source="search.png"
+                       WidthRequest="26"
+                       HeightRequest="26"
+                       VerticalOptions="Center"/>
+
+                <Entry x:Name="SearchEntry"
+                       Grid.Column="1"
+                       Placeholder="Tìm kiếm địa điểm..."
+                       Text="{Binding SearchText}"
+                       TextColor="Black"
+                       Focused="OnSearchFocused"
+                       Unfocused="OnSearchUnfocused"/>
+
+                <Label Grid.Column="2"
+                       Text="Huỷ"
+                       FontSize="14"
+                       TextColor="#0F5BD7"
+                       VerticalOptions="Center"
+                       HorizontalOptions="Center">
+                    <Label.GestureRecognizers>
+                        <TapGestureRecognizer Tapped="OnCancelSearch"/>
+                    </Label.GestureRecognizers>
+                </Label>
+            </Grid>
+        </Frame>
+
+        <!-- SUGGESTIONS -->
+        <Border Margin="16,146,16,0"
+                VerticalOptions="Start"
+                BackgroundColor="White"
+                Stroke="#E5E7EB"
+                StrokeThickness="1"
+                IsVisible="{Binding IsSuggestionVisible}"
+                ZIndex="4"
+                MaximumHeightRequest="260"
+                HorizontalOptions="Fill">
+
+            <Border.StrokeShape>
+                <RoundRectangle CornerRadius="8,8,18,18" />
+            </Border.StrokeShape>
+
+            <ScrollView>
+                <VerticalStackLayout BindableLayout.ItemsSource="{Binding Suggestions}"
+                                     Spacing="0">
+
+                    <BindableLayout.ItemTemplate>
+                        <DataTemplate>
+                            <Grid Padding="12,10"
+                                  ColumnDefinitions="*,70"
+                                  RowDefinitions="Auto,Auto">
+
+                                <Label Text="{Binding Name}"
+                                       FontSize="15"
+                                       FontAttributes="Bold"
+                                       Grid.Row="0"
+                                       Grid.Column="0"
+                                       LineBreakMode="TailTruncation" />
+
+                                <Label Text="{Binding DistanceText}"
+                                       FontSize="12"
+                                       TextColor="#6B7280"
+                                       HorizontalTextAlignment="End"
+                                       Grid.Row="0"
+                                       Grid.Column="1"
+                                       VerticalOptions="Center" />
+
+                                <Label Text="{Binding Address}"
+                                       FontSize="12"
+                                       TextColor="#6B7280"
+                                       Grid.Row="1"
+                                       Grid.Column="0"
+                                       Grid.ColumnSpan="2"
+                                       LineBreakMode="TailTruncation"
+                                       MaxLines="1" />
+
+                                <Grid.GestureRecognizers>
+                                    <TapGestureRecognizer
+                                        Tapped="OnSuggestionTapped"
+                                        CommandParameter="{Binding .}" />
+                                </Grid.GestureRecognizers>
+                            </Grid>
+                        </DataTemplate>
+                    </BindableLayout.ItemTemplate>
+
+                </VerticalStackLayout>
+            </ScrollView>
+        </Border>
+
+        <!-- LOCATION -->
+        <Frame WidthRequest="54"
+               HeightRequest="54"
+               CornerRadius="18"
+               BackgroundColor="White"
+               HorizontalOptions="End"
+               VerticalOptions="Start"
+               Margin="0,190,16,0"
+               ZIndex="2">
+
+            <Frame.Shadow>
+                <Shadow Brush="#000000"
+                        Opacity="0.10"
+                        Radius="10"
+                        Offset="3,4"/>
+            </Frame.Shadow>
+
+            <Frame.GestureRecognizers>
+                <TapGestureRecognizer Tapped="OnMyLocationClicked"/>
+            </Frame.GestureRecognizers>
+
+            <Image Source="location.png"
+                   WidthRequest="26"
+                   HeightRequest="26"
+                   HorizontalOptions="Center"
+                   VerticalOptions="Center"/>
+        </Frame>
+
+        <!-- TRACKING BUTTON -->
+        <Frame x:Name="TrackingButton"
+                WidthRequest="80"
+                HeightRequest="80"
+                CornerRadius="40"
+                BackgroundColor="#374151"
+                HorizontalOptions="End"
+                VerticalOptions="End"
+                Margin="0,0,16,100"
+                ZIndex="5"
+                Padding="6">
+
+            <Frame.Shadow>
+                <Shadow Brush="#000000"
+                        Opacity="0.2"
+                        Radius="10"
+                        Offset="2,3"/>
+            </Frame.Shadow>
+
+            <VerticalStackLayout Spacing="2"
+                                HorizontalOptions="Center"
+                                VerticalOptions="Center">
+
+                <Image x:Name="TrackingIcon"
+                    WidthRequest="20"
+                    HeightRequest="20"
+                    HorizontalOptions="Center"/>
+
+                <Label x:Name="TrackingText"
+                    FontSize="10"
+                    TextColor="White"
+                    HorizontalTextAlignment="Center"/>
+            </VerticalStackLayout>
+
+            <Frame.GestureRecognizers>
+                <TapGestureRecognizer Tapped="OnTrackingTapped"/>
+            </Frame.GestureRecognizers>
+
+        </Frame>
+
+        <!-- CARD -->
+        <Frame x:Name="BottomCard"
+               IsVisible="{Binding IsPoiSelected}"
+               VerticalOptions="End"
+               Margin="16,0,16,20"
+               CornerRadius="22"
+               Padding="16"
+               BackgroundColor="White"
+               ZIndex="3">
+
+            <Frame.Shadow>
+                <Shadow Brush="#000000"
+                        Opacity="0.10"
+                        Radius="12"
+                        Offset="3,4"/>
+            </Frame.Shadow>
+
+            <Frame.GestureRecognizers>
+                <TapGestureRecognizer Tapped="OnCardTapped"/>
+            </Frame.GestureRecognizers>
+
+            <VerticalStackLayout Spacing="12">
+
+                <Grid ColumnDefinitions="100,*,Auto" ColumnSpacing="12">
+
+                    <Frame Padding="0"
+                           CornerRadius="18"
+                           BorderColor="#E5E7EB"
+                           HasShadow="False"
+                           WidthRequest="100"
+                           HeightRequest="100">
+
+                        <Image Source="{Binding ImageUrl}"
+                               Aspect="AspectFill"/>
+                    </Frame>
+
+                    <VerticalStackLayout Grid.Column="1" Spacing="4">
+
+                        <Label Text="{Binding Category}"
+                               FontSize="12"
+                               TextColor="#0F5BD7"/>
+
+                        <Label Text="{Binding Title}"
+                               FontSize="18"
+                               FontAttributes="Bold"/>
+
+                        <HorizontalStackLayout Spacing="6">
+                            <!-- Listen (icon + count) for selected POI (use listen2.png) -->
+                            <Image Source="listen2.png" WidthRequest="14" HeightRequest="14" VerticalOptions="Center" />
+                            <Label Text="{Binding SelectedPoi.ListenedCount}" VerticalOptions="Center" />
+
+                            <Image Source="star.png" WidthRequest="14"/>
+                            <Label Text="{Binding RatingText}"/>
+                        </HorizontalStackLayout>
+
+                        <Label Text="{Binding DistanceText}"
+                               FontSize="14"
+                               TextColor="#0F5BD7"/>
+
+                        <Label Text="{Binding Address}"
+                               FontSize="12"
+                               TextColor="#6B7280"
+                               LineBreakMode="TailTruncation"
+                               MaxLines="2"/>
+                    </VerticalStackLayout>
+
+                    <Frame Grid.Column="2"
+                        WidthRequest="36"
+                        HeightRequest="36"
+                        Padding="0"
+                        CornerRadius="18"
+                        BackgroundColor="#D1D5DB"
+                        VerticalOptions="Start"
+                        HorizontalOptions="End"
+                        HasShadow="False">
+
+                        <Image WidthRequest="18"
+                            HeightRequest="18"
+                            HorizontalOptions="Center"
+                            VerticalOptions="Center">
+
+                            <Image.GestureRecognizers>
+                                <TapGestureRecognizer Tapped="OnMapAudioTapped" />
+                            </Image.GestureRecognizers>
+
+                            <Image.Triggers>
+                                <DataTrigger TargetType="Image"
+                                            Binding="{Binding SelectedPoi.IsAudioPlaying}"
+                                            Value="True">
+                                    <Setter Property="Source" Value="audio.png" />
+                                </DataTrigger>
+
+                                <DataTrigger TargetType="Image"
+                                            Binding="{Binding SelectedPoi.IsAudioPlaying}"
+                                            Value="False">
+                                    <Setter Property="Source" Value="audio2.png" />
+                                </DataTrigger>
+                            </Image.Triggers>
+                        </Image>
+                    </Frame>
+                </Grid>
+
+                <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+
+                    <Button Text="Chỉ đường"
+                            Clicked="OnDirectionClicked"
+                            BackgroundColor="#0F5BD7"
+                            TextColor="White"
+                            CornerRadius="16"
+                            HeightRequest="50"/>
+
+                    <Button Grid.Column="1"
+                            Text="Chi tiết"
+                            BackgroundColor="#E5E7EB"
+                            TextColor="#0F5BD7"
+                            CornerRadius="16"
+                            HeightRequest="50"
+                            Clicked="OnOpenDetailClicked"/>
+                </Grid>
+
+            </VerticalStackLayout>
+        </Frame>
+
+    </Grid>
+</ContentPage>

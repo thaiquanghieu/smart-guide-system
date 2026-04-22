@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: smartguide-api
+    runtime: docker
+    rootDir: services/api
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      - key: DATABASE_URL
+        sync: false

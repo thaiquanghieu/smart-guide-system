@@ -1,0 +1,6 @@
+@SmartGuideAPI_HostAddress = http://localhost:5022
+
+GET {{SmartGuideAPI_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

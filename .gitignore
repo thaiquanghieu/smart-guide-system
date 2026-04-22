@@ -1,0 +1,31 @@
+# OS
+.DS_Store
+
+# Node
+node_modules/
+.next/
+dist/
+
+# .NET / MAUI
+bin/
+obj/
+*.user
+*.suo
+
+# MAUI / VS / Rider
+.vs/
+.idea/
+
+# Xcode
+*.xcworkspace
+xcuserdata/
+DerivedData/
+
+# Mac temp
+*.swp
+
+# Logs
+*.log
+
+# Env
+.env
