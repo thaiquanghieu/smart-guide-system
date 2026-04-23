@@ -21,8 +21,8 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 var connectionString =
-    builder.Configuration.GetConnectionString("Default") ??
     builder.Configuration["DATABASE_URL"] ??
+    builder.Configuration.GetConnectionString("Default") ??
     builder.Configuration["ConnectionStrings__Default"];
 
 if (string.IsNullOrWhiteSpace(connectionString))
