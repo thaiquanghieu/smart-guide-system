@@ -367,16 +367,15 @@ export default function AdminQrPage() {
                                 <Eye size={14} className="mr-1 inline" />
                                 Xem log
                               </button>
-                              {entry.status !== 'admin_suspended' && (
+                              {entry.status === 'active' ? (
                                 <button onClick={() => updateStatus(entry, 'admin_suspended')} className="rounded bg-orange-500/20 px-3 py-1 text-orange-300 hover:bg-orange-500/30">
                                   Tạm ngừng
                                 </button>
-                              )}
-                              {entry.status === 'admin_suspended' && (
+                              ) : entry.status !== 'seller_deleted' ? (
                                 <button onClick={() => updateStatus(entry, 'active')} className="rounded bg-green-500/20 px-3 py-1 text-green-300 hover:bg-green-500/30">
                                   Kích hoạt
                                 </button>
-                              )}
+                              ) : null}
                               <button onClick={() => hardDeleteQr(entry)} className="rounded bg-red-500/20 px-3 py-1 text-red-300 hover:bg-red-500/30" title="Xóa hẳn QR">
                                 <Trash2 size={14} />
                               </button>

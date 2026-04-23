@@ -6,6 +6,7 @@ import { Ban, CheckCircle, Search, Smartphone, Trash2 } from 'lucide-react'
 
 type Device = {
   id: number
+  device_uuid?: string
   name?: string
   platform?: string
   model?: string
@@ -27,6 +28,7 @@ export default function DevicesPage() {
   const [filter, setFilter] = useState('all')
   const [reason, setReason] = useState('')
   const [query, setQuery] = useState('')
+  const [showDeviceIds, setShowDeviceIds] = useState(false)
 
   useEffect(() => {
     fetchDevices()
@@ -87,6 +89,7 @@ export default function DevicesPage() {
   const visibleDevices = devices.filter((device) => {
     const keyword = [
       device.id,
+      device.device_uuid,
       device.name,
       device.platform,
       device.model,
@@ -134,6 +137,15 @@ export default function DevicesPage() {
               />
             </div>
 
+            <div className="mb-4 flex justify-end">
+              <button
+                onClick={() => setShowDeviceIds((current) => !current)}
+                className="rounded-lg bg-secondary px-4 py-2 text-sm font-semibold text-gray-300 hover:text-white"
+              >
+                {showDeviceIds ? 'Ẩn ID thiết bị' : 'Hiện ID thiết bị'}
+              </button>
+            </div>
+
             <div className="flex gap-2 flex-wrap mb-6">
               {['all', 'active', 'banned', 'user_deleted', 'inactive'].map((item) => (
                 <button
@@ -172,6 +184,9 @@ export default function DevicesPage() {
                               <div>
                                 <p className="text-white font-semibold">{device.name || `Device #${device.id}`}</p>
                                 <p className="text-gray-400 text-xs">{device.platform || '-'} {device.model || ''}</p>
+                                <p className="mt-1 font-mono text-[11px] text-gray-500">
+                                  ID: {showDeviceIds ? (device.device_uuid || `#${device.id}`) : '••••••••••••••••'}
+                                </p>
                               </div>
                             </div>
                           </td>
