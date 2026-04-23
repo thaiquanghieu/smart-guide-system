@@ -41,6 +41,7 @@ export default function AdminPayments() {
   const [type, setType] = useState('all')
   const [sort, setSort] = useState('newest')
   const [loading, setLoading] = useState(true)
+  const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null)
 
   const fetchPayments = async (silent = false) => {
     if (!silent) setLoading(true)
@@ -115,8 +116,18 @@ export default function AdminPayments() {
             <div className="mt-6 overflow-hidden rounded-2xl border border-gray-700 bg-secondary">
               {loading ? <p className="p-6 text-gray-400">Đang tải...</p> : null}
               {!loading && visiblePayments.length === 0 ? <p className="p-6 text-gray-400">Chưa có thanh toán phù hợp.</p> : null}
+              {visiblePayments.length > 0 ? (
+                <div className="hidden border-b border-gray-700 bg-dark/30 px-5 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-gray-400 xl:grid xl:grid-cols-[1.4fr_1fr_160px_170px_190px_120px]">
+                  <span>Nội dung</span>
+                  <span>Thông tin</span>
+                  <span>Số tiền</span>
+                  <span>Trạng thái</span>
+                  <span>Thao tác</span>
+                  <span>Chi tiết</span>
+                </div>
+              ) : null}
               {visiblePayments.map((payment) => (
-                <div key={payment.id} className="grid gap-4 border-b border-gray-700 p-5 last:border-b-0 xl:grid-cols-[1.4fr_1fr_160px_170px_190px]">
+                <div key={payment.id} className="grid gap-4 border-b border-gray-700 p-5 last:border-b-0 xl:grid-cols-[1.4fr_1fr_160px_170px_190px_120px]">
                   <div>
                     <p className="font-bold text-white">{payment.poi_name || payment.plan_name || payment.description}</p>
                     <p className="mt-1 text-sm text-gray-400">{payment.description}</p>
@@ -136,11 +147,25 @@ export default function AdminPayments() {
                         <CheckCircle size={15} /> Xác nhận
                       </button>
                     ) : null}
-                    {payment.status !== 'rejected' ? (
+                    {payment.status !== 'rejected' && payment.status !== 'confirmed' && payment.status !== 'used' ? (
                       <button onClick={() => updateStatus(payment.id, 'rejected')} className="inline-flex items-center gap-1 rounded-lg bg-red-500/15 px-3 py-2 text-sm text-red-300 hover:bg-red-500/25">
                         <XCircle size={15} /> Từ chối
                       </button>
                     ) : null}
+                    {payment.status === 'confirmed' || payment.status === 'used' ? (
+                      <span className="inline-flex items-center gap-1 rounded-lg bg-green-500/15 px-3 py-2 text-sm text-green-300">
+                        <CheckCircle size={15} /> Thanh toán thành công
+                      </span>
+                    ) : null}
+                  </div>
+                  <div className="flex items-start xl:justify-end">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedPayment(payment)}
+                      className="rounded-lg bg-primary/15 px-3 py-2 text-sm font-semibold text-primary hover:bg-primary/25"
+                    >
+                      Xem chi tiết
+                    </button>
                   </div>
                 </div>
               ))}
@@ -148,6 +173,46 @@ export default function AdminPayments() {
           </div>
         </main>
       </div>
+
+      {selectedPayment ? (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/50 px-5" onClick={() => setSelectedPayment(null)}>
+          <div className="w-full max-w-3xl rounded-2xl border border-gray-700 bg-secondary p-6" onClick={(event) => event.stopPropagation()}>
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h3 className="text-2xl font-bold text-white">{selectedPayment.poi_name || selectedPayment.plan_name || selectedPayment.description}</h3>
+                <p className="mt-1 font-mono text-sm text-primary">{selectedPayment.code}</p>
+              </div>
+              <button onClick={() => setSelectedPayment(null)} className="text-2xl text-gray-400 hover:text-white">×</button>
+            </div>
+
+            <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              <InfoCard label="Nội dung" value={selectedPayment.description} />
+              <InfoCard label="Trạng thái" value={selectedPayment.status_label} />
+              <InfoCard label="Số tiền" value={`${selectedPayment.amount.toLocaleString('vi-VN')}đ`} accent />
+              <InfoCard label="Người trả" value={selectedPayment.owner_name || selectedPayment.device_name || selectedPayment.payer_type} />
+              <InfoCard label="Loại thanh toán" value={selectedPayment.payment_type} />
+              <InfoCard label="POI / Gói" value={selectedPayment.poi_name || selectedPayment.plan_name || 'Chưa có'} />
+              <InfoCard label="Ngày tạo" value={formatDate(selectedPayment.created_at)} />
+              <InfoCard label="Ngày xác nhận" value={formatDate(selectedPayment.confirmed_at)} />
+            </div>
+
+            {selectedPayment.rejected_reason ? (
+              <div className="mt-4 rounded-xl bg-red-500/10 px-4 py-3 text-sm text-red-300">
+                <span className="font-semibold">Lý do từ chối:</span> {selectedPayment.rejected_reason}
+              </div>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
     </ProtectedRoute>
+  )
+}
+
+function InfoCard({ label, value, accent = false }: { label: string; value: string; accent?: boolean }) {
+  return (
+    <div className="rounded-xl border border-gray-700 bg-dark/40 px-4 py-3">
+      <p className="text-xs uppercase tracking-[0.08em] text-gray-500">{label}</p>
+      <p className={`mt-2 text-sm font-semibold ${accent ? 'text-yellow-300' : 'text-white'}`}>{value || 'Chưa có'}</p>
+    </div>
   )
 }

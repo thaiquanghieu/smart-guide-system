@@ -36,6 +36,7 @@ export default function SellerPayments() {
   const [status, setStatus] = useState('all')
   const [sort, setSort] = useState('newest')
   const [loading, setLoading] = useState(true)
+  const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null)
 
   const fetchPayments = async (silent = false) => {
     if (!silent) setLoading(true)
@@ -96,8 +97,22 @@ export default function SellerPayments() {
             <div className="mt-6 overflow-hidden rounded-2xl border border-gray-700 bg-secondary">
               {loading ? <p className="p-6 text-gray-400">Đang tải...</p> : null}
               {!loading && visiblePayments.length === 0 ? <p className="p-6 text-gray-400">Chưa có thanh toán phù hợp.</p> : null}
+              {visiblePayments.length > 0 ? (
+                <div className="hidden border-b border-gray-700 bg-dark/30 px-5 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-gray-400 md:grid md:grid-cols-[1.2fr_1fr_160px_160px_130px]">
+                  <span>Nội dung</span>
+                  <span>Thông tin</span>
+                  <span>Số tiền</span>
+                  <span>Trạng thái</span>
+                  <span>Chi tiết</span>
+                </div>
+              ) : null}
               {visiblePayments.map((payment) => (
-                <div key={payment.id} className="grid gap-4 border-b border-gray-700 p-5 last:border-b-0 md:grid-cols-[1.2fr_1fr_160px_160px]">
+                <button
+                  key={payment.id}
+                  type="button"
+                  onClick={() => setSelectedPayment(payment)}
+                  className="grid w-full gap-4 border-b border-gray-700 p-5 text-left transition hover:bg-dark/20 last:border-b-0 md:grid-cols-[1.2fr_1fr_160px_160px_130px]"
+                >
                   <div>
                     <p className="font-bold text-white">{payment.poi_name || payment.description}</p>
                     <p className="mt-1 text-sm text-gray-400">{payment.description}</p>
@@ -110,12 +125,53 @@ export default function SellerPayments() {
                   </div>
                   <p className="text-xl font-bold text-yellow-300">{payment.amount.toLocaleString('vi-VN')}đ</p>
                   <span className={`h-fit rounded-full px-3 py-1 text-center text-sm font-semibold ${statusClass(payment.status)}`}>{payment.status_label}</span>
-                </div>
+                  <div className="flex items-start md:justify-end">
+                    <span className="rounded-lg bg-primary/15 px-3 py-2 text-sm font-semibold text-primary">Xem chi tiết</span>
+                  </div>
+                </button>
               ))}
             </div>
           </div>
         </main>
       </div>
+
+      {selectedPayment ? (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/50 px-5" onClick={() => setSelectedPayment(null)}>
+          <div className="w-full max-w-2xl rounded-2xl border border-gray-700 bg-secondary p-6" onClick={(event) => event.stopPropagation()}>
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h3 className="text-2xl font-bold text-white">{selectedPayment.poi_name || selectedPayment.description}</h3>
+                <p className="mt-1 font-mono text-sm text-primary">{selectedPayment.code}</p>
+              </div>
+              <button onClick={() => setSelectedPayment(null)} className="text-2xl text-gray-400 hover:text-white">×</button>
+            </div>
+
+            <div className="mt-6 grid gap-4 md:grid-cols-2">
+              <InfoCard label="Nội dung" value={selectedPayment.description} />
+              <InfoCard label="Trạng thái" value={selectedPayment.status_label} />
+              <InfoCard label="Số tiền" value={`${selectedPayment.amount.toLocaleString('vi-VN')}đ`} accent />
+              <InfoCard label="Ngày tạo" value={formatDate(selectedPayment.created_at)} />
+              <InfoCard label="Ngày xác nhận" value={formatDate(selectedPayment.confirmed_at)} />
+              <InfoCard label="Loại thanh toán" value={selectedPayment.payment_type} />
+            </div>
+
+            {selectedPayment.rejected_reason ? (
+              <div className="mt-4 rounded-xl bg-red-500/10 px-4 py-3 text-sm text-red-300">
+                <span className="font-semibold">Lý do từ chối:</span> {selectedPayment.rejected_reason}
+              </div>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
     </ProtectedRoute>
+  )
+}
+
+function InfoCard({ label, value, accent = false }: { label: string; value: string; accent?: boolean }) {
+  return (
+    <div className="rounded-xl border border-gray-700 bg-dark/40 px-4 py-3">
+      <p className="text-xs uppercase tracking-[0.08em] text-gray-500">{label}</p>
+      <p className={`mt-2 text-sm font-semibold ${accent ? 'text-yellow-300' : 'text-white'}`}>{value || 'Chưa có'}</p>
+    </div>
   )
 }

@@ -118,6 +118,7 @@ export default function ProfilePage() {
   const [historyItems, setHistoryItems] = useState<ProfilePoiItem[]>([]);
   const [favoriteItems, setFavoriteItems] = useState<ProfilePoiItem[]>([]);
   const [paymentItems, setPaymentItems] = useState<PaymentHistoryItem[]>([]);
+  const [selectedPayment, setSelectedPayment] = useState<PaymentHistoryItem | null>(null);
   const [historyLoaded, setHistoryLoaded] = useState(false);
   const [favoritesLoaded, setFavoritesLoaded] = useState(false);
   const [paymentsLoaded, setPaymentsLoaded] = useState(false);
@@ -751,7 +752,12 @@ export default function ProfilePage() {
                       const dateText = item.confirmed_at || item.used_at || item.created_at;
 
                       return (
-                        <article key={`payment-${item.id}`} className="ios-card rounded-[18px] p-4">
+                        <button
+                          key={`payment-${item.id}`}
+                          type="button"
+                          onClick={() => setSelectedPayment(item)}
+                          className="ios-card w-full rounded-[18px] p-4 text-left"
+                        >
                           <div className="flex items-start justify-between gap-3">
                             <div className="min-w-0">
                               <p className="text-[15px] font-bold text-[#111827]">
@@ -780,7 +786,7 @@ export default function ProfilePage() {
                               {item.rejected_reason}
                             </p>
                           ) : null}
-                        </article>
+                        </button>
                       );
                     })
                   : null}
@@ -794,6 +800,42 @@ export default function ProfilePage() {
                 {t("common.close")}
               </button>
             </div>
+          </div>
+        </div>
+      ) : null}
+
+      {selectedPayment ? (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/30 px-5" onClick={() => setSelectedPayment(null)}>
+          <div className="w-full max-w-[360px] rounded-[20px] bg-white p-5 text-[#111827]" onClick={(event) => event.stopPropagation()}>
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h3 className="text-[18px] font-bold">{selectedPayment.plan_name || selectedPayment.description || "Thanh toán Smart Guide"}</h3>
+                <p className="mt-1 text-[12px] font-semibold text-[#0F5BD7]">Mã: {selectedPayment.code}</p>
+              </div>
+              <button type="button" onClick={() => setSelectedPayment(null)} className="text-[24px] leading-none text-[#9CA3AF]">×</button>
+            </div>
+
+            <div className="mt-5 space-y-3 text-[14px]">
+              <PaymentInfoRow label="Trạng thái" value={selectedPayment.status_label || selectedPayment.status} />
+              <PaymentInfoRow label="Số tiền" value={`${Number(selectedPayment.amount || 0).toLocaleString("vi-VN")}đ`} accent />
+              <PaymentInfoRow label="Loại" value={selectedPayment.payment_type} />
+              <PaymentInfoRow label="Tạo lúc" value={formatDateTime(selectedPayment.created_at)} />
+              <PaymentInfoRow label="Xác nhận" value={formatDateTime(selectedPayment.confirmed_at || selectedPayment.used_at)} />
+            </div>
+
+            {selectedPayment.rejected_reason ? (
+              <div className="mt-4 rounded-[12px] bg-[#FEF2F2] px-3 py-3 text-[13px] text-[#B91C1C]">
+                {selectedPayment.rejected_reason}
+              </div>
+            ) : null}
+
+            <button
+              type="button"
+              onClick={() => setSelectedPayment(null)}
+              className="mt-5 w-full rounded-[12px] bg-[#0F5BD7] py-3 text-white"
+            >
+              {t("common.close")}
+            </button>
           </div>
         </div>
       ) : null}
@@ -839,5 +881,14 @@ export default function ProfilePage() {
 
       <BottomNav />
     </>
+  );
+}
+
+function PaymentInfoRow({ label, value, accent = false }: { label: string; value?: string; accent?: boolean }) {
+  return (
+    <div className="rounded-[14px] bg-[#F8FAFC] px-3 py-3">
+      <p className="text-[12px] text-[#6B7280]">{label}</p>
+      <p className={`mt-1 font-semibold ${accent ? "text-[#0F5BD7]" : "text-[#111827]"}`}>{value || "Chưa có"}</p>
+    </div>
   );
 }

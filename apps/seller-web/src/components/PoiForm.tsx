@@ -720,7 +720,7 @@ export default function PoiForm({ mode, initialValue, poiId, onDone }: Props) {
       </section>
 
       <div className="flex gap-3">
-        <button disabled={loading} className={`flex-1 disabled:bg-gray-600 font-bold py-4 rounded-xl ${upgradeAmount > 0 ? 'bg-yellow-400 text-dark hover:bg-yellow-300' : 'bg-primary hover:bg-blue-700 text-white'}`}>
+        <button disabled={loading} className={`flex-1 disabled:bg-gray-600 font-bold py-4 rounded-xl ${upgradeAmount > 0 ? 'bg-yellow-400 text-black hover:bg-yellow-300' : 'bg-primary hover:bg-blue-700 text-white'}`}>
           {loading
             ? 'Đang lưu...'
             : mode === 'edit'

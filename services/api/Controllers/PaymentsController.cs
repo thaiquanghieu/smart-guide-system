@@ -28,11 +28,70 @@ public class PaymentsController : ControllerBase
     {
         return status switch
         {
-            "submitted" => "Đã báo thanh toán",
+            "submitted" => "Chờ hệ thống xác minh",
             "confirmed" => "Đã xác nhận",
             "rejected" => "Đã từ chối",
-            "used" => "Đã kích hoạt",
+            "used" => "Thanh toán thành công",
             _ => "Đang chờ"
+        };
+    }
+
+    private async Task ActivateUserPlanAsync(Payment payment)
+    {
+        if (!payment.DeviceId.HasValue || !payment.PlanId.HasValue)
+            return;
+
+        var plan = await _db.Plans.FindAsync(payment.PlanId.Value);
+        if (plan == null)
+            return;
+
+        var now = DateTime.UtcNow;
+        var sub = await _db.Subscriptions.FirstOrDefaultAsync(x => x.DeviceId == payment.DeviceId.Value);
+
+        if (sub == null)
+        {
+            sub = new Subscription
+            {
+                DeviceId = payment.DeviceId.Value,
+                ExpireAt = DateTime.SpecifyKind(now.AddDays(plan.Days), DateTimeKind.Utc)
+            };
+            _db.Subscriptions.Add(sub);
+        }
+        else
+        {
+            sub.ExpireAt = sub.ExpireAt > now
+                ? DateTime.SpecifyKind(sub.ExpireAt.AddDays(plan.Days), DateTimeKind.Utc)
+                : DateTime.SpecifyKind(now.AddDays(plan.Days), DateTimeKind.Utc);
+        }
+
+        payment.IsUsed = true;
+        payment.UsedAt = now;
+        payment.ConfirmedAt = now;
+        payment.Status = "used";
+        payment.RejectedReason = null;
+    }
+
+    private object ToPaymentStatusResponse(Payment payment, string? planName = null, string? poiName = null)
+    {
+        return new
+        {
+            payment.Id,
+            payment.Code,
+            payment.Amount,
+            payment.Status,
+            status_label = PaymentStatusLabel(payment.Status),
+            payment_type = payment.PaymentType,
+            payer_type = payment.PayerType,
+            payment.DeviceId,
+            payment.OwnerId,
+            payment.PoiId,
+            plan_name = planName,
+            poi_name = poiName,
+            description = payment.Description ?? planName ?? poiName ?? "Thanh toán",
+            created_at = payment.CreatedAt,
+            used_at = payment.UsedAt,
+            confirmed_at = payment.ConfirmedAt,
+            rejected_reason = payment.RejectedReason
         };
     }
 
@@ -167,6 +226,42 @@ public class PaymentsController : ControllerBase
         });
     }
 
+    [HttpPost("submit")]
+    public async Task<IActionResult> SubmitDevicePayment([FromQuery] string code, [FromQuery] int deviceId)
+    {
+        var device = await GetActiveDeviceAsync(deviceId);
+        if (device == null)
+            return BadRequest(new { message = "Thiết bị không hợp lệ hoặc đã bị khóa" });
+
+        var payment = await _db.Payments.FirstOrDefaultAsync(x => x.Code == code && x.DeviceId == deviceId);
+        if (payment == null)
+            return NotFound(new { message = "Không tìm thấy yêu cầu thanh toán" });
+
+        if (payment.Status == "used" || payment.Status == "confirmed")
+            return Ok(new { message = "Thanh toán đã được xác nhận trước đó", payment = ToPaymentStatusResponse(payment) });
+
+        payment.Status = "submitted";
+        payment.RejectedReason = null;
+        await _db.SaveChangesAsync();
+
+        return Ok(new { message = "Đã gửi yêu cầu xác minh thanh toán", payment = ToPaymentStatusResponse(payment) });
+    }
+
+    [HttpGet("status")]
+    public async Task<IActionResult> GetDevicePaymentStatus([FromQuery] string code, [FromQuery] int deviceId)
+    {
+        var device = await GetActiveDeviceAsync(deviceId);
+        if (device == null)
+            return NotFound(new { message = "Thiết bị không hợp lệ hoặc đã bị khóa" });
+
+        var payment = await _db.Payments.FirstOrDefaultAsync(x => x.Code == code && x.DeviceId == deviceId);
+        if (payment == null)
+            return NotFound(new { message = "Không tìm thấy thanh toán" });
+
+        var plan = payment.PlanId.HasValue ? await _db.Plans.FindAsync(payment.PlanId.Value) : null;
+        return Ok(ToPaymentStatusResponse(payment, plan?.Name));
+    }
+
     [HttpGet("check")]
     public async Task<IActionResult> Check(int deviceId)
     {
@@ -244,23 +339,40 @@ public class PaymentsController : ControllerBase
         return Ok(payments.Select(payment =>
         {
             var poi = !string.IsNullOrWhiteSpace(payment.PoiId) ? pois.FirstOrDefault(x => x.Id == payment.PoiId) : null;
-            return new
-            {
-                payment.Id,
-                payment.Code,
-                payment.Amount,
-                payment.Status,
-                status_label = PaymentStatusLabel(payment.Status),
-                payment_type = payment.PaymentType,
-                payment.PoiId,
-                poi_name = poi?.Name,
-                description = payment.Description ?? "Thanh toán",
-                created_at = payment.CreatedAt,
-                used_at = payment.UsedAt,
-                confirmed_at = payment.ConfirmedAt,
-                rejected_reason = payment.RejectedReason
-            };
+            return ToPaymentStatusResponse(payment, null, poi?.Name);
         }));
+    }
+
+    [HttpGet("/api/owner/payments/status")]
+    public async Task<IActionResult> GetOwnerPaymentStatus([FromQuery] string code, [FromQuery] int ownerId)
+    {
+        var forbidden = await EnsureOwnerAsync(ownerId);
+        if (forbidden != null) return forbidden;
+
+        var payment = await _db.Payments.FirstOrDefaultAsync(x => x.Code == code && x.OwnerId == ownerId);
+        if (payment == null)
+            return NotFound(new { message = "Không tìm thấy thanh toán" });
+
+        var poi = !string.IsNullOrWhiteSpace(payment.PoiId) ? await _db.Pois.FindAsync(payment.PoiId) : null;
+        return Ok(ToPaymentStatusResponse(payment, null, poi?.Name));
+    }
+
+    [HttpPost("/api/owner/payments/submit")]
+    public async Task<IActionResult> ResubmitOwnerPayment([FromQuery] string code, [FromQuery] int ownerId)
+    {
+        var forbidden = await EnsureOwnerAsync(ownerId);
+        if (forbidden != null) return forbidden;
+
+        var payment = await _db.Payments.FirstOrDefaultAsync(x => x.Code == code && x.OwnerId == ownerId);
+        if (payment == null)
+            return NotFound(new { message = "Không tìm thấy thanh toán" });
+
+        payment.Status = "submitted";
+        payment.RejectedReason = null;
+        await _db.SaveChangesAsync();
+
+        var poi = !string.IsNullOrWhiteSpace(payment.PoiId) ? await _db.Pois.FindAsync(payment.PoiId) : null;
+        return Ok(new { message = "Đã gửi lại yêu cầu xác minh", payment = ToPaymentStatusResponse(payment, null, poi?.Name) });
     }
 
     [HttpGet("/api/admin/payments")]
@@ -330,13 +442,28 @@ public class PaymentsController : ControllerBase
         if (payment == null)
             return NotFound(new { message = "Không tìm thấy thanh toán" });
 
-        payment.Status = request.Status;
-        payment.RejectedReason = request.Status == "rejected" ? request.Reason : null;
         if (request.Status == "confirmed")
-            payment.ConfirmedAt = DateTime.UtcNow;
+        {
+            if (payment.PaymentType == "user_plan")
+            {
+                await ActivateUserPlanAsync(payment);
+            }
+            else
+            {
+                payment.Status = "confirmed";
+                payment.ConfirmedAt = DateTime.UtcNow;
+                payment.RejectedReason = null;
+            }
+        }
+        else
+        {
+            payment.Status = request.Status;
+            payment.RejectedReason = request.Status == "rejected" ? request.Reason : null;
+        }
+
         await _db.SaveChangesAsync();
 
-        return Ok(new { message = "Đã cập nhật thanh toán" });
+        return Ok(new { message = "Đã cập nhật thanh toán", payment = ToPaymentStatusResponse(payment) });
     }
 }
 

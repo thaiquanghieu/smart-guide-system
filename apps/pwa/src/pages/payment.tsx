@@ -14,7 +14,11 @@ import {
 } from "@/lib/device";
 
 type PaymentPreview = {
+  id?: number;
   code: string;
+  status?: string;
+  status_label?: string;
+  rejected_reason?: string;
   plan: {
     id: number;
     name: string;
@@ -30,6 +34,8 @@ export default function PaymentPage() {
   const [message, setMessage] = useState(t("common.loading"));
   const [isConfirming, setIsConfirming] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [showRejectedNotice, setShowRejectedNotice] = useState(false);
+  const [canRetryRejected, setCanRetryRejected] = useState(false);
 
   useEffect(() => {
     if (!router.isReady) return;
@@ -50,6 +56,48 @@ export default function PaymentPage() {
 
     load();
   }, [router, t]);
+
+  useEffect(() => {
+    if (!payment || (payment.status !== "submitted" && payment.status !== "pending")) {
+      return undefined;
+    }
+
+    const timer = window.setInterval(async () => {
+      try {
+        const response = await apiClient.get(
+          `/payments/status?code=${encodeURIComponent(payment.code)}&deviceId=${getDeviceId()}`
+        );
+        const nextPayment = { ...payment, ...response.data };
+        setPayment(nextPayment);
+
+        if (nextPayment.status === "used" || nextPayment.status === "confirmed") {
+          setMessage(t("payment.successMessage"));
+          setShowSuccess(true);
+          window.clearInterval(timer);
+          await new Promise((resolve) => setTimeout(resolve, 900));
+          const pendingPoiId = getPendingPoiId();
+          const returnTo = getReturnTo();
+          clearReturnTo();
+          clearPendingPoiId();
+          clearEntryContext();
+          router.replace(pendingPoiId ? `/map?poiId=${pendingPoiId}` : returnTo || "/map");
+          return;
+        }
+
+        if (nextPayment.status === "rejected") {
+          setMessage(nextPayment.rejected_reason || "Hệ thống chưa xác nhận được thanh toán này. Vui lòng kiểm tra lại và gửi yêu cầu mới.");
+          setCanRetryRejected(false);
+          window.clearInterval(timer);
+        } else if (nextPayment.status === "submitted") {
+          setMessage("Đợi hệ thống xác minh thanh toán...");
+        }
+      } catch {
+        // silent polling
+      }
+    }, 3000);
+
+    return () => window.clearInterval(timer);
+  }, [payment, router, t]);
 
   const qrUrl =
     payment == null
@@ -83,7 +131,7 @@ export default function PaymentPage() {
             </div>
 
             <div className="rounded-[16px] bg-white p-4">
-              <div className="mx-auto aspect-square w-[220px] max-w-full">
+              <div className="mx-auto aspect-square w-[288px] max-w-full">
                 <img src={qrUrl} alt="QR thanh toán" className="h-full w-full object-contain" />
               </div>
             </div>
@@ -107,19 +155,21 @@ export default function PaymentPage() {
               disabled={isConfirming}
               className="h-[50px] w-full rounded-[16px] bg-[#0F5BD7] text-white disabled:opacity-60"
               onClick={async () => {
+                if (!payment) return;
+
+                if (payment.status === "rejected" && !canRetryRejected) {
+                  setShowRejectedNotice(true);
+                  return;
+                }
+
                 try {
                   setIsConfirming(true);
-                  await apiClient.post(
-                    `/payments/scan?code=${encodeURIComponent(payment.code)}&deviceId=${getDeviceId()}`
+                  const response = await apiClient.post(
+                    `/payments/submit?code=${encodeURIComponent(payment.code)}&deviceId=${getDeviceId()}`
                   );
-                  setShowSuccess(true);
-                  await new Promise((resolve) => setTimeout(resolve, 900));
-                  const pendingPoiId = getPendingPoiId();
-                  const returnTo = getReturnTo();
-                  clearReturnTo();
-                  clearPendingPoiId();
-                  clearEntryContext();
-                  router.replace(pendingPoiId ? `/map?poiId=${pendingPoiId}` : returnTo || "/map");
+                  setPayment((prev) => ({ ...(prev || payment), ...(response.data?.payment || {}), status: response.data?.payment?.status || "submitted" }));
+                  setMessage("Đợi hệ thống xác minh thanh toán...");
+                  setCanRetryRejected(false);
                 } catch (error: any) {
                   setMessage(error?.response?.data?.message || t("payment.confirmError"));
                 } finally {
@@ -127,7 +177,13 @@ export default function PaymentPage() {
                 }
               }}
             >
-              {isConfirming ? t("payment.confirming") : t("payment.confirm")}
+              {isConfirming
+                ? t("payment.confirming")
+                : payment?.status === "submitted"
+                  ? "Đang chờ xác minh"
+                  : payment?.status === "rejected" && canRetryRejected
+                    ? "Gửi lại yêu cầu xác minh"
+                    : t("payment.confirm")}
             </button>
           </>
         ) : (
@@ -146,6 +202,29 @@ export default function PaymentPage() {
               type="button"
               className="w-full border-t border-[#E5E7EB] py-3 text-[18px] font-bold text-[#0F5BD7]"
               onClick={() => setShowSuccess(false)}
+            >
+              {t("common.ok")}
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      {showRejectedNotice ? (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/30 px-5">
+          <div className="w-full max-w-[340px] overflow-hidden rounded-[18px] bg-white text-center text-[#111827]">
+            <div className="px-5 pb-4 pt-5">
+              <h3 className="text-[18px] font-bold">Chưa xác minh được thanh toán</h3>
+              <p className="mt-2 text-[15px] leading-[1.5]">
+                {payment?.rejected_reason || "Hệ thống chưa ghi nhận giao dịch này. Vui lòng kiểm tra lại chuyển khoản rồi gửi yêu cầu xác minh lần nữa."}
+              </p>
+            </div>
+            <button
+              type="button"
+              className="w-full border-t border-[#E5E7EB] py-3 text-[18px] font-bold text-[#0F5BD7]"
+              onClick={() => {
+                setShowRejectedNotice(false);
+                setCanRetryRejected(true);
+              }}
             >
               {t("common.ok")}
             </button>
