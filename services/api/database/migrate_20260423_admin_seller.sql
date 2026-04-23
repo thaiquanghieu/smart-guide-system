@@ -40,7 +40,7 @@ ALTER TABLE qr_entries
   DROP CONSTRAINT IF EXISTS qr_entries_status_check;
 
 ALTER TABLE qr_entries
-  ADD CONSTRAINT qr_entries_status_check CHECK (status IN ('active', 'inactive', 'expired', 'admin_suspended'));
+  ADD CONSTRAINT qr_entries_status_check CHECK (status IN ('active', 'inactive', 'expired', 'admin_suspended', 'seller_deleted'));
 
 ALTER TABLE qr_entries
   ADD COLUMN IF NOT EXISTS suspension_reason text,

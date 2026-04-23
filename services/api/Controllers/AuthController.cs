@@ -84,7 +84,7 @@ public class AuthController : ControllerBase
             return BadRequest(new { message = "Sai tài khoản hoặc tài khoản không phải owner" });
 
         if (!user.IsActive)
-            return BadRequest(new { message = "Tài khoản đã bị vô hiệu hóa" });
+            return BadRequest(new { message = "Tài khoản đã bị khóa. Vui lòng liên hệ admin để được hỗ trợ." });
 
         if (!VerifyPassword(user, request.Password))
             return BadRequest(new { message = "Sai mật khẩu" });
@@ -143,6 +143,45 @@ public class AuthController : ControllerBase
             user.CreatedAt
         });
     }
+
+    [HttpPut("user/{userId}")]
+    public async Task<IActionResult> UpdateUser(int userId, [FromBody] UpdateUserRequest request)
+    {
+        var user = await _db.Users.FindAsync(userId);
+        if (user == null)
+            return NotFound(new { message = "User không tồn tại" });
+
+        var userName = request.UserName?.Trim() ?? "";
+        var email = request.Email?.Trim() ?? "";
+
+        if (string.IsNullOrWhiteSpace(userName) || string.IsNullOrWhiteSpace(email))
+            return BadRequest(new { message = "Tên và email không được để trống" });
+
+        if (await _db.Users.AnyAsync(x => x.Id != userId && x.UserName == userName))
+            return BadRequest(new { message = "Tên đã tồn tại" });
+
+        if (await _db.Users.AnyAsync(x => x.Id != userId && x.Email == email))
+            return BadRequest(new { message = "Email đã tồn tại" });
+
+        user.UserName = userName;
+        user.Email = email;
+        if (!string.IsNullOrWhiteSpace(request.AvatarUrl))
+            user.AvatarUrl = request.AvatarUrl.Trim();
+        user.UpdatedAt = DateTime.UtcNow;
+
+        await _db.SaveChangesAsync();
+
+        return Ok(new
+        {
+            user.Id,
+            user.UserName,
+            user.Email,
+            user.AvatarUrl,
+            user.Role,
+            user.IsActive,
+            user.CreatedAt
+        });
+    }
 }
 
 // DTO
@@ -157,4 +196,11 @@ public class LoginRequest
 {
     public string Input { get; set; } = "";
     public string Password { get; set; } = "";
+}
+
+public class UpdateUserRequest
+{
+    public string UserName { get; set; } = "";
+    public string Email { get; set; } = "";
+    public string? AvatarUrl { get; set; }
 }

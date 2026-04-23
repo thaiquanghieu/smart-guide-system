@@ -4,7 +4,7 @@ import Sidebar from '@/components/Sidebar'
 import ProtectedRoute from '@/components/ProtectedRoute'
 import { useAuthStore } from '@/lib/store'
 import apiClient from '@/lib/api'
-import { Mail, Shield, Store, MapPin, Volume2 } from 'lucide-react'
+import { Mail, Shield, Store, MapPin, Volume2, Save } from 'lucide-react'
 
 interface UserProfile {
   id: number
@@ -16,27 +16,61 @@ interface UserProfile {
 }
 
 export default function Profile() {
-  const { user } = useAuthStore()
+  const { user, setUser } = useAuthStore()
   const [profile, setProfile] = useState<UserProfile | null>(null)
+  const [form, setForm] = useState({ userName: '', email: '' })
   const [stats, setStats] = useState<any>(null)
   const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
 
   useEffect(() => {
     if (user) {
-      apiClient.get(`/Auth/user/${user.id}`).then((response) => setProfile(response.data)).catch(() => {
-      setProfile({
-        id: user.id,
-        userName: user.userName,
-        email: user.email,
-        role: user.role,
-        isActive: user.isActive,
-        createdAt: new Date().toISOString(),
-      })
+      apiClient.get(`/auth/user/${user.id}`).then((response) => {
+        setProfile(response.data)
+        setForm({ userName: response.data.userName || '', email: response.data.email || '' })
+      }).catch(() => {
+        const fallback = {
+          id: user.id,
+          userName: user.userName,
+          email: user.email,
+          role: user.role,
+          isActive: user.isActive,
+          createdAt: new Date().toISOString(),
+        }
+        setProfile(fallback)
+        setForm({ userName: fallback.userName, email: fallback.email })
       })
       apiClient.get('/owner/pois/analytics/summary').then((response) => setStats(response.data)).catch(() => {})
     }
     setLoading(false)
   }, [user])
+
+  const handleSaveProfile = async () => {
+    if (!profile) return
+    if (!form.userName.trim() || !form.email.trim()) {
+      alert('Tên và email không được để trống')
+      return
+    }
+
+    setSaving(true)
+    try {
+      const response = await apiClient.put(`/auth/user/${profile.id}`, form)
+      setProfile(response.data)
+      setForm({ userName: response.data.userName || '', email: response.data.email || '' })
+      setUser({
+        id: response.data.id,
+        userName: response.data.userName,
+        email: response.data.email,
+        role: response.data.role,
+        isActive: response.data.isActive,
+      })
+      alert('Đã cập nhật hồ sơ')
+    } catch (error: any) {
+      alert(error?.response?.data?.message || 'Cập nhật hồ sơ thất bại')
+    } finally {
+      setSaving(false)
+    }
+  }
 
   return (
     <ProtectedRoute>
@@ -80,6 +114,33 @@ export default function Profile() {
                       </p>
                     </div>
                   </div>
+
+                  <div className="mt-6 grid gap-4 border-t border-gray-700 pt-6 md:grid-cols-[1fr,1fr,auto]">
+                    <div>
+                      <label className="mb-2 block text-sm text-gray-400">Tên seller</label>
+                      <input
+                        value={form.userName}
+                        onChange={(event) => setForm((prev) => ({ ...prev, userName: event.target.value }))}
+                        className="w-full rounded-xl border border-gray-700 bg-dark px-4 py-3 text-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-2 block text-sm text-gray-400">Email</label>
+                      <input
+                        value={form.email}
+                        onChange={(event) => setForm((prev) => ({ ...prev, email: event.target.value }))}
+                        className="w-full rounded-xl border border-gray-700 bg-dark px-4 py-3 text-white"
+                      />
+                    </div>
+                    <button
+                      onClick={handleSaveProfile}
+                      disabled={saving}
+                      className="self-end inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 font-semibold text-white hover:bg-blue-700 disabled:opacity-60"
+                    >
+                      <Save size={18} />
+                      {saving ? 'Đang lưu...' : 'Lưu'}
+                    </button>
+                  </div>
                 </div>
 
                 <div className="grid md:grid-cols-3 gap-4">
@@ -93,7 +154,7 @@ export default function Profile() {
                   <div className="grid md:grid-cols-2 gap-4 text-sm">
                     <Info label="ID tài khoản" value={`#${profile.id}`} />
                     <Info label="Ngày tạo" value={profile.createdAt ? new Date(profile.createdAt).toLocaleString('vi-VN') : '-'} />
-                    <Info label="Quyền truy cập" value="Quản lý POI, QR, Audio/TTS" />
+                    <Info label="Quyền truy cập" value="Quản lý POI, QR, chỉnh TTS trong từng POI" />
                     <Info label="Ghi chú" value="Thông tin nhạy cảm cần đổi sẽ làm qua admin để đảm bảo an toàn." />
                   </div>
                 </div>

@@ -5,7 +5,7 @@ import BottomNav from "@/components/BottomNav";
 import MapSurface from "@/components/MapSurface";
 import SearchBar from "@/components/SearchBar";
 import ToastBanner from "@/components/ToastBanner";
-import apiClient from "@/lib/api";
+import apiClient, { assetUrl } from "@/lib/api";
 import { translatePois, useAppI18n } from "@/lib/i18n";
 import { playPoiAudio, stopSpeech } from "@/lib/audio";
 import { ensureDeviceReady, getDeviceId, setReturnTo } from "@/lib/device";
@@ -435,7 +435,7 @@ export default function HomePage() {
               <div key={poi.id} className="ios-card overflow-hidden rounded-[16px]">
                 <div className="relative h-[145px] cursor-pointer" onClick={() => router.push(`/detail?poiId=${poi.id}`)}>
                   <img
-                    src={poi.images?.[0] || "/assets/appiconfg.png"}
+                    src={assetUrl(poi.images?.[0]) || "/assets/appiconfg.png"}
                     alt={poi.name}
                     className="h-full w-full object-cover"
                   />

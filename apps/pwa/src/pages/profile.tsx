@@ -3,7 +3,7 @@ import { useRouter } from "next/router";
 import AppHeader from "@/components/AppHeader";
 import BottomNav from "@/components/BottomNav";
 import ToastBanner from "@/components/ToastBanner";
-import apiClient from "@/lib/api";
+import apiClient, { assetUrl } from "@/lib/api";
 import { useAppI18n } from "@/lib/i18n";
 import {
   ensureDeviceReady,
@@ -578,7 +578,7 @@ export default function ProfilePage() {
                         className="ios-card grid w-full grid-cols-[76px,1fr] gap-3 rounded-[18px] p-3 text-left"
                       >
                         <img
-                          src={item.imageUrl || "/icon-192.png"}
+                          src={assetUrl(item.imageUrl) || "/icon-192.png"}
                           alt={item.name}
                           className="h-[76px] w-[76px] rounded-[16px] object-cover"
                         />
@@ -642,7 +642,7 @@ export default function ProfilePage() {
                         className="ios-card grid w-full grid-cols-[76px,1fr] gap-3 rounded-[18px] p-3 text-left"
                       >
                         <img
-                          src={item.imageUrl || "/icon-192.png"}
+                          src={assetUrl(item.imageUrl) || "/icon-192.png"}
                           alt={item.name}
                           className="h-[76px] w-[76px] rounded-[16px] object-cover"
                         />

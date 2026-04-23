@@ -19,16 +19,22 @@ export default function Dashboard() {
 
   useEffect(() => {
     fetchStats()
+    const interval = window.setInterval(() => {
+      void fetchStats(true)
+    }, 4000)
+
+    return () => window.clearInterval(interval)
   }, [])
 
-  const fetchStats = async () => {
+  const fetchStats = async (silent = false) => {
+    if (!silent) setLoading(true)
     try {
       const response = await apiClient.get('/admin/analytics/dashboard')
       setStats(response.data)
     } catch (error) {
       console.error('Failed to fetch stats:', error)
     } finally {
-      setLoading(false)
+      if (!silent) setLoading(false)
     }
   }
 

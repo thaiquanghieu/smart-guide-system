@@ -64,6 +64,18 @@ export default function DevicesPage() {
     }
   }
 
+  const deleteDevice = async (deviceId: number) => {
+    if (!confirm('Xóa hẳn thiết bị này khỏi DB? Hành động này không thể khôi phục.')) return
+
+    try {
+      await apiClient.delete(`/admin/devices/${deviceId}`)
+      setDevices((prev) => prev.filter((device) => device.id !== deviceId))
+      setAllDevices((prev) => prev.filter((device) => device.id !== deviceId))
+    } catch (error: any) {
+      alert(error?.response?.data?.message || 'Xóa thiết bị thất bại')
+    }
+  }
+
   const statusClass = (status: string) => {
     if (status === 'active') return 'bg-green-400/10 text-green-300'
     if (status === 'banned') return 'bg-red-400/10 text-red-300'
@@ -161,7 +173,11 @@ export default function DevicesPage() {
                                   <CheckCircle size={16} />
                                 </button>
                               )}
-                              <button onClick={() => updateStatus(device.id, 'user_deleted')} className="px-3 py-2 rounded-lg bg-gray-500/15 text-gray-300 hover:bg-gray-500/25">
+                              <button
+                                onClick={() => deleteDevice(device.id)}
+                                title="Xóa hẳn khỏi DB"
+                                className="px-3 py-2 rounded-lg bg-gray-500/15 text-gray-300 hover:bg-gray-500/25"
+                              >
                                 <Trash2 size={16} />
                               </button>
                             </div>

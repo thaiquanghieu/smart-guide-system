@@ -19,6 +19,7 @@ interface POI {
   websiteUrl?: string
   status: string
   ownerId: number
+  owner_name?: string
   listened_count: number
   rating_avg?: number
   rating_count?: number
@@ -47,23 +48,59 @@ export default function POIs() {
   const [pois, setPois] = useState<POI[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>(
-    'pending'
+    'all'
   )
   const [selectedPoi, setSelectedPoi] = useState<POI | null>(null)
+  const [showApprovalQueue, setShowApprovalQueue] = useState(false)
 
   useEffect(() => {
-    fetchPois()
+    void fetchPois()
+    const timer = window.setInterval(() => {
+      void fetchPois(true)
+    }, 5000)
+
+    return () => window.clearInterval(timer)
   }, [])
 
-  const fetchPois = async () => {
-    setLoading(true)
+  const normalizePoi = (poi: any): POI => ({
+    id: String(poi.id || ''),
+    name: poi.name || 'Chưa có tên',
+    category: poi.category || '',
+    categories: Array.isArray(poi.categories) ? poi.categories : [],
+    shortDescription: poi.shortDescription || poi.short_description || '',
+    description: poi.description || '',
+    address: poi.address || '',
+    openTime: poi.openTime || poi.open_time || '',
+    closeTime: poi.closeTime || poi.close_time || '',
+    priceText: poi.priceText || poi.price_text || '',
+    phone: poi.phone || '',
+    websiteUrl: poi.websiteUrl || poi.website_url || '',
+    status: poi.status || 'pending',
+    ownerId: Number(poi.ownerId ?? poi.owner_id ?? 0),
+    owner_name: poi.owner_name || poi.ownerName || '',
+    listened_count: Number(poi.listened_count ?? poi.listenedCount ?? 0),
+    rating_avg: Number(poi.rating_avg ?? poi.ratingAvg ?? 0),
+    rating_count: Number(poi.rating_count ?? poi.ratingCount ?? 0),
+    latitude: Number(poi.latitude ?? 0),
+    longitude: Number(poi.longitude ?? 0),
+    radius: Number(poi.radius ?? 0),
+    priority: Number(poi.priority ?? 0),
+    created_at: poi.created_at || poi.createdAt || new Date().toISOString(),
+    images: Array.isArray(poi.images) ? poi.images.filter(Boolean) : [],
+    audios: Array.isArray(poi.audios) ? poi.audios : [],
+  })
+
+  const fetchPois = async (silent = false) => {
+    if (!silent) setLoading(true)
     try {
       const response = await apiClient.get('/admin/pois')
-      setPois(response.data)
+      const nextPois = (response.data || []).map(normalizePoi)
+      setPois(nextPois)
+      setSelectedPoi((current) => current ? nextPois.find((poi: POI) => poi.id === current.id) || null : null)
     } catch (error) {
       console.error('Failed to fetch POIs:', error)
     } finally {
-      setLoading(false)
+      if (!silent) setLoading(false)
     }
   }
 
@@ -73,6 +110,7 @@ export default function POIs() {
       setPois((prev) =>
         prev.map((p) => (p.id === id ? { ...p, status: 'approved' } : p))
       )
+      await fetchPois(true)
     } catch (error) {
       console.error('Failed to approve:', error)
       alert('Phê duyệt thất bại')
@@ -86,20 +124,10 @@ export default function POIs() {
       setPois((prev) =>
         prev.map((p) => (p.id === id ? { ...p, status: 'rejected' } : p))
       )
+      await fetchPois(true)
     } catch (error) {
       console.error('Failed to reject:', error)
       alert('Từ chối thất bại')
-    }
-  }
-
-  const handleAudioStatus = async (audioId: string, status: 'approve' | 'reject') => {
-    const reason = status === 'reject' ? prompt('Lý do từ chối audio?') || '' : ''
-    try {
-      await apiClient.put(`/admin/audio/${audioId}/${status}`, status === 'reject' ? { reason } : {})
-      await fetchPois()
-      setSelectedPoi(null)
-    } catch {
-      alert('Cập nhật audio thất bại')
     }
   }
 
@@ -109,13 +137,19 @@ export default function POIs() {
     try {
       await apiClient.delete(`/admin/pois/${id}`)
       setPois((prev) => prev.filter((p) => p.id !== id))
+      setSelectedPoi((current) => current?.id === id ? null : current)
     } catch (error) {
       console.error('Failed to delete:', error)
       alert('Xóa POI thất bại')
     }
   }
 
-  const filteredPois = filter === 'all' ? pois : pois.filter((p) => p.status === filter)
+  const pendingPois = pois.filter((p) => p.status === 'pending')
+  const filteredPois = (filter === 'all' ? pois : pois.filter((p) => p.status === filter)).sort((left, right) => {
+    const ownerCompare = (left.owner_name || `Seller #${left.ownerId}`).localeCompare(right.owner_name || `Seller #${right.ownerId}`)
+    if (ownerCompare !== 0) return ownerCompare
+    return new Date(right.created_at).getTime() - new Date(left.created_at).getTime()
+  })
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -149,7 +183,23 @@ export default function POIs() {
         <Sidebar />
         <main className="flex-1 p-8">
           <div className="max-w-7xl">
-            <h1 className="text-3xl font-bold text-white mb-6">Duyệt POI</h1>
+            <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
+              <div>
+                <h1 className="text-3xl font-bold text-white">Quản lý POI</h1>
+                <p className="mt-2 text-gray-400">Theo dõi POI theo seller, duyệt nội dung và kiểm tra chi tiết trước khi hiển thị trong app.</p>
+              </div>
+              <button
+                onClick={() => setShowApprovalQueue(true)}
+                className={`inline-flex items-center gap-2 rounded-xl px-4 py-3 font-semibold transition ${
+                  pendingPois.length
+                    ? 'bg-yellow-500 text-dark hover:bg-yellow-400 shadow-lg shadow-yellow-500/20'
+                    : 'bg-secondary text-gray-300 hover:text-white'
+                }`}
+              >
+                <CheckCircle size={18} />
+                Cần duyệt ({pendingPois.length})
+              </button>
+            </div>
 
             {/* Filter */}
             <div className="flex gap-2 mb-6 flex-wrap">
@@ -203,7 +253,7 @@ export default function POIs() {
                               {getStatusLabel(poi.status)}
                             </span>
                             <span className="text-gray-400">
-                              By: User #{poi.ownerId}
+                              Seller: {poi.owner_name || `#${poi.ownerId}`}
                             </span>
                             <span className="text-gray-400">
                               📊 {poi.listened_count} lượt
@@ -254,6 +304,41 @@ export default function POIs() {
                     <p className="text-gray-400">Không có POI nào</p>
                   </div>
                 )}
+              </div>
+            )}
+
+            {showApprovalQueue && (
+              <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/70 p-4" onClick={() => setShowApprovalQueue(false)}>
+                <div className="w-full max-w-4xl rounded-2xl border border-gray-700 bg-secondary p-6 shadow-2xl" onClick={(event) => event.stopPropagation()}>
+                  <div className="mb-4 flex items-center justify-between">
+                    <div>
+                      <h2 className="text-2xl font-bold text-white">Danh sách POI cần duyệt</h2>
+                      <p className="text-sm text-gray-400">Admin xem nhanh, mở chi tiết hoặc duyệt/từ chối ngay.</p>
+                    </div>
+                    <button onClick={() => setShowApprovalQueue(false)} className="rounded-lg bg-dark px-4 py-2 text-white">Đóng</button>
+                  </div>
+
+                  <div className="max-h-[70vh] space-y-3 overflow-auto pr-1">
+                    {pendingPois.length ? pendingPois.map((poi) => (
+                      <div key={poi.id} className="rounded-xl border border-gray-700 bg-dark/60 p-4">
+                        <div className="flex flex-wrap items-start justify-between gap-3">
+                          <div>
+                            <h3 className="text-lg font-bold text-white">{poi.name}</h3>
+                            <p className="text-sm text-gray-400">Seller: {poi.owner_name || `#${poi.ownerId}`}</p>
+                            <p className="mt-2 line-clamp-2 text-sm text-gray-300">{poi.description}</p>
+                          </div>
+                          <div className="flex gap-2">
+                            <button onClick={() => setSelectedPoi(poi)} className="rounded-lg bg-primary/20 px-3 py-2 text-primary hover:bg-primary/30">Xem</button>
+                            <button onClick={() => handleApprove(poi.id)} className="rounded-lg bg-success/20 px-3 py-2 text-success hover:bg-success/30">Duyệt</button>
+                            <button onClick={() => handleReject(poi.id)} className="rounded-lg bg-danger/20 px-3 py-2 text-danger hover:bg-danger/30">Từ chối</button>
+                          </div>
+                        </div>
+                      </div>
+                    )) : (
+                      <div className="rounded-xl border border-dashed border-gray-700 py-10 text-center text-gray-400">Không có POI chờ duyệt</div>
+                    )}
+                  </div>
+                </div>
               </div>
             )}
 
@@ -354,10 +439,6 @@ export default function POIs() {
                                 <p className="text-white font-bold">{audio.languageName || audio.languageCode}</p>
                                 <p className="text-gray-400 text-sm">Trạng thái: {audio.approvalStatus}</p>
                                 {audio.audioUrl && <p className="text-primary text-xs">{audio.audioUrl}</p>}
-                              </div>
-                              <div className="flex gap-2">
-                                <button onClick={() => handleAudioStatus(audio.id, 'approve')} className="px-3 py-2 bg-success/20 text-success rounded-lg">Duyệt audio</button>
-                                <button onClick={() => handleAudioStatus(audio.id, 'reject')} className="px-3 py-2 bg-danger/20 text-danger rounded-lg">Từ chối</button>
                               </div>
                             </div>
                             <p className="text-gray-300 text-sm whitespace-pre-line">{audio.scriptText}</p>

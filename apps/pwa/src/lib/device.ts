@@ -13,6 +13,14 @@ const TRACKING_RADIUS_KEY = "pwa_tracking_radius";
 const TRACKING_INTERVAL_KEY = "pwa_tracking_interval";
 const AUDIO_CUSTOM_KEY = "pwa_audio_custom";
 
+export const DEVICE_BLOCKED_EVENT = "smartguide-device-blocked";
+
+export type DeviceBlockedDetail = {
+  message: string;
+  reason?: string;
+  status?: number;
+};
+
 function canUseStorage() {
   return typeof window !== "undefined";
 }
@@ -65,6 +73,26 @@ function hashToUuid(input: string) {
   }).join("");
 
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-4${hex.slice(13, 16)}-a${hex.slice(17, 20)}-${hex.slice(20, 32)}`;
+}
+
+export function notifyDeviceBlocked(detail: DeviceBlockedDetail) {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new CustomEvent<DeviceBlockedDetail>(DEVICE_BLOCKED_EVENT, { detail }));
+}
+
+function getBlockedDetail(error: any): DeviceBlockedDetail {
+  const status = error?.response?.status;
+  const responseData = error?.response?.data || {};
+
+  return {
+    status,
+    message:
+      responseData.message ||
+      (status === 410
+        ? "Thiết bị này đã được xóa khỏi hệ thống."
+        : "Thiết bị này đã bị khóa bởi hệ thống."),
+    reason: responseData.reason || responseData.detail || undefined,
+  };
 }
 
 export function initializeSettingsDefaults() {
@@ -143,9 +171,18 @@ export async function ensureDeviceReady() {
 
 export async function sendDeviceHeartbeat() {
   const deviceId = getDeviceId();
-  if (!deviceId) return;
+  if (!deviceId) return { ok: false };
 
-  await apiClient.post(`/devices/${deviceId}/heartbeat`).catch(() => undefined);
+  try {
+    const response = await apiClient.post(`/devices/${deviceId}/heartbeat`);
+    return { ok: true, data: response.data };
+  } catch (error: any) {
+    const status = error?.response?.status;
+    if (status === 403 || status === 410) {
+      notifyDeviceBlocked(getBlockedDetail(error));
+    }
+    return { ok: false, status };
+  }
 }
 
 export function setPendingPoiId(poiId: string) {

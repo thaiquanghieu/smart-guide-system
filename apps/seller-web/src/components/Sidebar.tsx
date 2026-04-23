@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/router'
 import { useAuthStore } from '@/lib/store'
 import { useState } from 'react'
-import { LogOut, LayoutDashboard, MapPin, Music, BarChart3, User, QrCode } from 'lucide-react'
+import { LogOut, LayoutDashboard, MapPin, BarChart3, User, QrCode } from 'lucide-react'
 
 export default function Sidebar() {
   const router = useRouter()
@@ -12,7 +12,6 @@ export default function Sidebar() {
   const menuItems = [
     { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { href: '/pois', label: 'Quản lý POI', icon: MapPin },
-    { href: '/audio', label: 'Audio/TTS', icon: Music },
     { href: '/qr', label: 'QR', icon: QrCode },
     { href: '/analytics', label: 'Thống kê', icon: BarChart3 },
     { href: '/profile', label: 'Hồ sơ', icon: User },

@@ -18,7 +18,7 @@ type QrEntry = {
   totalScans: number
   usedScans: number
   remaining_scans: number
-  status: 'active' | 'inactive' | 'expired' | 'admin_suspended'
+  status: 'active' | 'inactive' | 'expired' | 'admin_suspended' | 'seller_deleted'
   suspension_reason?: string | null
   activation_requested_at?: string | null
   activation_request_note?: string | null
@@ -68,6 +68,7 @@ const statusLabel: Record<string, string> = {
   inactive: 'Đã ẩn',
   expired: 'Hết lượt',
   admin_suspended: 'Hệ thống tạm ngưng',
+  seller_deleted: 'Seller đã xóa',
 }
 
 function formatDate(value?: string | null) {
@@ -133,6 +134,7 @@ export default function SellerQrPage() {
   const [sortMode, setSortMode] = useState<SortMode>('updated_desc')
   const [logFilter, setLogFilter] = useState<'all' | 'granted' | 'free_already_used' | 'quota_exceeded' | 'subscription_active'>('all')
   const [logSort, setLogSort] = useState<'desc' | 'asc'>('desc')
+  const [copiedEntryId, setCopiedEntryId] = useState<number | null>(null)
   const [form, setForm] = useState({
     poiId: '',
     name: '',
@@ -270,15 +272,28 @@ export default function SellerQrPage() {
   }
 
   const handleDelete = async (entry: QrEntry) => {
-    const confirmed = window.confirm(`Ẩn QR "${entry.name}"? QR sẽ không quét được nữa.`)
+    const confirmed = window.confirm(`Xóa QR "${entry.name}" khỏi trang seller? Admin vẫn thấy lịch sử và trạng thái QR này.`)
     if (!confirmed) return
 
     try {
       await apiClient.delete(`/owner/qr/${entry.id}`)
+      setEntries((prev) => prev.filter((item) => item.id !== entry.id))
       if (showLogsFor?.id === entry.id) setShowLogsFor(null)
       await fetchData({ silent: true })
     } catch (error: any) {
-      alert(error?.response?.data?.message || 'Ẩn QR thất bại')
+      alert(error?.response?.data?.message || 'Xóa QR thất bại')
+    }
+  }
+
+  const copyQrLink = async (entry: QrEntry) => {
+    try {
+      await navigator.clipboard.writeText(getQrUrl(entry.entryCode))
+      setCopiedEntryId(entry.id)
+      window.setTimeout(() => {
+        setCopiedEntryId((current) => (current === entry.id ? null : current))
+      }, 1800)
+    } catch {
+      alert('Không copy được link QR')
     }
   }
 
@@ -494,52 +509,56 @@ export default function SellerQrPage() {
 	                          )}
 	                        </div>
 
-	                          <div className="grid gap-2 sm:grid-cols-2 lg:col-span-2 xl:grid-cols-7">
+	                          <div className="grid gap-2 sm:grid-cols-6 lg:col-span-2">
 	                            <button
-	                              onClick={() => navigator.clipboard.writeText(getQrUrl(entry.entryCode))}
-	                              className="inline-flex min-h-12 items-center justify-center gap-2 rounded-lg bg-primary/15 px-3 py-2 text-primary hover:bg-primary/25"
+	                              onClick={() => copyQrLink(entry)}
+	                              className={`inline-flex min-h-12 items-center justify-center gap-2 rounded-lg px-3 py-2 sm:col-span-2 ${
+                                  copiedEntryId === entry.id
+                                    ? 'bg-green-500/20 text-green-300'
+                                    : 'bg-primary/15 text-primary hover:bg-primary/25'
+                                }`}
 	                            >
 	                              <Copy size={16} />
-	                              Copy link
+	                              {copiedEntryId === entry.id ? 'Copied' : 'Copy link'}
                             </button>
 	                            <button
 	                              onClick={() => window.open(getQrUrl(entry.entryCode), '_blank')}
-	                              className="inline-flex min-h-12 items-center justify-center gap-2 rounded-lg bg-secondary px-3 py-2 text-white hover:bg-secondary/80"
+	                              className="inline-flex min-h-12 items-center justify-center gap-2 rounded-lg bg-secondary px-3 py-2 text-white hover:bg-secondary/80 sm:col-span-2"
 	                            >
                               <Eye size={16} />
                               Mở thử
                             </button>
 	                            <button
 	                              onClick={() => printSingleQr(entry)}
-	                              className="inline-flex min-h-12 items-center justify-center gap-2 rounded-lg bg-secondary px-3 py-2 text-white hover:bg-secondary/80"
+	                              className="inline-flex min-h-12 items-center justify-center gap-2 rounded-lg bg-secondary px-3 py-2 text-white hover:bg-secondary/80 sm:col-span-2"
 	                            >
                               <Printer size={16} />
                               In QR
                             </button>
 	                            <button
 	                              onClick={() => handleTopup(entry)}
-	                              className="inline-flex min-h-12 items-center justify-center gap-2 rounded-lg bg-yellow-500/15 px-3 py-2 text-yellow-400 hover:bg-yellow-500/25"
+	                              className="inline-flex min-h-12 items-center justify-center gap-2 rounded-lg bg-yellow-500/15 px-3 py-2 text-yellow-400 hover:bg-yellow-500/25 sm:col-span-2"
 	                            >
                               <Plus size={16} />
                               Cộng lượt
                             </button>
 	                            <button
 	                              onClick={() => handleStatusToggle(entry)}
-	                              className="inline-flex min-h-12 items-center justify-center gap-2 rounded-lg bg-secondary px-3 py-2 text-white hover:bg-secondary/80"
+	                              className="inline-flex min-h-12 items-center justify-center gap-2 rounded-lg bg-secondary px-3 py-2 text-white hover:bg-secondary/80 sm:col-span-2"
 	                            >
                               {entry.status === 'active' ? <PauseCircle size={16} /> : <PlayCircle size={16} />}
                               {entry.status === 'admin_suspended' ? 'Gửi yêu cầu' : entry.status === 'active' ? 'Tạm ngưng' : 'Kích hoạt'}
                             </button>
 	                            <button
 	                              onClick={() => handleDelete(entry)}
-	                              className="inline-flex min-h-12 items-center justify-center gap-2 rounded-lg bg-red-500/15 px-3 py-2 text-red-300 hover:bg-red-500/25"
+	                              className="inline-flex min-h-12 items-center justify-center gap-2 rounded-lg bg-red-500/15 px-3 py-2 text-red-300 hover:bg-red-500/25 sm:col-span-2"
 	                            >
                               <Trash2 size={16} />
-                              Ẩn QR
+                              Xóa
                             </button>
 	                            <button
 	                              onClick={() => openLogs(entry)}
-	                              className="inline-flex min-h-12 items-center justify-center gap-2 rounded-lg bg-secondary px-3 py-2 text-white hover:bg-secondary/80"
+	                              className="inline-flex min-h-12 items-center justify-center gap-2 rounded-lg bg-secondary px-3 py-2 text-white hover:bg-secondary/80 sm:col-span-6"
 	                            >
                               <QrCode size={16} />
                               Xem lịch sử của QR này

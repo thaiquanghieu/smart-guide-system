@@ -103,7 +103,7 @@ CREATE TABLE qr_entries (
   entry_code text NOT NULL UNIQUE,
   total_scans integer NOT NULL DEFAULT 0,
   used_scans integer NOT NULL DEFAULT 0,
-  status text NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'inactive', 'expired', 'admin_suspended')),
+  status text NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'inactive', 'expired', 'admin_suspended', 'seller_deleted')),
   suspension_reason text,
   activation_requested_at timestamptz,
   activation_request_note text,

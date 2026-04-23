@@ -125,6 +125,12 @@ public class AdminController : ControllerBase
         var pois = await query.ToListAsync();
         var poiImages = await _db.PoiImages.OrderBy(x => x.SortOrder).ToListAsync();
         var audioGuides = await _db.AudioGuides.ToListAsync();
+        var ownerIds = pois
+            .Where(p => p.OwnerId.HasValue)
+            .Select(p => p.OwnerId!.Value)
+            .Distinct()
+            .ToList();
+        var owners = await _db.Users.Where(x => ownerIds.Contains(x.Id)).ToListAsync();
 
         var result = pois.Select(p => new
         {
@@ -147,6 +153,9 @@ public class AdminController : ControllerBase
             p.Radius,
             p.Priority,
             p.OwnerId,
+            owner_name = p.OwnerId.HasValue
+                ? owners.FirstOrDefault(x => x.Id == p.OwnerId.Value)?.UserName ?? $"Seller #{p.OwnerId.Value}"
+                : "Chưa gán seller",
             listened_count = p.ListenedCount,
             rating_avg = p.RatingAvg,
             rating_count = p.RatingCount,
@@ -347,6 +356,50 @@ public class AdminController : ControllerBase
         await _db.SaveChangesAsync();
 
         return Ok(new { message = "Đã cập nhật thiết bị" });
+    }
+
+    [HttpDelete("devices/{deviceId}")]
+    public async Task<IActionResult> DeleteDevice(int deviceId, [FromQuery] int adminId)
+    {
+        var admin = await _db.Users.FindAsync(adminId);
+        if (admin == null || admin.Role != "admin")
+            return Forbid("Chỉ admin mới có quyền");
+
+        var device = await _db.Devices.FindAsync(deviceId);
+        if (device == null)
+            return NotFound(new { message = "Thiết bị không tồn tại" });
+
+        var subscriptions = await _db.Subscriptions.Where(x => x.DeviceId == deviceId).ToListAsync();
+        var favorites = await _db.Favorites.Where(x => x.DeviceId == deviceId).ToListAsync();
+        var listenLogs = await _db.ListenLogs.Where(x => x.DeviceId == deviceId).ToListAsync();
+        var ratings = await _db.Ratings.Where(x => x.DeviceId == deviceId).ToListAsync();
+        var payments = await _db.Payments.Where(x => x.DeviceId == deviceId).ToListAsync();
+        var qrLogs = await _db.QrLogs.Where(x => x.DeviceId == deviceId).ToListAsync();
+        var grants = await _db.DeviceEntryGrants.Where(x => x.DeviceId == deviceId).ToListAsync();
+
+        _db.Subscriptions.RemoveRange(subscriptions);
+        _db.Favorites.RemoveRange(favorites);
+        _db.ListenLogs.RemoveRange(listenLogs);
+        _db.Ratings.RemoveRange(ratings);
+        _db.Payments.RemoveRange(payments);
+        _db.QrLogs.RemoveRange(qrLogs);
+        _db.DeviceEntryGrants.RemoveRange(grants);
+        _db.Devices.Remove(device);
+
+        try
+        {
+            await _db.SaveChangesAsync();
+        }
+        catch (DbUpdateException exception)
+        {
+            return StatusCode(500, new
+            {
+                message = "Xóa thiết bị thất bại. Kiểm tra ràng buộc dữ liệu liên quan.",
+                detail = exception.InnerException?.Message ?? exception.Message
+            });
+        }
+
+        return Ok(new { message = "Đã xóa hẳn thiết bị khỏi DB" });
     }
 
     [HttpDelete("pois/{id}")]

@@ -5,7 +5,7 @@ import DirectionsSheet from "@/components/DirectionsSheet";
 import MapSurface from "@/components/MapSurface";
 import SearchBar from "@/components/SearchBar";
 import ToastBanner from "@/components/ToastBanner";
-import apiClient from "@/lib/api";
+import apiClient, { assetUrl } from "@/lib/api";
 import { translatePois, useAppI18n } from "@/lib/i18n";
 import { playPoiAudio, stopSpeech } from "@/lib/audio";
 import {
@@ -421,7 +421,7 @@ export default function MapPage() {
                 onClick={() => router.push(`/detail?poiId=${selectedPoi.id}`)}
               >
                 <img
-                  src={selectedPoi.images?.[0] || "/assets/appiconfg.png"}
+                  src={assetUrl(selectedPoi.images?.[0]) || "/assets/appiconfg.png"}
                   alt={selectedPoi.name}
                   className="absolute inset-0 h-full w-full object-cover"
                 />

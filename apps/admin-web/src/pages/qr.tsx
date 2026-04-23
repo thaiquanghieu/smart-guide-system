@@ -15,7 +15,7 @@ type QrEntry = {
   totalScans: number
   usedScans: number
   remaining_scans: number
-  status: 'active' | 'inactive' | 'expired' | 'admin_suspended'
+  status: 'active' | 'inactive' | 'expired' | 'admin_suspended' | 'seller_deleted'
   suspension_reason?: string | null
   activation_requested_at?: string | null
   activation_request_note?: string | null
@@ -65,6 +65,7 @@ const statusLabel: Record<string, string> = {
   inactive: 'Đã ẩn',
   expired: 'Hết lượt',
   admin_suspended: 'Hệ thống tạm ngưng',
+  seller_deleted: 'Seller đã xóa',
 }
 
 function formatDate(value?: string | null) {
@@ -74,7 +75,7 @@ function formatDate(value?: string | null) {
 export default function AdminQrPage() {
   const [entries, setEntries] = useState<QrEntry[]>([])
   const [loading, setLoading] = useState(true)
-  const [filter, setFilter] = useState<'all' | 'active' | 'inactive' | 'expired' | 'admin_suspended'>('all')
+  const [filter, setFilter] = useState<'all' | 'active' | 'inactive' | 'expired' | 'admin_suspended' | 'seller_deleted'>('all')
   const [sortMode, setSortMode] = useState<SortMode>('updated_desc')
   const [selectedEntry, setSelectedEntry] = useState<QrEntry | null>(null)
   const [logs, setLogs] = useState<QrLog[]>([])
@@ -160,7 +161,7 @@ export default function AdminQrPage() {
     }
   }
 
-  const updateStatus = async (entry: QrEntry, status: 'active' | 'inactive' | 'expired' | 'admin_suspended') => {
+  const updateStatus = async (entry: QrEntry, status: 'active' | 'inactive' | 'expired' | 'admin_suspended' | 'seller_deleted') => {
     const reason = status === 'admin_suspended' ? window.prompt('Lý do admin tạm ngưng QR?', entry.suspension_reason || '') || 'Admin tạm ngưng QR để kiểm tra' : undefined
     try {
       await apiClient.put(`/admin/qr/${entry.id}/status`, { status, reason })
@@ -273,6 +274,7 @@ export default function AdminQrPage() {
                   <option value="inactive">Đã ẩn</option>
                   <option value="expired">Hết lượt</option>
                   <option value="admin_suspended">Hệ thống tạm ngưng</option>
+                  <option value="seller_deleted">Seller đã xóa</option>
                 </select>
                 <select
                   value={sortMode}
@@ -332,7 +334,7 @@ export default function AdminQrPage() {
                               </button>
                               {entry.status !== 'admin_suspended' && (
                                 <button onClick={() => updateStatus(entry, 'admin_suspended')} className="rounded bg-orange-500/20 px-3 py-1 text-orange-300 hover:bg-orange-500/30">
-                                  Ngưng bởi admin
+                                  Tạm ngừng
                                 </button>
                               )}
                               <button onClick={() => hardDeleteQr(entry)} className="rounded bg-red-500/20 px-3 py-1 text-red-300 hover:bg-red-500/30" title="Xóa hẳn QR">

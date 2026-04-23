@@ -12,5 +12,14 @@ const apiClient = axios.create({
   }
 });
 
+export function assetUrl(url?: string) {
+  if (!url) return "";
+  if (/^https?:\/\//i.test(url)) return url;
+
+  const origin = API_BASE_URL.replace(/\/api\/?$/, "");
+  if (!origin || origin === API_BASE_URL) return url;
+  return `${origin}${url.startsWith("/") ? url : `/${url}`}`;
+}
+
 export default apiClient;
 export { API_BASE_URL };

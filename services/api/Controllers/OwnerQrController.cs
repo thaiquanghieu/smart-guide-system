@@ -35,7 +35,7 @@ public class OwnerQrController : ControllerBase
             return Forbid("Chỉ owner mới có quyền truy cập");
 
         var entries = await _db.QrEntries
-            .Where(x => x.OwnerId == ownerId)
+            .Where(x => x.OwnerId == ownerId && x.Status != "seller_deleted")
             .OrderByDescending(x => x.UpdatedAt)
             .ToListAsync();
 
@@ -75,7 +75,7 @@ public class OwnerQrController : ControllerBase
             return Forbid("Chỉ owner mới có quyền truy cập");
 
         var entries = await _db.QrEntries
-            .Where(x => x.OwnerId == ownerId)
+            .Where(x => x.OwnerId == ownerId && x.Status != "seller_deleted")
             .ToListAsync();
 
         var entryIds = entries.Select(x => x.Id).ToList();
@@ -216,11 +216,11 @@ public class OwnerQrController : ControllerBase
         if (entry == null)
             return NotFound(new { message = "QR không tồn tại" });
 
-        entry.Status = "inactive";
+        entry.Status = "seller_deleted";
         entry.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync();
 
-        return Ok(new { message = "Đã ẩn QR" });
+        return Ok(new { message = "Đã xóa QR khỏi trang seller" });
     }
 
     [HttpPost("{id}/activation-request")]

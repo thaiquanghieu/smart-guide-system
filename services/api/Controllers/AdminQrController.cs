@@ -46,7 +46,9 @@ public class AdminQrController : ControllerBase
             entry.TotalScans,
             entry.UsedScans,
             remaining_scans = Math.Max(0, entry.TotalScans - entry.UsedScans),
-            Status = entry.UsedScans >= entry.TotalScans ? "expired" : entry.Status,
+            Status = entry.Status == "seller_deleted"
+                ? "seller_deleted"
+                : entry.UsedScans >= entry.TotalScans ? "expired" : entry.Status,
             suspension_reason = entry.SuspensionReason,
             activation_requested_at = entry.ActivationRequestedAt,
             activation_request_note = entry.ActivationRequestNote,
@@ -129,7 +131,7 @@ public class AdminQrController : ControllerBase
         if (!await IsAdminAsync(adminId))
             return Forbid("Chỉ admin mới có quyền truy cập");
 
-        if (request.Status is not ("active" or "inactive" or "expired" or "admin_suspended"))
+        if (request.Status is not ("active" or "inactive" or "expired" or "admin_suspended" or "seller_deleted"))
             return BadRequest(new { message = "Trạng thái không hợp lệ" });
 
         var entry = await _db.QrEntries.FirstOrDefaultAsync(x => x.Id == id);

@@ -25,18 +25,33 @@ export default function POIs() {
   const [sort, setSort] = useState<'newest' | 'oldest' | 'listens_desc' | 'rating_desc' | 'name_asc'>('newest')
 
   useEffect(() => {
-    fetchPois()
+    void fetchPois()
+    const timer = window.setInterval(() => {
+      void fetchPois(true)
+    }, 5000)
+
+    return () => window.clearInterval(timer)
   }, [])
 
-  const fetchPois = async () => {
-    setLoading(true)
+  const normalizePoi = (poi: any): POI => ({
+    id: String(poi.id || ''),
+    name: poi.name || 'Chưa có tên',
+    status: poi.status || 'pending',
+    description: poi.description || poi.shortDescription || poi.short_description || '',
+    listened_count: Number(poi.listened_count ?? poi.listenedCount ?? 0),
+    rating_avg: Number(poi.rating_avg ?? poi.ratingAvg ?? 0),
+    created_at: poi.created_at || poi.createdAt || new Date().toISOString(),
+  })
+
+  const fetchPois = async (silent = false) => {
+    if (!silent) setLoading(true)
     try {
       const response = await apiClient.get('/owner/pois')
-      setPois(response.data)
+      setPois((response.data || []).map(normalizePoi).filter((poi: POI) => poi.id))
     } catch (error) {
       console.error('Failed to fetch POIs:', error)
     } finally {
-      setLoading(false)
+      if (!silent) setLoading(false)
     }
   }
 
@@ -53,12 +68,12 @@ export default function POIs() {
   }
 
   const filteredPois = (filter === 'all' ? pois : pois.filter((p) => p.status === filter))
-    .filter((poi) => `${poi.name} ${poi.description}`.toLowerCase().includes(query.toLowerCase()))
+    .filter((poi) => `${poi.name || ''} ${poi.description || ''}`.toLowerCase().includes(query.toLowerCase()))
     .sort((a, b) => {
       if (sort === 'oldest') return new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
       if (sort === 'listens_desc') return b.listened_count - a.listened_count
-      if (sort === 'rating_desc') return b.rating_avg - a.rating_avg
-      if (sort === 'name_asc') return a.name.localeCompare(b.name)
+      if (sort === 'rating_desc') return Number(b.rating_avg || 0) - Number(a.rating_avg || 0)
+      if (sort === 'name_asc') return (a.name || '').localeCompare(b.name || '')
       return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
     })
 
@@ -184,7 +199,7 @@ export default function POIs() {
                             📊 {poi.listened_count} lượt nghe
                           </span>
                           <span className="text-gray-400 text-sm">
-                            ⭐ {poi.rating_avg.toFixed(1)}
+                            ⭐ {Number(poi.rating_avg || 0).toFixed(1)}
                           </span>
                         </div>
                       </div>

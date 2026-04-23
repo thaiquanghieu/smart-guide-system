@@ -7,6 +7,14 @@ import ProtectedRoute from '@/components/ProtectedRoute'
 import apiClient from '@/lib/api'
 import { ArrowLeft, Edit2, Image as ImageIcon, Music, Globe2 } from 'lucide-react'
 
+const API_ORIGIN = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5022/api').replace(/\/api\/?$/, '')
+
+function assetUrl(url?: string) {
+  if (!url) return ''
+  if (/^https?:\/\//i.test(url)) return url
+  return `${API_ORIGIN}${url.startsWith('/') ? url : `/${url}`}`
+}
+
 type PoiDetail = {
   id: string
   name: string
@@ -92,7 +100,10 @@ export default function PoiDetailPage() {
                   {poi.images?.length ? (
                     <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
                       {poi.images.map((image) => (
-                        <div key={image} className="bg-dark/60 border border-gray-700 rounded-xl p-3 text-gray-300 break-all">{image}</div>
+                        <a key={image} href={assetUrl(image)} target="_blank" rel="noreferrer" className="group overflow-hidden rounded-xl border border-gray-700 bg-dark/60">
+                          <img src={assetUrl(image)} alt={poi.name} className="aspect-video w-full object-cover transition group-hover:scale-[1.02]" />
+                          <div className="truncate px-3 py-2 text-xs text-gray-400">{image}</div>
+                        </a>
                       ))}
                     </div>
                   ) : (

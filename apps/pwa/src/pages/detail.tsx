@@ -2,7 +2,7 @@ import { useRouter } from "next/router";
 import { useEffect, useMemo, useState } from "react";
 import BottomNav from "@/components/BottomNav";
 import ToastBanner from "@/components/ToastBanner";
-import apiClient from "@/lib/api";
+import apiClient, { assetUrl } from "@/lib/api";
 import { getLanguageName, translatePoi, useAppI18n } from "@/lib/i18n";
 import { playPoiAudio, stopSpeech } from "@/lib/audio";
 import { ensureDeviceReady, getDeviceId, setPendingPoiId, setReturnTo } from "@/lib/device";
@@ -155,7 +155,7 @@ export default function DetailPage() {
 
   if (!poi) return <main className="app-shell">{errorMessage || t("detail.loading")}</main>;
 
-  const currentImage = poi.images?.[imageIndex] || "/assets/appiconfg.png";
+  const currentImage = assetUrl(poi.images?.[imageIndex]) || "/assets/appiconfg.png";
   const currentAudio = poi.audios?.[0];
   const currentShareUrl = typeof window !== "undefined" ? window.location.href : "";
 
