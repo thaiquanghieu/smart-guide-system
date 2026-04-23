@@ -184,17 +184,23 @@ public class AdminQrController : ControllerBase
         if (entry == null)
             return NotFound(new { message = "QR không tồn tại" });
 
-        var logs = await _db.QrLogs.Where(x => x.QrEntryId == id).ToListAsync();
-        var grants = await _db.DeviceEntryGrants.Where(x => x.QrEntryId == id).ToListAsync();
+        await using var transaction = await _db.Database.BeginTransactionAsync();
         try
         {
-            _db.DeviceEntryGrants.RemoveRange(grants);
-            _db.QrLogs.RemoveRange(logs);
-            _db.QrEntries.Remove(entry);
-            await _db.SaveChangesAsync();
+            await _db.Database.ExecuteSqlInterpolatedAsync($"DELETE FROM device_entry_grants WHERE qr_entry_id = {id}");
+            await _db.Database.ExecuteSqlInterpolatedAsync($"UPDATE device_entry_grants SET qr_entry_id = NULL WHERE entry_code = {entry.EntryCode}");
+            await _db.Database.ExecuteSqlInterpolatedAsync($"DELETE FROM qr_logs WHERE qr_entry_id = {id}");
+            await _db.Database.ExecuteSqlInterpolatedAsync($"DELETE FROM qr_entries WHERE id = {id}");
+            await transaction.CommitAsync();
         }
         catch (DbUpdateException exception)
         {
+            await transaction.RollbackAsync();
+            return StatusCode(500, new { message = "Xóa QR thất bại do còn dữ liệu liên quan.", detail = exception.InnerException?.Message ?? exception.Message });
+        }
+        catch (Exception exception)
+        {
+            await transaction.RollbackAsync();
             return StatusCode(500, new { message = "Xóa QR thất bại do còn dữ liệu liên quan.", detail = exception.InnerException?.Message ?? exception.Message });
         }
 

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import Sidebar from '@/components/Sidebar'
 import ProtectedRoute from '@/components/ProtectedRoute'
 import apiClient from '@/lib/api'
-import { Ban, CheckCircle, Smartphone, Trash2 } from 'lucide-react'
+import { Ban, CheckCircle, Search, Smartphone, Trash2 } from 'lucide-react'
 
 type Device = {
   id: number
@@ -26,6 +26,7 @@ export default function DevicesPage() {
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('all')
   const [reason, setReason] = useState('')
+  const [query, setQuery] = useState('')
 
   useEffect(() => {
     fetchDevices()
@@ -83,6 +84,19 @@ export default function DevicesPage() {
     return 'bg-yellow-400/10 text-yellow-300'
   }
 
+  const visibleDevices = devices.filter((device) => {
+    const keyword = [
+      device.id,
+      device.name,
+      device.platform,
+      device.model,
+      device.app_version,
+      device.status,
+      device.ban_reason,
+    ].join(' ').toLowerCase()
+    return keyword.includes(query.trim().toLowerCase())
+  })
+
   return (
     <ProtectedRoute>
       <div className="flex bg-dark min-h-screen">
@@ -110,6 +124,16 @@ export default function DevicesPage() {
               </div>
             </div>
 
+            <div className="relative mb-4">
+              <Search className="absolute left-3 top-3 text-gray-500" size={18} />
+              <input
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                className="w-full rounded-xl border border-gray-700 bg-secondary py-3 pl-10 pr-4 text-white placeholder:text-gray-500"
+                placeholder="Tìm theo tên máy, nền tảng, trạng thái, lý do khóa..."
+              />
+            </div>
+
             <div className="flex gap-2 flex-wrap mb-6">
               {['all', 'active', 'banned', 'user_deleted', 'inactive'].map((item) => (
                 <button
@@ -124,7 +148,7 @@ export default function DevicesPage() {
 
             {loading ? (
               <p className="text-gray-400">Đang tải...</p>
-            ) : devices.length ? (
+            ) : visibleDevices.length ? (
               <div className="bg-secondary border border-gray-700 rounded-2xl overflow-hidden">
                 <div className="overflow-x-auto">
                   <table className="w-full">
@@ -140,7 +164,7 @@ export default function DevicesPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {devices.map((device) => (
+                      {visibleDevices.map((device) => (
                         <tr key={device.id} className="border-b border-gray-700 hover:bg-dark/30">
                           <td className="p-4">
                             <div className="flex items-center gap-3">

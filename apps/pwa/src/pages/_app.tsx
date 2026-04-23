@@ -1,9 +1,12 @@
 import type { AppProps } from "next/app";
 import Head from "next/head";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/router";
 import "@/styles/globals.css";
 import {
   DEVICE_BLOCKED_EVENT,
+  DEVICE_REMOVED_EVENT,
+  DEVICE_RESTORED_EVENT,
   ensureDeviceReady,
   notifyDeviceBlocked,
   sendDeviceHeartbeat,
@@ -11,8 +14,10 @@ import {
 } from "@/lib/device";
 
 export default function App({ Component, pageProps }: AppProps) {
+  const router = useRouter();
   const [mounted, setMounted] = useState(false);
   const [deviceBlocked, setDeviceBlocked] = useState<DeviceBlockedDetail | null>(null);
+  const deviceBlockedRef = useRef<DeviceBlockedDetail | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -57,14 +62,33 @@ export default function App({ Component, pageProps }: AppProps) {
   }, []);
 
   useEffect(() => {
+    deviceBlockedRef.current = deviceBlocked;
+  }, [deviceBlocked]);
+
+  useEffect(() => {
     const handleBlocked = (event: Event) => {
       const detail = (event as CustomEvent<DeviceBlockedDetail>).detail;
       setDeviceBlocked(detail);
     };
+    const handleRestored = () => {
+      if (!deviceBlockedRef.current) return;
+      setDeviceBlocked(null);
+      router.replace("/paywall");
+    };
+    const handleRemoved = () => {
+      setDeviceBlocked(null);
+      router.replace("/paywall");
+    };
 
     window.addEventListener(DEVICE_BLOCKED_EVENT, handleBlocked);
-    return () => window.removeEventListener(DEVICE_BLOCKED_EVENT, handleBlocked);
-  }, []);
+    window.addEventListener(DEVICE_RESTORED_EVENT, handleRestored);
+    window.addEventListener(DEVICE_REMOVED_EVENT, handleRemoved);
+    return () => {
+      window.removeEventListener(DEVICE_BLOCKED_EVENT, handleBlocked);
+      window.removeEventListener(DEVICE_RESTORED_EVENT, handleRestored);
+      window.removeEventListener(DEVICE_REMOVED_EVENT, handleRemoved);
+    };
+  }, [router]);
 
   return (
     <>

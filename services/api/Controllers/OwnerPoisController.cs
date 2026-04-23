@@ -294,7 +294,7 @@ public class OwnerPoisController : ControllerBase
             ".jpg", ".jpeg", ".png", ".webp"
         };
 
-        var uploadRoot = Path.Combine(_env.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot"), "uploads", "pois");
+        var uploadRoot = Path.Combine(_env.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot"), "images", "pois");
         Directory.CreateDirectory(uploadRoot);
 
         var urls = new List<string>();
@@ -317,7 +317,7 @@ public class OwnerPoisController : ControllerBase
             await using var stream = System.IO.File.Create(filePath);
             await file.CopyToAsync(stream);
 
-            urls.Add($"/uploads/pois/{fileName}");
+            urls.Add($"/images/pois/{fileName}");
         }
 
         return Ok(new { urls });

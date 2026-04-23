@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import ProtectedRoute from '@/components/ProtectedRoute'
 import Sidebar from '@/components/Sidebar'
 import apiClient from '@/lib/api'
-import { AlertTriangle, CheckCircle, Eye, History, RefreshCw, Trash2, XCircle } from 'lucide-react'
+import { AlertTriangle, CheckCircle, Eye, History, RefreshCw, Search, Trash2, XCircle } from 'lucide-react'
 
 type QrEntry = {
   id: number
@@ -76,10 +76,12 @@ export default function AdminQrPage() {
   const [entries, setEntries] = useState<QrEntry[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<'all' | 'active' | 'inactive' | 'expired' | 'admin_suspended' | 'seller_deleted'>('all')
+  const [query, setQuery] = useState('')
   const [sortMode, setSortMode] = useState<SortMode>('updated_desc')
   const [selectedEntry, setSelectedEntry] = useState<QrEntry | null>(null)
   const [logs, setLogs] = useState<QrLog[]>([])
   const [logsLoading, setLogsLoading] = useState(false)
+  const [logQuery, setLogQuery] = useState('')
   const [showAllLogs, setShowAllLogs] = useState(false)
   const [allLogs, setAllLogs] = useState<QrLog[]>([])
   const [allLogsLoading, setAllLogsLoading] = useState(false)
@@ -102,7 +104,19 @@ export default function AdminQrPage() {
   }
 
   const filteredEntries = useMemo(() => {
-    const next = filter === 'all' ? [...entries] : entries.filter((entry) => entry.status === filter)
+    const normalizedQuery = query.trim().toLowerCase()
+    const next = (filter === 'all' ? [...entries] : entries.filter((entry) => entry.status === filter)).filter((entry) => {
+      const keyword = [
+        entry.name,
+        entry.entryCode,
+        entry.poi_name,
+        entry.owner_name,
+        entry.status,
+        entry.suspension_reason,
+        entry.activation_request_note,
+      ].join(' ').toLowerCase()
+      return keyword.includes(normalizedQuery)
+    })
     next.sort((left, right) => {
       switch (sortMode) {
         case 'updated_asc':
@@ -124,7 +138,7 @@ export default function AdminQrPage() {
       }
     })
     return next
-  }, [entries, filter, sortMode])
+  }, [entries, filter, query, sortMode])
 
   const activationRequests = useMemo(
     () => entries.filter((entry) => Boolean(entry.activation_requested_at)),
@@ -197,7 +211,19 @@ export default function AdminQrPage() {
     }
   }
 
-  const logsToRender = showAllLogs ? allLogs : logs
+  const logsToRender = (showAllLogs ? allLogs : logs).filter((log) => {
+    const keyword = [
+      log.qr_name,
+      log.entry_code,
+      log.owner_name,
+      log.poi_name,
+      log.device_label,
+      log.scanStatus,
+      scanStatusLabel[log.scanStatus],
+      log.code,
+    ].join(' ').toLowerCase()
+    return keyword.includes(logQuery.trim().toLowerCase())
+  })
 
   return (
     <ProtectedRoute>
@@ -263,7 +289,16 @@ export default function AdminQrPage() {
                 </div>
               )}
 
-              <div className="mb-4 flex flex-wrap gap-3">
+              <div className="mb-4 grid gap-3 lg:grid-cols-[1fr,auto,auto]">
+                <div className="relative">
+                  <Search className="absolute left-3 top-3 text-gray-500" size={18} />
+                  <input
+                    value={query}
+                    onChange={(event) => setQuery(event.target.value)}
+                    className="w-full rounded-lg border border-gray-700 bg-dark py-2 pl-10 pr-4 text-white placeholder:text-gray-500"
+                    placeholder="Tìm theo tên QR, mã, seller, POI, trạng thái..."
+                  />
+                </div>
                 <select
                   value={filter}
                   onChange={(event) => setFilter(event.target.value as any)}
@@ -337,6 +372,11 @@ export default function AdminQrPage() {
                                   Tạm ngừng
                                 </button>
                               )}
+                              {entry.status === 'admin_suspended' && (
+                                <button onClick={() => updateStatus(entry, 'active')} className="rounded bg-green-500/20 px-3 py-1 text-green-300 hover:bg-green-500/30">
+                                  Kích hoạt
+                                </button>
+                              )}
                               <button onClick={() => hardDeleteQr(entry)} className="rounded bg-red-500/20 px-3 py-1 text-red-300 hover:bg-red-500/30" title="Xóa hẳn QR">
                                 <Trash2 size={14} />
                               </button>
@@ -373,6 +413,16 @@ export default function AdminQrPage() {
                   >
                     Đóng
                   </button>
+                </div>
+
+                <div className="relative mb-4">
+                  <Search className="absolute left-3 top-3 text-gray-500" size={18} />
+                  <input
+                    value={logQuery}
+                    onChange={(event) => setLogQuery(event.target.value)}
+                    className="w-full rounded-lg border border-gray-700 bg-dark py-2 pl-10 pr-4 text-white placeholder:text-gray-500"
+                    placeholder="Tìm trong log theo QR, POI, seller, thiết bị, trạng thái..."
+                  />
                 </div>
 
                 {(showAllLogs ? allLogsLoading : logsLoading) ? (

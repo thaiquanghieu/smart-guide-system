@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import Sidebar from '@/components/Sidebar'
 import ProtectedRoute from '@/components/ProtectedRoute'
 import apiClient from '@/lib/api'
-import { Ban, Trash2, Shield } from 'lucide-react'
+import { Ban, Search, Trash2 } from 'lucide-react'
 
 interface User {
   id: number
@@ -17,6 +17,7 @@ export default function Users() {
   const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<'all' | 'admin' | 'owner'>('all')
+  const [query, setQuery] = useState('')
 
   useEffect(() => {
     fetchUsers()
@@ -59,7 +60,10 @@ export default function Users() {
     }
   }
 
-  const filteredUsers = filter === 'all' ? users : users.filter((u) => u.role === filter)
+  const filteredUsers = (filter === 'all' ? users : users.filter((u) => u.role === filter)).filter((user) => {
+    const keyword = `${user.userName || ''} ${user.email || ''} ${user.role || ''}`.toLowerCase()
+    return keyword.includes(query.trim().toLowerCase())
+  })
 
   const getRoleColor = (role: string) => {
     switch (role) {
@@ -92,6 +96,18 @@ export default function Users() {
             <h1 className="text-3xl font-bold text-white mb-6">Quản lý tài khoản</h1>
 
             {/* Filter */}
+            <div className="mb-6 grid gap-3 md:grid-cols-[1fr,auto]">
+              <div className="relative">
+                <Search className="absolute left-3 top-3 text-gray-500" size={18} />
+                <input
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  className="w-full rounded-xl border border-gray-700 bg-secondary py-3 pl-10 pr-4 text-white placeholder:text-gray-500"
+                  placeholder="Tìm theo tên, email hoặc vai trò..."
+                />
+              </div>
+            </div>
+
             <div className="flex gap-2 mb-6">
               {(['all', 'admin', 'owner'] as const).map((f) => (
                 <button

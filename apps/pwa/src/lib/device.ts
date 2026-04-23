@@ -14,6 +14,8 @@ const TRACKING_INTERVAL_KEY = "pwa_tracking_interval";
 const AUDIO_CUSTOM_KEY = "pwa_audio_custom";
 
 export const DEVICE_BLOCKED_EVENT = "smartguide-device-blocked";
+export const DEVICE_RESTORED_EVENT = "smartguide-device-restored";
+export const DEVICE_REMOVED_EVENT = "smartguide-device-removed";
 
 export type DeviceBlockedDetail = {
   message: string;
@@ -78,6 +80,16 @@ function hashToUuid(input: string) {
 export function notifyDeviceBlocked(detail: DeviceBlockedDetail) {
   if (typeof window === "undefined") return;
   window.dispatchEvent(new CustomEvent<DeviceBlockedDetail>(DEVICE_BLOCKED_EVENT, { detail }));
+}
+
+export function notifyDeviceRestored() {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new Event(DEVICE_RESTORED_EVENT));
+}
+
+export function notifyDeviceRemoved() {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new Event(DEVICE_REMOVED_EVENT));
 }
 
 function getBlockedDetail(error: any): DeviceBlockedDetail {
@@ -175,11 +187,15 @@ export async function sendDeviceHeartbeat() {
 
   try {
     const response = await apiClient.post(`/devices/${deviceId}/heartbeat`);
+    notifyDeviceRestored();
     return { ok: true, data: response.data };
   } catch (error: any) {
     const status = error?.response?.status;
     if (status === 403 || status === 410) {
       notifyDeviceBlocked(getBlockedDetail(error));
+    } else if (status === 404) {
+      resetDeviceIdentity();
+      notifyDeviceRemoved();
     }
     return { ok: false, status };
   }

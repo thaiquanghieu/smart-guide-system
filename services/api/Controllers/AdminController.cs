@@ -369,29 +369,31 @@ public class AdminController : ControllerBase
         if (device == null)
             return NotFound(new { message = "Thiết bị không tồn tại" });
 
-        var subscriptions = await _db.Subscriptions.Where(x => x.DeviceId == deviceId).ToListAsync();
-        var favorites = await _db.Favorites.Where(x => x.DeviceId == deviceId).ToListAsync();
-        var listenLogs = await _db.ListenLogs.Where(x => x.DeviceId == deviceId).ToListAsync();
-        var ratings = await _db.Ratings.Where(x => x.DeviceId == deviceId).ToListAsync();
-        var payments = await _db.Payments.Where(x => x.DeviceId == deviceId).ToListAsync();
-        var qrLogs = await _db.QrLogs.Where(x => x.DeviceId == deviceId).ToListAsync();
-        var grants = await _db.DeviceEntryGrants.Where(x => x.DeviceId == deviceId).ToListAsync();
-
-        _db.Subscriptions.RemoveRange(subscriptions);
-        _db.Favorites.RemoveRange(favorites);
-        _db.ListenLogs.RemoveRange(listenLogs);
-        _db.Ratings.RemoveRange(ratings);
-        _db.Payments.RemoveRange(payments);
-        _db.QrLogs.RemoveRange(qrLogs);
-        _db.DeviceEntryGrants.RemoveRange(grants);
-        _db.Devices.Remove(device);
-
+        await using var transaction = await _db.Database.BeginTransactionAsync();
         try
         {
-            await _db.SaveChangesAsync();
+            await _db.Database.ExecuteSqlInterpolatedAsync($"DELETE FROM device_entry_grants WHERE device_id = {deviceId}");
+            await _db.Database.ExecuteSqlInterpolatedAsync($"DELETE FROM qr_logs WHERE device_id = {deviceId}");
+            await _db.Database.ExecuteSqlInterpolatedAsync($"DELETE FROM payments WHERE device_id = {deviceId}");
+            await _db.Database.ExecuteSqlInterpolatedAsync($"DELETE FROM subscriptions WHERE device_id = {deviceId}");
+            await _db.Database.ExecuteSqlInterpolatedAsync($"DELETE FROM ratings WHERE device_id = {deviceId}");
+            await _db.Database.ExecuteSqlInterpolatedAsync($"DELETE FROM favorites WHERE device_id = {deviceId}");
+            await _db.Database.ExecuteSqlInterpolatedAsync($"DELETE FROM listen_logs WHERE device_id = {deviceId}");
+            await _db.Database.ExecuteSqlInterpolatedAsync($"DELETE FROM devices WHERE id = {deviceId}");
+            await transaction.CommitAsync();
         }
         catch (DbUpdateException exception)
         {
+            await transaction.RollbackAsync();
+            return StatusCode(500, new
+            {
+                message = "Xóa thiết bị thất bại. Kiểm tra ràng buộc dữ liệu liên quan.",
+                detail = exception.InnerException?.Message ?? exception.Message
+            });
+        }
+        catch (Exception exception)
+        {
+            await transaction.RollbackAsync();
             return StatusCode(500, new
             {
                 message = "Xóa thiết bị thất bại. Kiểm tra ràng buộc dữ liệu liên quan.",

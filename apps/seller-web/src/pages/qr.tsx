@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import ProtectedRoute from '@/components/ProtectedRoute'
 import Sidebar from '@/components/Sidebar'
 import apiClient from '@/lib/api'
-import { AlertTriangle, Copy, Eye, History, PauseCircle, PlayCircle, Plus, Printer, QrCode, RefreshCw, Trash2 } from 'lucide-react'
+import { AlertTriangle, Copy, Eye, History, PauseCircle, PlayCircle, Plus, Printer, QrCode, RefreshCw, Search, Trash2 } from 'lucide-react'
 
 type PoiOption = {
   id: string
@@ -130,6 +130,7 @@ export default function SellerQrPage() {
   const [showAllLogs, setShowAllLogs] = useState(false)
   const [allLogs, setAllLogs] = useState<QrLog[]>([])
   const [allLogsLoading, setAllLogsLoading] = useState(false)
+  const [logQuery, setLogQuery] = useState('')
   const [filter, setFilter] = useState<'all' | 'active' | 'inactive' | 'expired' | 'admin_suspended'>('all')
   const [sortMode, setSortMode] = useState<SortMode>('updated_desc')
   const [logFilter, setLogFilter] = useState<'all' | 'granted' | 'free_already_used' | 'quota_exceeded' | 'subscription_active'>('all')
@@ -203,13 +204,24 @@ export default function SellerQrPage() {
 
   const filteredLogs = useMemo(() => {
     const source = showAllLogs ? allLogs : logs
-    const next = logFilter === 'all' ? [...source] : source.filter((log) => log.scanStatus === logFilter)
+    const next = (logFilter === 'all' ? [...source] : source.filter((log) => log.scanStatus === logFilter)).filter((log) => {
+      const keyword = [
+        log.qr_name,
+        log.entry_code,
+        log.poi_name,
+        log.device_label,
+        log.scanStatus,
+        scanStatusLabel[log.scanStatus],
+        log.code,
+      ].join(' ').toLowerCase()
+      return keyword.includes(logQuery.trim().toLowerCase())
+    })
     next.sort((left, right) => {
       const diff = new Date(left.scannedAt).getTime() - new Date(right.scannedAt).getTime()
       return logSort === 'asc' ? diff : -diff
     })
     return next
-  }, [allLogs, logFilter, logSort, logs, showAllLogs])
+  }, [allLogs, logFilter, logQuery, logSort, logs, showAllLogs])
 
   const handleCreate = async () => {
     if (!form.poiId) {
@@ -595,7 +607,16 @@ export default function SellerQrPage() {
                   </button>
                 </div>
 
-                <div className="mb-4 flex flex-wrap gap-3">
+                <div className="mb-4 grid gap-3 lg:grid-cols-[1fr,auto,auto]">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-3 text-gray-500" size={18} />
+                    <input
+                      value={logQuery}
+                      onChange={(event) => setLogQuery(event.target.value)}
+                      className="w-full rounded-lg border border-gray-700 bg-dark py-2 pl-10 pr-4 text-white placeholder:text-gray-500"
+                      placeholder="Tìm trong log theo QR, POI, thiết bị, trạng thái..."
+                    />
+                  </div>
                   <select
                     value={logFilter}
                     onChange={(event) => setLogFilter(event.target.value as any)}

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import Sidebar from '@/components/Sidebar'
 import ProtectedRoute from '@/components/ProtectedRoute'
 import apiClient from '@/lib/api'
-import { CheckCircle, XCircle, Trash2, Eye, MapPin, Clock, DollarSign, Navigation, ExternalLink, Volume2 } from 'lucide-react'
+import { CheckCircle, XCircle, Trash2, Eye, MapPin, Clock, DollarSign, Navigation, ExternalLink, Volume2, Search } from 'lucide-react'
 
 interface POI {
   id: string
@@ -50,6 +50,7 @@ export default function POIs() {
   const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>(
     'all'
   )
+  const [query, setQuery] = useState('')
   const [selectedPoi, setSelectedPoi] = useState<POI | null>(null)
   const [showApprovalQueue, setShowApprovalQueue] = useState(false)
 
@@ -145,7 +146,19 @@ export default function POIs() {
   }
 
   const pendingPois = pois.filter((p) => p.status === 'pending')
-  const filteredPois = (filter === 'all' ? pois : pois.filter((p) => p.status === filter)).sort((left, right) => {
+  const filteredPois = (filter === 'all' ? pois : pois.filter((p) => p.status === filter)).filter((poi) => {
+    const keyword = [
+      poi.name,
+      poi.description,
+      poi.shortDescription,
+      poi.address,
+      poi.owner_name,
+      poi.category,
+      ...(poi.categories || []),
+      poi.status,
+    ].join(' ').toLowerCase()
+    return keyword.includes(query.trim().toLowerCase())
+  }).sort((left, right) => {
     const ownerCompare = (left.owner_name || `Seller #${left.ownerId}`).localeCompare(right.owner_name || `Seller #${right.ownerId}`)
     if (ownerCompare !== 0) return ownerCompare
     return new Date(right.created_at).getTime() - new Date(left.created_at).getTime()
@@ -199,6 +212,16 @@ export default function POIs() {
                 <CheckCircle size={18} />
                 Cần duyệt ({pendingPois.length})
               </button>
+            </div>
+
+            <div className="relative mb-4">
+              <Search className="absolute left-3 top-3 text-gray-500" size={18} />
+              <input
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                className="w-full rounded-xl border border-gray-700 bg-secondary py-3 pl-10 pr-4 text-white placeholder:text-gray-500"
+                placeholder="Tìm theo tên POI, seller, địa chỉ, danh mục, trạng thái..."
+              />
             </div>
 
             {/* Filter */}
