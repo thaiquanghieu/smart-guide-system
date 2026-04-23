@@ -37,6 +37,11 @@ export default function PaymentPage() {
   const [showRejectedNotice, setShowRejectedNotice] = useState(false);
   const [canRetryRejected, setCanRetryRejected] = useState(false);
 
+  const markProfileForRefresh = () => {
+    if (typeof window === "undefined") return;
+    sessionStorage.setItem("profile_force_refresh", "1");
+  };
+
   useEffect(() => {
     if (!router.isReady) return;
 
@@ -75,6 +80,7 @@ export default function PaymentPage() {
           setShowSuccess(true);
           window.clearInterval(timer);
           await new Promise((resolve) => setTimeout(resolve, 900));
+          markProfileForRefresh();
           const pendingPoiId = getPendingPoiId();
           const returnTo = getReturnTo();
           clearReturnTo();

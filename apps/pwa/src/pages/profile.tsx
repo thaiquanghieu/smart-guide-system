@@ -86,6 +86,7 @@ let profileCache:
   | null = null;
 
 const PROFILE_OVERLAY_KEY = "profile_overlay_state";
+const PROFILE_REFRESH_KEY = "profile_force_refresh";
 
 const languages = [
   { code: "vi", name: "Tiếng Việt" },
@@ -145,7 +146,10 @@ export default function ProfilePage() {
 
     const load = async () => {
       try {
-        if (profileCache) {
+        const forceRefresh =
+          typeof window !== "undefined" && sessionStorage.getItem(PROFILE_REFRESH_KEY) === "1";
+
+        if (profileCache && !forceRefresh) {
           setProfile(profileCache.profile);
           setDaysLeftText(profileCache.daysLeftText);
           setAppLangState(profileCache.appLang);
@@ -172,6 +176,10 @@ export default function ProfilePage() {
           }
           sessionStorage.removeItem(PROFILE_OVERLAY_KEY);
           return;
+        }
+
+        if (typeof window !== "undefined") {
+          sessionStorage.removeItem(PROFILE_REFRESH_KEY);
         }
 
         await ensureDeviceReady();
