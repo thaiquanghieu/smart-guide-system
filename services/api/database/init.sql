@@ -50,6 +50,10 @@ CREATE TABLE devices (
   model text,
   app_version text,
   is_active boolean DEFAULT true,
+  status text DEFAULT 'active' CHECK (status IN ('active', 'inactive', 'banned', 'user_deleted')),
+  deleted_at timestamptz,
+  banned_at timestamptz,
+  ban_reason text,
   last_seen timestamptz,
   registered_at timestamptz DEFAULT now(),
   metadata jsonb DEFAULT '{}'::jsonb,
@@ -75,6 +79,10 @@ CREATE TABLE pois (
   radius integer DEFAULT 100,
   priority integer DEFAULT 0,
   status text DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
+  approval_note text,
+  rejected_reason text,
+  phone text,
+  website_url text,
   listened_count integer DEFAULT 0,
   rating_avg double precision DEFAULT 0,
   rating_count integer DEFAULT 0,
@@ -95,7 +103,10 @@ CREATE TABLE qr_entries (
   entry_code text NOT NULL UNIQUE,
   total_scans integer NOT NULL DEFAULT 0,
   used_scans integer NOT NULL DEFAULT 0,
-  status text NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'inactive', 'expired')),
+  status text NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'inactive', 'expired', 'admin_suspended')),
+  suspension_reason text,
+  activation_requested_at timestamptz,
+  activation_request_note text,
   expires_at timestamptz,
   created_at timestamptz DEFAULT now(),
   updated_at timestamptz DEFAULT now()
@@ -154,7 +165,11 @@ CREATE TABLE audio_guides (
   language_name text,
   voice_name text,
   script_text text,
-  created_at timestamptz DEFAULT now()
+  audio_url text,
+  approval_status text DEFAULT 'pending' CHECK (approval_status IN ('pending', 'approved', 'rejected')),
+  rejected_reason text,
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
 );
 
 -- =========================

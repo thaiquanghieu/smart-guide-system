@@ -19,7 +19,7 @@ public class Poi
     [Column("category")]
     public string Category { get; set; } = "";
 
-    [Column("categories")]
+    [Column("categories", TypeName = "jsonb")]
     [System.Text.Json.Serialization.JsonIgnore]
     public string CategoriesJson { get; set; } = "[]";
 
@@ -49,6 +49,18 @@ public class Poi
 
     [Column("status")]
     public string Status { get; set; } = "pending"; // "pending", "approved", "rejected"
+
+    [Column("approval_note")]
+    public string? ApprovalNote { get; set; }
+
+    [Column("rejected_reason")]
+    public string? RejectedReason { get; set; }
+
+    [Column("phone")]
+    public string? Phone { get; set; }
+
+    [Column("website_url")]
+    public string? WebsiteUrl { get; set; }
 
     [Column("latitude")]
     public double Latitude { get; set; }

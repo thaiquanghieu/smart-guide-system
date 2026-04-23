@@ -24,4 +24,19 @@ public class AudioGuide
 
     [Column("script_text")]
     public string ScriptText { get; set; } = "";
+
+    [Column("audio_url")]
+    public string? AudioUrl { get; set; }
+
+    [Column("approval_status")]
+    public string ApprovalStatus { get; set; } = "pending";
+
+    [Column("rejected_reason")]
+    public string? RejectedReason { get; set; }
+
+    [Column("created_at")]
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+    [Column("updated_at")]
+    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 }
