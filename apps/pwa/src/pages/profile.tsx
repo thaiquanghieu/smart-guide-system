@@ -6,6 +6,8 @@ import ToastBanner from "@/components/ToastBanner";
 import apiClient, { assetUrl } from "@/lib/api";
 import { useAppI18n } from "@/lib/i18n";
 import {
+  PROFILE_DATA_CHANGED_EVENT,
+  consumeProfileRefreshPending,
   ensureDeviceReady,
   getAppLanguage,
   getAudioCustom,
@@ -130,8 +132,71 @@ export default function ProfilePage() {
   const radiusValue = trackingRadiusIndex === 0 ? 0.1 : trackingRadiusIndex === 2 ? 0.3 : 0.2;
   const intervalValue = trackingIntervalIndex === 0 ? 2000 : trackingIntervalIndex === 2 ? 10000 : 5000;
 
+  const fetchSummary = async () => {
+    await ensureDeviceReady();
+
+    const [profileResponse, paymentResponse] = await Promise.all([
+      apiClient.get(`/profiles/${getDeviceId()}`),
+      apiClient.get(`/payments/check?deviceId=${getDeviceId()}`),
+    ]);
+
+    setProfile(profileResponse.data);
+
+    if (paymentResponse.data?.isActive && paymentResponse.data?.expire) {
+      const expireDate = new Date(paymentResponse.data.expire);
+      const diffDays = Math.max(0, Math.ceil((expireDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24)));
+      setDaysLeftText(t("profile.daysLeft", { count: diffDays }));
+      return;
+    }
+
+    setDaysLeftText(t("profile.noPlan"));
+  };
+
+  const fetchHistory = async (force = false) => {
+    if ((!force && historyLoaded) || historyLoading) return;
+
+    try {
+      setHistoryLoading(true);
+      await ensureDeviceReady();
+      const response = await apiClient.get(`/profiles/${getDeviceId()}/history?lang=${lang}`);
+      setHistoryItems(response.data || []);
+      setHistoryLoaded(true);
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
+  const fetchFavorites = async (force = false) => {
+    if ((!force && favoritesLoaded) || favoritesLoading) return;
+
+    try {
+      setFavoritesLoading(true);
+      await ensureDeviceReady();
+      const response = await apiClient.get(`/profiles/${getDeviceId()}/favorites?lang=${lang}`);
+      setFavoriteItems(response.data || []);
+      setFavoritesLoaded(true);
+    } finally {
+      setFavoritesLoading(false);
+    }
+  };
+
+  const fetchPayments = async (force = false) => {
+    if ((!force && paymentsLoaded) || paymentsLoading) return;
+
+    try {
+      setPaymentsLoading(true);
+      await ensureDeviceReady();
+      const response = await apiClient.get(`/payments/history?deviceId=${getDeviceId()}`);
+      setPaymentItems(response.data || []);
+      setPaymentsLoaded(true);
+    } finally {
+      setPaymentsLoading(false);
+    }
+  };
+
   useEffect(() => {
     initializeSettingsDefaults();
+    window.scrollTo({ top: 0, behavior: "auto" });
 
     setAppLangState(getAppLanguage());
     setAudioLangState(getAudioLanguage());
@@ -147,9 +212,10 @@ export default function ProfilePage() {
     const load = async () => {
       try {
         const forceRefresh =
-          typeof window !== "undefined" && sessionStorage.getItem(PROFILE_REFRESH_KEY) === "1";
+          (typeof window !== "undefined" && sessionStorage.getItem(PROFILE_REFRESH_KEY) === "1") ||
+          consumeProfileRefreshPending();
 
-        if (profileCache && !forceRefresh) {
+        if (profileCache) {
           setProfile(profileCache.profile);
           setDaysLeftText(profileCache.daysLeftText);
           setAppLangState(profileCache.appLang);
@@ -175,28 +241,24 @@ export default function ProfilePage() {
             setShowPayments(true);
           }
           sessionStorage.removeItem(PROFILE_OVERLAY_KEY);
-          return;
         }
 
         if (typeof window !== "undefined") {
           sessionStorage.removeItem(PROFILE_REFRESH_KEY);
         }
 
-        await ensureDeviceReady();
+        if (!profileCache || forceRefresh) {
+          await fetchSummary();
 
-        const [profileResponse, paymentResponse] = await Promise.all([
-          apiClient.get(`/profiles/${getDeviceId()}`),
-          apiClient.get(`/payments/check?deviceId=${getDeviceId()}`),
-        ]);
-
-        setProfile(profileResponse.data);
-
-        if (paymentResponse.data?.isActive && paymentResponse.data?.expire) {
-          const expireDate = new Date(paymentResponse.data.expire);
-          const diffDays = Math.max(0, Math.ceil((expireDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24)));
-          setDaysLeftText(t("profile.daysLeft", { count: diffDays }));
-        } else {
-          setDaysLeftText(t("profile.noPlan"));
+          if (forceRefresh && profileCache?.historyLoaded) {
+            await fetchHistory(true);
+          }
+          if (forceRefresh && profileCache?.favoritesLoaded) {
+            await fetchFavorites(true);
+          }
+          if (forceRefresh && profileCache?.paymentsLoaded) {
+            await fetchPayments(true);
+          }
         }
       } catch (error: any) {
         setErrorMessage(error?.response?.data?.message || t("profile.loadError"));
@@ -205,6 +267,31 @@ export default function ProfilePage() {
 
     load();
   }, []);
+
+  useEffect(() => {
+    const handleProfileDataChanged = async () => {
+      try {
+        await fetchSummary();
+
+        if (historyLoaded || showHistory) {
+          await fetchHistory(true);
+        }
+        if (favoritesLoaded || showFavorites) {
+          await fetchFavorites(true);
+        }
+        if (paymentsLoaded || showPayments) {
+          await fetchPayments(true);
+        }
+      } catch (error: any) {
+        setToast(error?.response?.data?.message || t("profile.loadError"));
+      }
+    };
+
+    window.addEventListener(PROFILE_DATA_CHANGED_EVENT, handleProfileDataChanged as EventListener);
+    return () => {
+      window.removeEventListener(PROFILE_DATA_CHANGED_EVENT, handleProfileDataChanged as EventListener);
+    };
+  }, [favoritesLoaded, historyLoaded, paymentsLoaded, showFavorites, showHistory, showPayments, lang, t]);
 
   useEffect(() => {
     profileCache = {
@@ -283,52 +370,31 @@ export default function ProfilePage() {
 
   const openHistory = async () => {
     setShowHistory(true);
-    if (historyLoaded || historyLoading) return;
 
     try {
-      setHistoryLoading(true);
-      await ensureDeviceReady();
-      const response = await apiClient.get(`/profiles/${getDeviceId()}/history?lang=${lang}`);
-      setHistoryItems(response.data || []);
-      setHistoryLoaded(true);
+      await fetchHistory();
     } catch (error: any) {
       setToast(error?.response?.data?.message || t("profile.loadError"));
-    } finally {
-      setHistoryLoading(false);
     }
   };
 
   const openFavorites = async () => {
     setShowFavorites(true);
-    if (favoritesLoaded || favoritesLoading) return;
 
     try {
-      setFavoritesLoading(true);
-      await ensureDeviceReady();
-      const response = await apiClient.get(`/profiles/${getDeviceId()}/favorites?lang=${lang}`);
-      setFavoriteItems(response.data || []);
-      setFavoritesLoaded(true);
+      await fetchFavorites();
     } catch (error: any) {
       setToast(error?.response?.data?.message || t("profile.loadError"));
-    } finally {
-      setFavoritesLoading(false);
     }
   };
 
   const openPayments = async () => {
     setShowPayments(true);
-    if (paymentsLoaded || paymentsLoading) return;
 
     try {
-      setPaymentsLoading(true);
-      await ensureDeviceReady();
-      const response = await apiClient.get(`/payments/history?deviceId=${getDeviceId()}`);
-      setPaymentItems(response.data || []);
-      setPaymentsLoaded(true);
+      await fetchPayments();
     } catch (error: any) {
       setToast(error?.response?.data?.message || t("profile.loadError"));
-    } finally {
-      setPaymentsLoading(false);
     }
   };
 

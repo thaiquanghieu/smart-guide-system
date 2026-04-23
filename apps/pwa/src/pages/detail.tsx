@@ -1,11 +1,11 @@
 import { useRouter } from "next/router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import BottomNav from "@/components/BottomNav";
 import ToastBanner from "@/components/ToastBanner";
 import apiClient, { assetUrl } from "@/lib/api";
 import { getLanguageName, translatePoi, useAppI18n } from "@/lib/i18n";
 import { playPoiAudio, stopSpeech } from "@/lib/audio";
-import { ensureDeviceReady, getDeviceId, setPendingPoiId, setReturnTo } from "@/lib/device";
+import { ensureDeviceReady, getAutoPlay, getDeviceId, notifyProfileDataChanged, setPendingPoiId, setReturnTo } from "@/lib/device";
 import { calculateDistanceKm, type GeoPoint } from "@/lib/location";
 
 type Poi = {
@@ -55,6 +55,7 @@ export default function DetailPage() {
   const [nameExpanded, setNameExpanded] = useState(false);
   const [addressExpanded, setAddressExpanded] = useState(false);
   const [priceExpanded, setPriceExpanded] = useState(false);
+  const autoPlayedPoiRef = useRef("");
 
   useEffect(() => {
     if (!router.isReady) return;
@@ -165,11 +166,46 @@ export default function DetailPage() {
 
     try {
       await apiClient.post(`/pois/favorite/${poi.id}?deviceId=${getDeviceId()}&isFavorite=${nextFavorite}`);
+      notifyProfileDataChanged();
       if (nextFavorite) {
         setToast("Đã thêm vào yêu thích!");
       }
     } catch {
       setPoi({ ...poi, is_favorite: !nextFavorite });
+    }
+  };
+
+  const playCurrentPoi = async (targetPoi: Poi) => {
+    if (!subscriptionActive && freePlaysRemaining <= 0) {
+      setReturnTo(`/detail?poiId=${targetPoi.id}`);
+      router.push(`/paywall?returnTo=${encodeURIComponent(`/detail?poiId=${targetPoi.id}`)}`);
+      return;
+    }
+
+    setPendingPoiId(targetPoi.id);
+    setIsPlaying(true);
+    setPoi((current) => current ? { ...current, listened_count: current.listened_count + 1 } : current);
+
+    try {
+      const result = await playPoiAudio(targetPoi, {
+        consumeFreeListen: !subscriptionActive,
+        onListenedCount: (count) => {
+          setPoi((current) => current ? { ...current, listened_count: count } : current);
+          notifyProfileDataChanged();
+        },
+      });
+      if (result.listenedCount) {
+        setPoi((current) => current ? { ...current, listened_count: result.listenedCount || current.listened_count } : current);
+        notifyProfileDataChanged();
+      }
+    } finally {
+      setIsPlaying(false);
+    }
+
+    if (!subscriptionActive) {
+      setFreePlaysRemaining((value) => Math.max(0, value - 1));
+      setReturnTo(`/detail?poiId=${targetPoi.id}`);
+      router.push(`/paywall?returnTo=${encodeURIComponent(`/detail?poiId=${targetPoi.id}`)}`);
     }
   };
 
@@ -180,36 +216,16 @@ export default function DetailPage() {
       return;
     }
 
-    if (!subscriptionActive && freePlaysRemaining <= 0) {
-      setReturnTo(`/detail?poiId=${poi.id}`);
-      router.push(`/paywall?returnTo=${encodeURIComponent(`/detail?poiId=${poi.id}`)}`);
-      return;
-    }
-
-    setPendingPoiId(poi.id);
-    setIsPlaying(true);
-    setPoi((current) => current ? { ...current, listened_count: current.listened_count + 1 } : current);
-
-    try {
-      const result = await playPoiAudio(poi, {
-        consumeFreeListen: !subscriptionActive,
-        onListenedCount: (count) => {
-          setPoi((current) => current ? { ...current, listened_count: count } : current);
-        },
-      });
-      if (result.listenedCount) {
-        setPoi((current) => current ? { ...current, listened_count: result.listenedCount || current.listened_count } : current);
-      }
-    } finally {
-      setIsPlaying(false);
-    }
-
-    if (!subscriptionActive) {
-      setFreePlaysRemaining((value) => Math.max(0, value - 1));
-      setReturnTo(`/detail?poiId=${poi.id}`);
-      router.push(`/paywall?returnTo=${encodeURIComponent(`/detail?poiId=${poi.id}`)}`);
-    }
+    await playCurrentPoi(poi);
   };
+
+  useEffect(() => {
+    if (!poi || isPlaying || !getAutoPlay()) return;
+    if (autoPlayedPoiRef.current === poi.id) return;
+
+    autoPlayedPoiRef.current = poi.id;
+    void playCurrentPoi(poi);
+  }, [freePlaysRemaining, isPlaying, poi, subscriptionActive]);
 
   const sharePoi = async () => {
     const shareData = {

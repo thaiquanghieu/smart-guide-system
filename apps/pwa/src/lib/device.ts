@@ -12,15 +12,21 @@ const BATTERY_SAVER_KEY = "pwa_battery_saver";
 const TRACKING_RADIUS_KEY = "pwa_tracking_radius";
 const TRACKING_INTERVAL_KEY = "pwa_tracking_interval";
 const AUDIO_CUSTOM_KEY = "pwa_audio_custom";
+const PROFILE_REFRESH_PENDING_KEY = "pwa_profile_refresh_pending";
 
 export const DEVICE_BLOCKED_EVENT = "smartguide-device-blocked";
 export const DEVICE_RESTORED_EVENT = "smartguide-device-restored";
 export const DEVICE_REMOVED_EVENT = "smartguide-device-removed";
+export const PROFILE_DATA_CHANGED_EVENT = "smartguide-profile-data-changed";
 
 export type DeviceBlockedDetail = {
   message: string;
   reason?: string;
   status?: number;
+};
+
+export type ProfileDataChangedDetail = {
+  scope: "all";
 };
 
 function canUseStorage() {
@@ -90,6 +96,30 @@ export function notifyDeviceRestored() {
 export function notifyDeviceRemoved() {
   if (typeof window === "undefined") return;
   window.dispatchEvent(new Event(DEVICE_REMOVED_EVENT));
+}
+
+export function notifyProfileDataChanged() {
+  const storage = getStorage();
+  storage?.setItem(PROFILE_REFRESH_PENDING_KEY, "all");
+
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(
+    new CustomEvent<ProfileDataChangedDetail>(PROFILE_DATA_CHANGED_EVENT, {
+      detail: { scope: "all" },
+    })
+  );
+}
+
+export function consumeProfileRefreshPending() {
+  const storage = getStorage();
+  if (!storage) return false;
+
+  const hasPending = storage.getItem(PROFILE_REFRESH_PENDING_KEY) === "all";
+  if (hasPending) {
+    storage.removeItem(PROFILE_REFRESH_PENDING_KEY);
+  }
+
+  return hasPending;
 }
 
 function getBlockedDetail(error: any): DeviceBlockedDetail {

@@ -10,10 +10,10 @@ import { translatePois, useAppI18n } from "@/lib/i18n";
 import { playPoiAudio, stopSpeech } from "@/lib/audio";
 import {
   ensureDeviceReady,
-  getAutoPlay,
   getBatterySaver,
   getDeviceId,
   getTrackingIntervalMs,
+  notifyProfileDataChanged,
   setPendingPoiId,
   setReturnTo,
 } from "@/lib/device";
@@ -283,7 +283,6 @@ export default function MapPage() {
           const now = Date.now();
           const poiCooldownUntil = (lastPlayedAtRef.current[candidatePoi.id] || 0) + poiCooldownMs;
           const canAutoPlay =
-            getAutoPlay() &&
             candidateRef.current.hits >= requiredStableHits &&
             lastTrackedPoiRef.current !== candidatePoi.id &&
             !playingPoiId &&
@@ -302,10 +301,12 @@ export default function MapPage() {
                 consumeFreeListen: !subscriptionActive,
                 onListenedCount: (count) => {
                   updatePoi(candidatePoi.id, (current) => ({ ...current, listened_count: count }));
+                  notifyProfileDataChanged();
                 },
               });
               if (result.listenedCount) {
                 updatePoi(candidatePoi.id, (current) => ({ ...current, listened_count: result.listenedCount || current.listened_count }));
+                notifyProfileDataChanged();
               }
             } finally {
               setPlayingPoiId("");
@@ -501,10 +502,12 @@ export default function MapPage() {
                       consumeFreeListen: !subscriptionActive,
                       onListenedCount: (count) => {
                         updatePoi(selectedPoi.id, (current) => ({ ...current, listened_count: count }));
+                        notifyProfileDataChanged();
                       },
                     });
                     if (result.listenedCount) {
                       updatePoi(selectedPoi.id, (current) => ({ ...current, listened_count: result.listenedCount || current.listened_count }));
+                      notifyProfileDataChanged();
                     }
                   } finally {
                     setPlayingPoiId("");

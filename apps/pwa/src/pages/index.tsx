@@ -8,7 +8,7 @@ import ToastBanner from "@/components/ToastBanner";
 import apiClient, { assetUrl } from "@/lib/api";
 import { translatePois, useAppI18n } from "@/lib/i18n";
 import { playPoiAudio, stopSpeech } from "@/lib/audio";
-import { ensureDeviceReady, getDeviceId, setReturnTo } from "@/lib/device";
+import { ensureDeviceReady, getDeviceId, notifyProfileDataChanged, setReturnTo } from "@/lib/device";
 import { calculateDistanceKm, type GeoPoint } from "@/lib/location";
 import { loadPageState, savePageState } from "@/lib/pageState";
 
@@ -265,6 +265,7 @@ export default function HomePage() {
 
     try {
       await apiClient.post(`/pois/favorite/${poi.id}?deviceId=${getDeviceId()}&isFavorite=${nextFavorite}`);
+      notifyProfileDataChanged();
       if (nextFavorite) {
         setToast("Đã thêm vào yêu thích!");
       }
@@ -296,10 +297,12 @@ export default function HomePage() {
         consumeFreeListen: !subscriptionActive,
         onListenedCount: (count) => {
           updatePoi(poi.id, (current) => ({ ...current, listened_count: count }));
+          notifyProfileDataChanged();
         },
       });
       if (result.listenedCount) {
         updatePoi(poi.id, (current) => ({ ...current, listened_count: result.listenedCount || current.listened_count }));
+        notifyProfileDataChanged();
       }
     } finally {
       setPlayingPoiId("");
