@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
+import { useRouter } from 'next/router'
 import apiClient from '@/lib/api'
 
 export const LANGUAGES = [
@@ -102,6 +103,16 @@ const defaultValue: PoiFormValue = {
 const API_MEDIA_ORIGIN = (process.env.NEXT_PUBLIC_API_URL || '').replace(/\/api\/?$/, '')
 
 const CATEGORY_OPTIONS = ['Y tế', 'Giáo dục', 'Văn hóa', 'Lịch sử', 'Kiến trúc', 'Tôn giáo', 'Thiên nhiên', 'Ẩm thực', 'Mua sắm', 'Giải trí']
+const RADIUS_OPTIONS = [
+  { label: 'Tiêu chuẩn', value: '100', price: 0, description: '100m, phù hợp điểm nhỏ hoặc khu vực ít chồng lấn.' },
+  { label: 'Mở rộng', value: '200', price: 49000, description: '200m, dễ kích hoạt hơn khi khách đến gần khu vực.' },
+  { label: 'Phủ rộng', value: '300', price: 99000, description: '300m, dành cho khuôn viên lớn hoặc vị trí khó định vị.' },
+]
+const PRIORITY_OPTIONS = [
+  { label: 'Bình thường', value: '0', price: 0, description: 'Ưu tiên tiêu chuẩn khi trùng vùng.' },
+  { label: 'Trung bình', value: '5', price: 29000, description: 'Được ưu tiên hơn POI bình thường khi khách ở trong nhiều vùng.' },
+  { label: 'Cao', value: '10', price: 39000, description: 'Ưu tiên cao nhất khi nhiều POI cùng đủ điều kiện phát.' },
+]
 
 const TRANSLATION_PHRASES: Record<string, Record<string, string>> = {
   en: {
@@ -213,6 +224,7 @@ function mockTranslate(value: string, languageCode: string) {
 }
 
 export default function PoiForm({ mode, initialValue, poiId, onDone }: Props) {
+  const router = useRouter()
   const [form, setForm] = useState<PoiFormValue>({ ...defaultValue, ...initialValue })
   const [activeLang, setActiveLang] = useState(form.selectedLanguages[0] || 'vi')
   const [showTranslations, setShowTranslations] = useState(false)
@@ -494,6 +506,27 @@ export default function PoiForm({ mode, initialValue, poiId, onDone }: Props) {
       if (mode === 'edit' && poiId) {
         await apiClient.put(`/owner/pois/${poiId}`, payload)
         setSuccess('Đã cập nhật POI và gửi duyệt lại')
+      } else if (upgradeAmount > 0) {
+        const paymentCode = `SGUP_${Date.now().toString(36).toUpperCase()}`
+        sessionStorage.setItem(
+          'pendingPoiUpgrade',
+          JSON.stringify({
+            payload: {
+              ...payload,
+              upgradeAmount,
+              upgradePaymentCode: paymentCode,
+              upgradeDescription,
+            },
+            payment: {
+              code: paymentCode,
+              amount: upgradeAmount,
+              description: upgradeDescription || 'Nâng cấp POI',
+              poiName: payload.name,
+            },
+          })
+        )
+        router.push('/payments/poi-upgrade')
+        return
       } else {
         await apiClient.post('/owner/pois', payload)
         setSuccess('Đã tạo POI và gửi admin duyệt')
@@ -510,6 +543,13 @@ export default function PoiForm({ mode, initialValue, poiId, onDone }: Props) {
 
   const activeTranslation = form.translations[activeLang] || emptyTranslation(activeLang)
   const activeAudio = form.audios[activeLang] || emptyAudio(activeLang)
+  const selectedRadiusOption = RADIUS_OPTIONS.find((option) => option.value === form.radius) || RADIUS_OPTIONS[0]
+  const selectedPriorityOption = PRIORITY_OPTIONS.find((option) => option.value === form.priority) || PRIORITY_OPTIONS[0]
+  const upgradeAmount = mode === 'create' ? selectedRadiusOption.price + selectedPriorityOption.price : 0
+  const upgradeDescription = [
+    selectedRadiusOption.price > 0 ? `Bán kính ${selectedRadiusOption.label} ${selectedRadiusOption.value}m` : '',
+    selectedPriorityOption.price > 0 ? `Ưu tiên ${selectedPriorityOption.label}` : '',
+  ].filter(Boolean).join(' + ')
 
   return (
     <form onSubmit={submit} className="space-y-6">
@@ -559,8 +599,20 @@ export default function PoiForm({ mode, initialValue, poiId, onDone }: Props) {
             <Input label="Vĩ độ *" value={form.latitude} onChange={(value) => updateField('latitude', value)} placeholder="10.779783" />
             <Input label="Kinh độ *" value={form.longitude} onChange={(value) => updateField('longitude', value)} placeholder="106.699018" />
           </div>
-          <Input label="Bán kính nhận diện (m)" value={form.radius} onChange={(value) => updateField('radius', value)} />
-          <Input label="Ưu tiên" value={form.priority} onChange={(value) => updateField('priority', value)} />
+          <OptionSelect
+            label="Bán kính nhận diện"
+            value={form.radius}
+            options={RADIUS_OPTIONS}
+            onChange={(value) => updateField('radius', value)}
+            hint="Tăng diện tích nhận diện giúp khách dễ kích hoạt audio hơn khi bước vào vùng POI."
+          />
+          <OptionSelect
+            label="Độ ưu tiên"
+            value={form.priority}
+            options={PRIORITY_OPTIONS}
+            onChange={(value) => updateField('priority', value)}
+            hint="Khi nhiều POI cùng nằm trong vùng của khách, hệ thống ưu tiên POI có bậc cao hơn."
+          />
         </div>
         <TextArea label="Mô tả chi tiết *" value={form.description} onChange={(value) => updateField('description', value)} rows={5} />
         <div className="rounded-2xl border border-gray-700 bg-dark/40 p-4 space-y-3">
@@ -668,8 +720,14 @@ export default function PoiForm({ mode, initialValue, poiId, onDone }: Props) {
       </section>
 
       <div className="flex gap-3">
-        <button disabled={loading} className="flex-1 bg-primary hover:bg-blue-700 disabled:bg-gray-600 text-white font-bold py-4 rounded-xl">
-          {loading ? 'Đang lưu...' : mode === 'edit' ? 'Cập nhật và gửi duyệt lại' : 'Tạo POI và gửi duyệt'}
+        <button disabled={loading} className={`flex-1 disabled:bg-gray-600 font-bold py-4 rounded-xl ${upgradeAmount > 0 ? 'bg-yellow-400 text-dark hover:bg-yellow-300' : 'bg-primary hover:bg-blue-700 text-white'}`}>
+          {loading
+            ? 'Đang lưu...'
+            : mode === 'edit'
+            ? 'Cập nhật và gửi duyệt lại'
+            : upgradeAmount > 0
+            ? `Thanh toán nâng cấp ${upgradeAmount.toLocaleString('vi-VN')}đ`
+            : 'Tạo POI và gửi duyệt'}
         </button>
       </div>
     </form>
@@ -701,6 +759,40 @@ function Input({ label, value, onChange, placeholder = '', type = 'text' }: { la
     <label className="block">
       <span className="block text-sm font-medium text-gray-300 mb-2">{label}</span>
       <input type={type} value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} className="w-full px-4 py-3 bg-dark border border-gray-600 rounded-xl text-white focus:border-primary focus:outline-none" />
+    </label>
+  )
+}
+
+function OptionSelect({
+  label,
+  value,
+  options,
+  onChange,
+  hint,
+}: {
+  label: string
+  value: string
+  options: Array<{ label: string; value: string; price: number; description: string }>
+  onChange: (value: string) => void
+  hint: string
+}) {
+  const selected = options.find((option) => option.value === value) || options[0]
+  return (
+    <label className="block">
+      <span className="block text-sm font-medium text-gray-300 mb-2">{label}</span>
+      <select
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className="w-full px-4 py-3 bg-dark border border-gray-600 rounded-xl text-white focus:border-primary focus:outline-none"
+      >
+        {options.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label} {label.includes('Bán kính') ? `${option.value}m` : ''} - {option.price ? `${option.price.toLocaleString('vi-VN')}đ` : 'Miễn phí'}
+          </option>
+        ))}
+      </select>
+      <p className="mt-2 text-xs text-gray-500">{hint}</p>
+      <p className="mt-1 text-xs text-yellow-300">{selected.description}</p>
     </label>
   )
 }

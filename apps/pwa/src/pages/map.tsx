@@ -14,7 +14,6 @@ import {
   getBatterySaver,
   getDeviceId,
   getTrackingIntervalMs,
-  getTrackingRadiusKm,
   setPendingPoiId,
   setReturnTo,
 } from "@/lib/device";
@@ -29,6 +28,8 @@ type Poi = {
   address: string;
   latitude: number;
   longitude: number;
+  radius?: number;
+  priority?: number;
   listened_count: number;
   rating_avg: number;
   is_favorite?: boolean;
@@ -68,6 +69,9 @@ export default function MapPage() {
   const [errorMessage, setErrorMessage] = useState("");
   const trackingTimerRef = useRef<number | null>(null);
   const lastTrackedPoiRef = useRef("");
+  const lastPlayedAtRef = useRef<Record<string, number>>({});
+  const candidateRef = useRef<{ poiId: string; hits: number }>({ poiId: "", hits: 0 });
+  const globalCooldownUntilRef = useRef(0);
 
   useEffect(() => {
     const load = async () => {
@@ -229,8 +233,10 @@ export default function MapPage() {
   useEffect(() => {
     if (!trackingEnabled || !navigator.geolocation || !enrichedPois.length) return undefined;
 
-    const radiusKm = getBatterySaver() ? 0.3 : getTrackingRadiusKm();
     const intervalMs = getBatterySaver() ? 10000 : getTrackingIntervalMs();
+    const poiCooldownMs = 4 * 60 * 1000;
+    const globalCooldownMs = 25 * 1000;
+    const requiredStableHits = 2;
 
     const tick = () => {
       navigator.geolocation.getCurrentPosition(
@@ -241,33 +247,65 @@ export default function MapPage() {
           };
           setUserLocation(currentLocation);
 
-          const nearestPoi = [...enrichedPois]
+          const candidatePoi = [...enrichedPois]
             .map((poi) => ({
               ...poi,
               distanceKm: calculateDistanceKm(currentLocation, { latitude: poi.latitude, longitude: poi.longitude }),
             }))
-            .filter((poi) => poi.distanceKm <= radiusKm)
-            .sort((left, right) => left.distanceKm - right.distanceKm)[0];
+            .filter((poi) => {
+              const poiRadiusKm = Math.max(0.01, Number(poi.radius || 100) / 1000);
+              return poi.distanceKm <= poiRadiusKm;
+            })
+            .sort((left, right) => {
+              const priorityDiff = Number(right.priority || 0) - Number(left.priority || 0);
+              if (priorityDiff !== 0) return priorityDiff;
+              const distanceDiff = left.distanceKm - right.distanceKm;
+              if (Math.abs(distanceDiff) > 0.001) return distanceDiff;
+              const listenedDiff = Number(left.listened_count || 0) - Number(right.listened_count || 0);
+              if (listenedDiff !== 0) return listenedDiff;
+              return left.id.localeCompare(right.id);
+            })[0];
 
-          if (!nearestPoi) return;
+          if (!candidatePoi) {
+            candidateRef.current = { poiId: "", hits: 0 };
+            return;
+          }
 
-          setSelectedPoiId(nearestPoi.id);
-          setMapCenter({ latitude: nearestPoi.latitude, longitude: nearestPoi.longitude });
+          if (candidateRef.current.poiId === candidatePoi.id) {
+            candidateRef.current = { poiId: candidatePoi.id, hits: candidateRef.current.hits + 1 };
+          } else {
+            candidateRef.current = { poiId: candidatePoi.id, hits: 1 };
+          }
 
-          if (getAutoPlay() && lastTrackedPoiRef.current !== nearestPoi.id && !playingPoiId) {
-            lastTrackedPoiRef.current = nearestPoi.id;
-            setPlayingPoiId(nearestPoi.id);
+          setSelectedPoiId(candidatePoi.id);
+          setMapCenter({ latitude: candidatePoi.latitude, longitude: candidatePoi.longitude });
+
+          const now = Date.now();
+          const poiCooldownUntil = (lastPlayedAtRef.current[candidatePoi.id] || 0) + poiCooldownMs;
+          const canAutoPlay =
+            getAutoPlay() &&
+            candidateRef.current.hits >= requiredStableHits &&
+            lastTrackedPoiRef.current !== candidatePoi.id &&
+            !playingPoiId &&
+            now >= globalCooldownUntilRef.current &&
+            now >= poiCooldownUntil;
+
+          if (canAutoPlay) {
+            lastTrackedPoiRef.current = candidatePoi.id;
+            lastPlayedAtRef.current[candidatePoi.id] = now;
+            globalCooldownUntilRef.current = now + globalCooldownMs;
+            setPlayingPoiId(candidatePoi.id);
 
             try {
-              updatePoi(nearestPoi.id, (current) => ({ ...current, listened_count: current.listened_count + 1 }));
-              const result = await playPoiAudio(nearestPoi, {
+              updatePoi(candidatePoi.id, (current) => ({ ...current, listened_count: current.listened_count + 1 }));
+              const result = await playPoiAudio(candidatePoi, {
                 consumeFreeListen: !subscriptionActive,
                 onListenedCount: (count) => {
-                  updatePoi(nearestPoi.id, (current) => ({ ...current, listened_count: count }));
+                  updatePoi(candidatePoi.id, (current) => ({ ...current, listened_count: count }));
                 },
               });
               if (result.listenedCount) {
-                updatePoi(nearestPoi.id, (current) => ({ ...current, listened_count: result.listenedCount || current.listened_count }));
+                updatePoi(candidatePoi.id, (current) => ({ ...current, listened_count: result.listenedCount || current.listened_count }));
               }
             } finally {
               setPlayingPoiId("");

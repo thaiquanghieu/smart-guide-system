@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/router'
 import { useAdminStore } from '@/lib/store'
 import { useState } from 'react'
-import { LogOut, LayoutDashboard, MapPin, Users, BarChart3, QrCode, Smartphone } from 'lucide-react'
+import { LogOut, LayoutDashboard, MapPin, Users, BarChart3, QrCode, Smartphone, CreditCard } from 'lucide-react'
 
 export default function Sidebar() {
   const router = useRouter()
@@ -15,6 +15,7 @@ export default function Sidebar() {
     { href: '/devices', label: 'Quản lý thiết bị', icon: Smartphone },
     { href: '/pois', label: 'Quản lý POI', icon: MapPin },
     { href: '/qr', label: 'Quản lý QR', icon: QrCode },
+    { href: '/payments', label: 'Thanh toán', icon: CreditCard },
     { href: '/analytics', label: 'Thống kê', icon: BarChart3 },
   ]
 

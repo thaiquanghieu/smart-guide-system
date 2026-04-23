@@ -266,6 +266,28 @@ public class OwnerPoisController : ControllerBase
             SyncImages(poi.Id, request.Images);
             SyncTranslations(poi.Id, request.Translations);
             SyncAudios(poi.Id, request.Audios);
+
+            if (request.UpgradeAmount > 0)
+            {
+                _db.Payments.Add(new Payment
+                {
+                    OwnerId = ownerId,
+                    PoiId = poi.Id,
+                    PayerType = "seller",
+                    PaymentType = "poi_upgrade",
+                    Amount = request.UpgradeAmount,
+                    Status = "submitted",
+                    Code = string.IsNullOrWhiteSpace(request.UpgradePaymentCode)
+                        ? $"SGUP_{Guid.NewGuid().ToString("N")[..8]}"
+                        : request.UpgradePaymentCode.Trim(),
+                    Description = string.IsNullOrWhiteSpace(request.UpgradeDescription)
+                        ? $"Nâng cấp POI: bán kính {poi.Radius}m, ưu tiên {poi.Priority}"
+                        : request.UpgradeDescription.Trim(),
+                    IsUsed = false,
+                    CreatedAt = DateTime.UtcNow
+                });
+            }
+
             await _db.SaveChangesAsync();
             await transaction.CommitAsync();
         }
@@ -599,6 +621,9 @@ public class CreatePoiRequest
     public List<string>? Images { get; set; }
     public List<PoiTranslationRequest>? Translations { get; set; }
     public List<PoiAudioRequest>? Audios { get; set; }
+    public int UpgradeAmount { get; set; }
+    public string? UpgradePaymentCode { get; set; }
+    public string? UpgradeDescription { get; set; }
 }
 
 public class TranslateRequest

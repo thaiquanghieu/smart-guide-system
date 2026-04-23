@@ -1,0 +1,153 @@
+import { useEffect, useMemo, useState } from 'react'
+import Sidebar from '@/components/Sidebar'
+import ProtectedRoute from '@/components/ProtectedRoute'
+import apiClient from '@/lib/api'
+import { CheckCircle, Search, XCircle } from 'lucide-react'
+
+type Payment = {
+  id: number
+  code: string
+  amount: number
+  status: string
+  status_label: string
+  payment_type: string
+  payer_type: string
+  owner_name?: string
+  device_name?: string
+  poi_name?: string
+  plan_name?: string
+  description: string
+  created_at: string
+  confirmed_at?: string
+  rejected_reason?: string
+}
+
+function formatDate(value?: string) {
+  if (!value) return 'Chưa có'
+  return new Intl.DateTimeFormat('vi-VN', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(value))
+}
+
+function statusClass(status: string) {
+  if (status === 'confirmed' || status === 'used') return 'bg-green-400/10 text-green-300'
+  if (status === 'rejected') return 'bg-red-400/10 text-red-300'
+  if (status === 'submitted') return 'bg-yellow-400/10 text-yellow-300'
+  return 'bg-gray-400/10 text-gray-300'
+}
+
+export default function AdminPayments() {
+  const [payments, setPayments] = useState<Payment[]>([])
+  const [query, setQuery] = useState('')
+  const [status, setStatus] = useState('all')
+  const [type, setType] = useState('all')
+  const [sort, setSort] = useState('newest')
+  const [loading, setLoading] = useState(true)
+
+  const fetchPayments = async (silent = false) => {
+    if (!silent) setLoading(true)
+    try {
+      const response = await apiClient.get('/admin/payments', { params: { status, type } })
+      setPayments(response.data || [])
+    } finally {
+      if (!silent) setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    void fetchPayments()
+    const timer = window.setInterval(() => void fetchPayments(true), 5000)
+    return () => window.clearInterval(timer)
+  }, [status, type])
+
+  const updateStatus = async (id: number, nextStatus: string) => {
+    const reason = nextStatus === 'rejected' ? prompt('Lý do từ chối?') || '' : ''
+    await apiClient.put(`/admin/payments/${id}/status`, { status: nextStatus, reason })
+    await fetchPayments(true)
+  }
+
+  const visiblePayments = useMemo(() => {
+    const keyword = query.trim().toLowerCase()
+    return payments
+      .filter((payment) => [payment.code, payment.owner_name, payment.device_name, payment.poi_name, payment.plan_name, payment.description, payment.status_label].join(' ').toLowerCase().includes(keyword))
+      .sort((a, b) => {
+        if (sort === 'amount_desc') return b.amount - a.amount
+        if (sort === 'amount_asc') return a.amount - b.amount
+        if (sort === 'oldest') return new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      })
+  }, [payments, query, sort])
+
+  return (
+    <ProtectedRoute>
+      <div className="flex min-h-screen bg-dark">
+        <Sidebar />
+        <main className="flex-1 p-8">
+          <div className="max-w-7xl">
+            <h1 className="text-4xl font-bold text-white">Quản lý thanh toán</h1>
+            <p className="mt-2 text-gray-400">Xem lịch sử user mua gói, seller nâng cấp POI và xử lý xác nhận khi cần.</p>
+
+            <div className="mt-6 grid gap-3 lg:grid-cols-[1fr_200px_200px_220px]">
+              <div className="relative">
+                <Search className="absolute left-3 top-3 text-gray-500" size={18} />
+                <input value={query} onChange={(event) => setQuery(event.target.value)} className="w-full rounded-xl border border-gray-700 bg-secondary py-3 pl-10 pr-4 text-white" placeholder="Tìm mã, seller, thiết bị, POI..." />
+              </div>
+              <select value={status} onChange={(event) => setStatus(event.target.value)} className="rounded-xl border border-gray-700 bg-secondary px-4 py-3 text-white">
+                <option value="all">Tất cả trạng thái</option>
+                <option value="pending">Đang chờ</option>
+                <option value="submitted">Đã báo thanh toán</option>
+                <option value="confirmed">Đã xác nhận</option>
+                <option value="used">Đã kích hoạt</option>
+                <option value="rejected">Đã từ chối</option>
+              </select>
+              <select value={type} onChange={(event) => setType(event.target.value)} className="rounded-xl border border-gray-700 bg-secondary px-4 py-3 text-white">
+                <option value="all">Tất cả loại</option>
+                <option value="user_plan">User mua gói</option>
+                <option value="poi_upgrade">Nâng cấp POI</option>
+                <option value="qr_topup">Nạp QR</option>
+              </select>
+              <select value={sort} onChange={(event) => setSort(event.target.value)} className="rounded-xl border border-gray-700 bg-secondary px-4 py-3 text-white">
+                <option value="newest">Mới nhất</option>
+                <option value="oldest">Cũ nhất</option>
+                <option value="amount_desc">Số tiền cao đến thấp</option>
+                <option value="amount_asc">Số tiền thấp đến cao</option>
+              </select>
+            </div>
+
+            <div className="mt-6 overflow-hidden rounded-2xl border border-gray-700 bg-secondary">
+              {loading ? <p className="p-6 text-gray-400">Đang tải...</p> : null}
+              {!loading && visiblePayments.length === 0 ? <p className="p-6 text-gray-400">Chưa có thanh toán phù hợp.</p> : null}
+              {visiblePayments.map((payment) => (
+                <div key={payment.id} className="grid gap-4 border-b border-gray-700 p-5 last:border-b-0 xl:grid-cols-[1.4fr_1fr_160px_170px_190px]">
+                  <div>
+                    <p className="font-bold text-white">{payment.poi_name || payment.plan_name || payment.description}</p>
+                    <p className="mt-1 text-sm text-gray-400">{payment.description}</p>
+                    <p className="mt-2 font-mono text-sm text-primary">{payment.code}</p>
+                  </div>
+                  <div className="text-sm text-gray-400">
+                    <p>Người trả: {payment.owner_name || payment.device_name || payment.payer_type}</p>
+                    <p>Loại: {payment.payment_type}</p>
+                    <p>Tạo: {formatDate(payment.created_at)}</p>
+                    <p>Xác nhận: {formatDate(payment.confirmed_at)}</p>
+                  </div>
+                  <p className="text-xl font-bold text-yellow-300">{payment.amount.toLocaleString('vi-VN')}đ</p>
+                  <span className={`h-fit rounded-full px-3 py-1 text-center text-sm font-semibold ${statusClass(payment.status)}`}>{payment.status_label}</span>
+                  <div className="flex flex-wrap gap-2">
+                    {payment.status !== 'confirmed' && payment.status !== 'used' ? (
+                      <button onClick={() => updateStatus(payment.id, 'confirmed')} className="inline-flex items-center gap-1 rounded-lg bg-green-500/15 px-3 py-2 text-sm text-green-300 hover:bg-green-500/25">
+                        <CheckCircle size={15} /> Xác nhận
+                      </button>
+                    ) : null}
+                    {payment.status !== 'rejected' ? (
+                      <button onClick={() => updateStatus(payment.id, 'rejected')} className="inline-flex items-center gap-1 rounded-lg bg-red-500/15 px-3 py-2 text-sm text-red-300 hover:bg-red-500/25">
+                        <XCircle size={15} /> Từ chối
+                      </button>
+                    ) : null}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </main>
+      </div>
+    </ProtectedRoute>
+  )
+}

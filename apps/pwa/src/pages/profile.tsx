@@ -49,6 +49,21 @@ type ProfilePoiItem = {
   listen_count?: number;
 };
 
+type PaymentHistoryItem = {
+  id: number;
+  code: string;
+  amount: number;
+  status: string;
+  status_label: string;
+  payment_type: string;
+  description?: string;
+  plan_name?: string;
+  created_at?: string;
+  used_at?: string;
+  confirmed_at?: string;
+  rejected_reason?: string;
+};
+
 let profileCache:
   | {
       profile: ProfileSummary | null;
@@ -62,9 +77,11 @@ let profileCache:
       trackingIntervalIndex: number;
       historyItems: ProfilePoiItem[];
       favoriteItems: ProfilePoiItem[];
+      paymentItems: PaymentHistoryItem[];
       historyLoaded: boolean;
       favoritesLoaded: boolean;
-      reopenOverlay: "" | "history" | "favorites";
+      paymentsLoaded: boolean;
+      reopenOverlay: "" | "history" | "favorites" | "payments";
     }
   | null = null;
 
@@ -87,6 +104,7 @@ export default function ProfilePage() {
   const [showLanguage, setShowLanguage] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [showFavorites, setShowFavorites] = useState(false);
+  const [showPayments, setShowPayments] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [toast, setToast] = useState("");
   const [appLang, setAppLangState] = useState("vi");
@@ -99,10 +117,13 @@ export default function ProfilePage() {
   const [errorMessage, setErrorMessage] = useState("");
   const [historyItems, setHistoryItems] = useState<ProfilePoiItem[]>([]);
   const [favoriteItems, setFavoriteItems] = useState<ProfilePoiItem[]>([]);
+  const [paymentItems, setPaymentItems] = useState<PaymentHistoryItem[]>([]);
   const [historyLoaded, setHistoryLoaded] = useState(false);
   const [favoritesLoaded, setFavoritesLoaded] = useState(false);
+  const [paymentsLoaded, setPaymentsLoaded] = useState(false);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [favoritesLoading, setFavoritesLoading] = useState(false);
+  const [paymentsLoading, setPaymentsLoading] = useState(false);
 
   const radiusValue = trackingRadiusIndex === 0 ? 0.1 : trackingRadiusIndex === 2 ? 0.3 : 0.2;
   const intervalValue = trackingIntervalIndex === 0 ? 2000 : trackingIntervalIndex === 2 ? 10000 : 5000;
@@ -135,14 +156,18 @@ export default function ProfilePage() {
           setTrackingIntervalIndex(profileCache.trackingIntervalIndex);
           setHistoryItems(profileCache.historyItems || []);
           setFavoriteItems(profileCache.favoriteItems || []);
+          setPaymentItems(profileCache.paymentItems || []);
           setHistoryLoaded(!!profileCache.historyLoaded);
           setFavoritesLoaded(!!profileCache.favoritesLoaded);
+          setPaymentsLoaded(!!profileCache.paymentsLoaded);
 
           const reopenOverlay = sessionStorage.getItem(PROFILE_OVERLAY_KEY) || profileCache.reopenOverlay;
           if (reopenOverlay === "history") {
             setShowHistory(true);
           } else if (reopenOverlay === "favorites") {
             setShowFavorites(true);
+          } else if (reopenOverlay === "payments") {
+            setShowPayments(true);
           }
           sessionStorage.removeItem(PROFILE_OVERLAY_KEY);
           return;
@@ -185,11 +210,13 @@ export default function ProfilePage() {
       trackingIntervalIndex,
       historyItems,
       favoriteItems,
+      paymentItems,
       historyLoaded,
       favoritesLoaded,
-      reopenOverlay: showHistory ? "history" : showFavorites ? "favorites" : "",
+      paymentsLoaded,
+      reopenOverlay: showHistory ? "history" : showFavorites ? "favorites" : showPayments ? "payments" : "",
     };
-  }, [appLang, audioCustom, audioLang, autoPlay, batterySaver, daysLeftText, favoriteItems, favoritesLoaded, historyItems, historyLoaded, profile, showFavorites, showHistory, trackingIntervalIndex, trackingRadiusIndex]);
+  }, [appLang, audioCustom, audioLang, autoPlay, batterySaver, daysLeftText, favoriteItems, favoritesLoaded, historyItems, historyLoaded, paymentItems, paymentsLoaded, profile, showFavorites, showHistory, showPayments, trackingIntervalIndex, trackingRadiusIndex]);
 
   useEffect(() => {
     if (!toast) return undefined;
@@ -198,7 +225,7 @@ export default function ProfilePage() {
   }, [toast]);
 
   useEffect(() => {
-    const hasOverlay = showSettings || showLanguage || showHistory || showFavorites || showDeleteConfirm;
+    const hasOverlay = showSettings || showLanguage || showHistory || showFavorites || showPayments || showDeleteConfirm;
     if (!hasOverlay) return undefined;
 
     const previousOverflow = document.body.style.overflow;
@@ -210,7 +237,7 @@ export default function ProfilePage() {
       document.body.style.overflow = previousOverflow;
       document.body.style.touchAction = previousTouchAction;
     };
-  }, [showDeleteConfirm, showFavorites, showHistory, showLanguage, showSettings]);
+  }, [showDeleteConfirm, showFavorites, showHistory, showLanguage, showPayments, showSettings]);
 
   useEffect(() => {
     if (!showLanguage) return;
@@ -279,6 +306,23 @@ export default function ProfilePage() {
     }
   };
 
+  const openPayments = async () => {
+    setShowPayments(true);
+    if (paymentsLoaded || paymentsLoading) return;
+
+    try {
+      setPaymentsLoading(true);
+      await ensureDeviceReady();
+      const response = await apiClient.get(`/payments/history?deviceId=${getDeviceId()}`);
+      setPaymentItems(response.data || []);
+      setPaymentsLoaded(true);
+    } catch (error: any) {
+      setToast(error?.response?.data?.message || t("profile.loadError"));
+    } finally {
+      setPaymentsLoading(false);
+    }
+  };
+
   const openDetailFromOverlay = (poiId: string, overlay: "history" | "favorites") => {
     sessionStorage.setItem(PROFILE_OVERLAY_KEY, overlay);
     router.push(`/detail?poiId=${poiId}`);
@@ -287,6 +331,7 @@ export default function ProfilePage() {
   const menuItems = [
     { icon: "history.png", label: t("profile.history"), onClick: openHistory },
     { icon: "favorite.png", label: t("profile.favoritePlaces"), onClick: openFavorites },
+    { icon: "ticket.png", label: "Lịch sử thanh toán", onClick: openPayments },
     { icon: "settings.png", label: t("profile.settings"), onClick: () => setShowSettings(true) },
     { icon: "language.png", label: t("profile.language"), onClick: () => setShowLanguage(true) },
     { icon: "support.png", label: t("profile.support") },
@@ -663,6 +708,87 @@ export default function ProfilePage() {
               <button
                 type="button"
                 onClick={() => setShowFavorites(false)}
+                className="w-full rounded-[12px] bg-[#0F5BD7] py-3 text-white"
+              >
+                {t("common.close")}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {showPayments ? (
+        <div
+          className="fixed inset-0 z-30 bg-black/40"
+          onClick={() => setShowPayments(false)}
+          onTouchMove={(event) => event.preventDefault()}
+        >
+          <div className="absolute bottom-0 left-0 right-0 mx-auto flex h-[78vh] max-w-[540px] flex-col overflow-hidden rounded-t-[20px] bg-white px-5 pb-6 pt-5">
+            <div className="flex h-full flex-col" onClick={(event) => event.stopPropagation()}>
+              <h3 className="text-[18px] font-bold text-[#111827]">Lịch sử thanh toán</h3>
+
+              <div
+                className="mt-5 min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain pb-3"
+                style={{ WebkitOverflowScrolling: "touch", touchAction: "pan-y" }}
+                onTouchMove={(event) => event.stopPropagation()}
+              >
+                {paymentsLoading ? <p className="py-10 text-center text-[14px] text-[#6B7280]">{t("common.loading")}</p> : null}
+
+                {!paymentsLoading && paymentItems.length === 0 ? (
+                  <div className="rounded-[18px] border border-dashed border-[#D1D5DB] px-5 py-8 text-center text-[14px] text-[#6B7280]">
+                    Chưa có giao dịch thanh toán nào.
+                  </div>
+                ) : null}
+
+                {!paymentsLoading
+                  ? paymentItems.map((item) => {
+                      const statusClass =
+                        item.status === "confirmed" || item.status === "used"
+                          ? "bg-[#ECFDF5] text-[#047857]"
+                          : item.status === "rejected"
+                            ? "bg-[#FEF2F2] text-[#B91C1C]"
+                            : "bg-[#FFF7ED] text-[#C47D00]";
+                      const dateText = item.confirmed_at || item.used_at || item.created_at;
+
+                      return (
+                        <article key={`payment-${item.id}`} className="ios-card rounded-[18px] p-4">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0">
+                              <p className="text-[15px] font-bold text-[#111827]">
+                                {item.plan_name || item.description || "Thanh toán Smart Guide"}
+                              </p>
+                              <p className="mt-1 text-[12px] font-semibold text-[#0F5BD7]">Mã: {item.code}</p>
+                            </div>
+                            <span className={`shrink-0 rounded-full px-3 py-1 text-[12px] font-bold ${statusClass}`}>
+                              {item.status_label || item.status}
+                            </span>
+                          </div>
+
+                          <div className="mt-4 grid grid-cols-2 gap-3 text-[13px]">
+                            <div className="rounded-[14px] bg-[#F3F7FF] px-3 py-3">
+                              <p className="text-[#6B7280]">Số tiền</p>
+                              <p className="mt-1 font-bold text-[#0F5BD7]">{Number(item.amount || 0).toLocaleString("vi-VN")}đ</p>
+                            </div>
+                            <div className="rounded-[14px] bg-[#F9FAFB] px-3 py-3">
+                              <p className="text-[#6B7280]">Thời điểm</p>
+                              <p className="mt-1 font-semibold text-[#111827]">{formatDateTime(dateText)}</p>
+                            </div>
+                          </div>
+
+                          {item.rejected_reason ? (
+                            <p className="mt-3 rounded-[12px] bg-[#FEF2F2] px-3 py-2 text-[13px] text-[#B91C1C]">
+                              {item.rejected_reason}
+                            </p>
+                          ) : null}
+                        </article>
+                      );
+                    })
+                  : null}
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowPayments(false)}
                 className="w-full rounded-[12px] bg-[#0F5BD7] py-3 text-white"
               >
                 {t("common.close")}

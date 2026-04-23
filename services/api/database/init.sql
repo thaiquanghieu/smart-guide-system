@@ -250,18 +250,33 @@ CREATE TABLE subscriptions (
 -- =========================
 CREATE TABLE payments (
     id SERIAL PRIMARY KEY,
-    device_id INT NOT NULL,
-    plan_id INT NOT NULL,
+    device_id INT,
+    plan_id INT,
+    owner_id INT,
+    poi_id text,
+    payer_type text DEFAULT 'device' CHECK (payer_type IN ('device', 'seller', 'admin')),
+    payment_type text DEFAULT 'user_plan' CHECK (payment_type IN ('user_plan', 'poi_upgrade', 'qr_topup')),
+    amount integer DEFAULT 0,
+    status text DEFAULT 'pending' CHECK (status IN ('pending', 'submitted', 'confirmed', 'rejected', 'used')),
+    description text,
     code VARCHAR(100) UNIQUE,
     is_used BOOLEAN DEFAULT FALSE,
     created_at timestamptz DEFAULT NOW(),
     used_at timestamptz,
+    confirmed_at timestamptz,
+    rejected_reason text,
 
     CONSTRAINT fk_pay_device
     FOREIGN KEY (device_id) REFERENCES devices(id) ON DELETE CASCADE,
 
     CONSTRAINT fk_pay_plan
-    FOREIGN KEY (plan_id) REFERENCES plans(id)
+    FOREIGN KEY (plan_id) REFERENCES plans(id),
+
+    CONSTRAINT fk_pay_owner
+    FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE SET NULL,
+
+    CONSTRAINT fk_pay_poi
+    FOREIGN KEY (poi_id) REFERENCES pois(id) ON DELETE SET NULL
 );
 
 -- =========================
