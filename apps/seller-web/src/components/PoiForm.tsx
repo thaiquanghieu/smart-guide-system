@@ -500,7 +500,9 @@ export default function PoiForm({ mode, initialValue, poiId, onDone }: Props) {
       }
       setTimeout(onDone, 500)
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Lưu POI thất bại')
+      const message = err.response?.data?.message || 'Lưu POI thất bại'
+      const detail = err.response?.data?.detail
+      setError(detail ? `${message} Chi tiết: ${detail}` : message)
     } finally {
       setLoading(false)
     }

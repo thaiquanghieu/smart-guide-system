@@ -21,11 +21,16 @@ ALTER TABLE audio_guides
   ADD COLUMN IF NOT EXISTS audio_url text,
   ADD COLUMN IF NOT EXISTS approval_status text DEFAULT 'pending',
   ADD COLUMN IF NOT EXISTS rejected_reason text,
+  ADD COLUMN IF NOT EXISTS created_at timestamptz DEFAULT now(),
   ADD COLUMN IF NOT EXISTS updated_at timestamptz DEFAULT now();
 
 UPDATE audio_guides
 SET approval_status = 'approved'
 WHERE approval_status IS NULL OR approval_status = 'pending';
+
+ALTER TABLE poi_translations
+  ADD COLUMN IF NOT EXISTS created_at timestamptz DEFAULT now(),
+  ADD COLUMN IF NOT EXISTS updated_at timestamptz DEFAULT now();
 
 ALTER TABLE qr_entries
   DROP CONSTRAINT IF EXISTS qr_entries_status_check;
