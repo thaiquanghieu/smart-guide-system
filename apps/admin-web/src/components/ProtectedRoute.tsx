@@ -1,4 +1,4 @@
-import { useEffect, ReactNode } from 'react'
+import { useEffect, ReactNode, useState } from 'react'
 import { useRouter } from 'next/router'
 import { useAdminStore } from '@/lib/store'
 
@@ -9,14 +9,26 @@ interface ProtectedRouteProps {
 export default function ProtectedRoute({ children }: ProtectedRouteProps) {
   const router = useRouter()
   const { isAuthenticated } = useAdminStore()
+  const [mounted, setMounted] = useState(false)
+  const [hasAdminId, setHasAdminId] = useState(false)
 
   useEffect(() => {
-    if (!isAuthenticated && !localStorage.getItem('adminId')) {
+    setMounted(true)
+    setHasAdminId(typeof window !== 'undefined' && !!localStorage.getItem('adminId'))
+  }, [])
+
+  useEffect(() => {
+    if (!mounted) return
+    if (!isAuthenticated && !hasAdminId) {
       router.push('/auth/login')
     }
-  }, [isAuthenticated, router])
+  }, [hasAdminId, isAuthenticated, mounted, router])
 
-  if (!isAuthenticated && !localStorage.getItem('adminId')) {
+  if (!mounted) {
+    return null
+  }
+
+  if (!isAuthenticated && !hasAdminId) {
     return null
   }
 

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import ProtectedRoute from '@/components/ProtectedRoute'
 import Sidebar from '@/components/Sidebar'
 import apiClient from '@/lib/api'
-import { Copy, Eye, PauseCircle, PlayCircle, Plus, Printer, QrCode, RefreshCw } from 'lucide-react'
+import { Copy, Eye, History, PauseCircle, PlayCircle, Plus, Printer, QrCode, RefreshCw, Trash2 } from 'lucide-react'
 
 type PoiOption = {
   id: string
@@ -19,7 +19,6 @@ type QrEntry = {
   usedScans: number
   remaining_scans: number
   status: 'active' | 'inactive' | 'expired'
-  expiresAt?: string | null
   createdAt: string
   updatedAt: string
   last_scanned_at?: string | null
@@ -28,6 +27,11 @@ type QrEntry = {
 
 type QrLog = {
   id: number
+  qrEntryId?: number | null
+  entry_code: string
+  qr_name: string
+  poi_id?: string | null
+  poi_name: string
   code: string
   scannedAt: string
   scanStatus: string
@@ -35,7 +39,80 @@ type QrLog = {
   device_label: string
 }
 
-const PWA_URL_STORAGE_KEY = 'seller_qr_pwa_url'
+const FIXED_PWA_URL = (process.env.NEXT_PUBLIC_PWA_URL || 'https://smart-guide-system.vercel.app').replace(/\/$/, '')
+
+type SortMode =
+  | 'updated_desc'
+  | 'updated_asc'
+  | 'remaining_desc'
+  | 'remaining_asc'
+  | 'used_desc'
+  | 'used_asc'
+  | 'name_asc'
+  | 'name_desc'
+
+const scanStatusLabel: Record<string, string> = {
+  granted: 'Được tặng nghe miễn phí',
+  subscription_active: 'Đã có gói còn hạn',
+  quota_exceeded: 'QR đã hết lượt',
+  free_already_used: 'Thiết bị đã dùng lượt free',
+  duplicate_fingerprint: 'Thiết bị đã dùng lượt free',
+  duplicate_device: 'Thiết bị đã quét trước đó',
+}
+
+const statusLabel: Record<string, string> = {
+  active: 'Đang hoạt động',
+  inactive: 'Đã ẩn',
+  expired: 'Hết lượt',
+}
+
+function formatDate(value?: string | null) {
+  return value ? new Date(value).toLocaleString('vi-VN') : 'Chưa có'
+}
+
+function getQrUrl(entryCode: string) {
+  return `${FIXED_PWA_URL}/qr/${entryCode}`
+}
+
+function getQrImageUrl(entryCode: string) {
+  return `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(getQrUrl(entryCode))}`
+}
+
+function printSingleQr(entry: QrEntry) {
+  const qrUrl = getQrUrl(entry.entryCode)
+  const imageUrl = getQrImageUrl(entry.entryCode)
+  const popup = window.open('', '_blank', 'width=720,height=900')
+  if (!popup) return
+
+  popup.document.write(`
+    <html>
+      <head>
+        <title>In QR - ${entry.name}</title>
+        <style>
+          body { font-family: Arial, sans-serif; margin: 0; padding: 32px; text-align: center; }
+          .sheet { display: inline-block; border: 1px solid #d9e0ea; border-radius: 24px; padding: 28px; }
+          .qr-box { display: inline-flex; align-items: center; justify-content: center; background: #fff; padding: 16px; border-radius: 20px; border: 1px solid #d9e0ea; }
+          .title { margin: 18px 0 6px; font-size: 28px; font-weight: 700; }
+          .poi { color: #475569; margin-bottom: 16px; }
+          .code { margin-top: 12px; font-size: 14px; color: #334155; letter-spacing: 0.08em; }
+          .url { margin-top: 8px; font-size: 14px; color: #0f5bd7; word-break: break-all; }
+        </style>
+      </head>
+      <body>
+        <div class="sheet">
+          <div class="qr-box"><img src="${imageUrl}" width="220" height="220" /></div>
+          <div class="title">${entry.name}</div>
+          <div class="poi">${entry.poi_name}</div>
+          <div class="code">${entry.entryCode}</div>
+          <div class="url">${qrUrl}</div>
+        </div>
+      </body>
+    </html>
+  `)
+  popup.document.close()
+  popup.focus()
+  popup.print()
+}
 
 export default function SellerQrPage() {
   const [pois, setPois] = useState<PoiOption[]>([])
@@ -45,60 +122,39 @@ export default function SellerQrPage() {
   const [showLogsFor, setShowLogsFor] = useState<QrEntry | null>(null)
   const [logs, setLogs] = useState<QrLog[]>([])
   const [logsLoading, setLogsLoading] = useState(false)
+  const [showAllLogs, setShowAllLogs] = useState(false)
+  const [allLogs, setAllLogs] = useState<QrLog[]>([])
+  const [allLogsLoading, setAllLogsLoading] = useState(false)
   const [filter, setFilter] = useState<'all' | 'active' | 'inactive' | 'expired'>('all')
-  const [sortBy, setSortBy] = useState<'updated' | 'remaining' | 'used' | 'name'>('updated')
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
-  const [logFilter, setLogFilter] = useState<'all' | 'granted' | 'duplicate_device' | 'quota_exceeded' | 'subscription_active'>('all')
+  const [sortMode, setSortMode] = useState<SortMode>('updated_desc')
+  const [logFilter, setLogFilter] = useState<'all' | 'granted' | 'free_already_used' | 'quota_exceeded' | 'subscription_active'>('all')
   const [logSort, setLogSort] = useState<'desc' | 'asc'>('desc')
   const [form, setForm] = useState({
     poiId: '',
     name: '',
     totalScans: 50,
-    expiresAt: '',
-    pwaBaseUrl: '',
   })
 
   useEffect(() => {
-    const stored = typeof window !== 'undefined' ? localStorage.getItem(PWA_URL_STORAGE_KEY) : ''
-    setForm((prev) => ({
-      ...prev,
-      pwaBaseUrl:
-        stored ||
-        (process.env.NEXT_PUBLIC_PWA_URL as string | undefined) ||
-        '',
-    }))
-    fetchData()
+    void fetchData()
   }, [])
 
   useEffect(() => {
     const interval = window.setInterval(() => {
-      fetchData()
+      void fetchData({ silent: true })
       if (showLogsFor) {
-        void openLogs(showLogsFor)
+        void openLogs(showLogsFor, true)
+      }
+      if (showAllLogs) {
+        void openAllLogs(true)
       }
     }, 10000)
 
     return () => window.clearInterval(interval)
-  }, [showLogsFor])
+  }, [showAllLogs, showLogsFor])
 
-  const isPhoneUnsafePwaUrl = useMemo(() => {
-    const value = form.pwaBaseUrl.trim().toLowerCase()
-    if (!value) return true
-    return (
-      value.includes('localhost') ||
-      value.includes('127.0.0.1') ||
-      value.includes('0.0.0.0')
-    )
-  }, [form.pwaBaseUrl])
-
-  const looksLikeApiUrl = useMemo(() => {
-    const pwaUrl = form.pwaBaseUrl.trim().replace(/\/$/, '')
-    const apiUrl = String(process.env.NEXT_PUBLIC_API_URL || '').trim().replace(/\/api$/, '').replace(/\/$/, '')
-    return !!pwaUrl && !!apiUrl && pwaUrl === apiUrl
-  }, [form.pwaBaseUrl])
-
-  const fetchData = async () => {
-    setLoading(true)
+  const fetchData = async ({ silent = false }: { silent?: boolean } = {}) => {
+    if (!silent) setLoading(true)
     try {
       const [poisResponse, qrResponse] = await Promise.all([
         apiClient.get('/owner/pois'),
@@ -108,50 +164,62 @@ export default function SellerQrPage() {
       setEntries(qrResponse.data || [])
     } catch (error) {
       console.error('Failed to load QR data:', error)
-      alert('Không tải được dữ liệu QR')
+      if (!silent) alert('Không tải được dữ liệu QR')
     } finally {
-      setLoading(false)
+      if (!silent) setLoading(false)
     }
   }
 
   const filteredEntries = useMemo(() => {
     const next = filter === 'all' ? [...entries] : entries.filter((entry) => entry.status === filter)
     next.sort((left, right) => {
-      const factor = sortOrder === 'asc' ? 1 : -1
-      if (sortBy === 'name') return left.name.localeCompare(right.name) * factor
-      if (sortBy === 'remaining') return (left.remaining_scans - right.remaining_scans) * factor
-      if (sortBy === 'used') return (left.usedScans - right.usedScans) * factor
-      return (new Date(left.updatedAt).getTime() - new Date(right.updatedAt).getTime()) * factor
+      switch (sortMode) {
+        case 'updated_asc':
+          return new Date(left.updatedAt).getTime() - new Date(right.updatedAt).getTime()
+        case 'remaining_desc':
+          return right.remaining_scans - left.remaining_scans
+        case 'remaining_asc':
+          return left.remaining_scans - right.remaining_scans
+        case 'used_desc':
+          return right.usedScans - left.usedScans
+        case 'used_asc':
+          return left.usedScans - right.usedScans
+        case 'name_asc':
+          return left.name.localeCompare(right.name)
+        case 'name_desc':
+          return right.name.localeCompare(left.name)
+        default:
+          return new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime()
+      }
     })
     return next
-  }, [entries, filter, sortBy, sortOrder])
+  }, [entries, filter, sortMode])
 
   const filteredLogs = useMemo(() => {
-    const next = logFilter === 'all' ? [...logs] : logs.filter((log) => log.scanStatus === logFilter)
+    const source = showAllLogs ? allLogs : logs
+    const next = logFilter === 'all' ? [...source] : source.filter((log) => log.scanStatus === logFilter)
     next.sort((left, right) => {
       const diff = new Date(left.scannedAt).getTime() - new Date(right.scannedAt).getTime()
       return logSort === 'asc' ? diff : -diff
     })
     return next
-  }, [logFilter, logSort, logs])
+  }, [allLogs, logFilter, logSort, logs, showAllLogs])
 
   const handleCreate = async () => {
-    if (!form.poiId || !form.pwaBaseUrl.trim()) {
-      alert('Vui lòng chọn POI và nhập PWA URL')
+    if (!form.poiId) {
+      alert('Vui lòng chọn POI')
       return
     }
 
     setSubmitting(true)
     try {
-      localStorage.setItem(PWA_URL_STORAGE_KEY, form.pwaBaseUrl.trim())
       await apiClient.post('/owner/qr', {
         poiId: form.poiId,
         name: form.name,
         totalScans: Number(form.totalScans),
-        expiresAt: form.expiresAt ? new Date(form.expiresAt).toISOString() : null,
-        baseUrl: form.pwaBaseUrl.trim(),
+        baseUrl: FIXED_PWA_URL,
       })
-      setForm((prev) => ({ ...prev, poiId: '', name: '', totalScans: 50, expiresAt: '' }))
+      setForm({ poiId: '', name: '', totalScans: 50 })
       await fetchData()
       alert('Tạo QR thành công')
     } catch (error: any) {
@@ -168,9 +236,9 @@ export default function SellerQrPage() {
 
     try {
       await apiClient.put(`/owner/qr/${entry.id}/topup`, { additionalScans })
-      await fetchData()
+      await fetchData({ silent: true })
     } catch (error: any) {
-      alert(error?.response?.data?.message || 'Gia hạn lượt thất bại')
+      alert(error?.response?.data?.message || 'Cộng thêm lượt thất bại')
     }
   }
 
@@ -178,56 +246,90 @@ export default function SellerQrPage() {
     const status = entry.status === 'active' ? 'inactive' : 'active'
     try {
       await apiClient.put(`/owner/qr/${entry.id}/status`, { status })
-      await fetchData()
+      await fetchData({ silent: true })
     } catch (error: any) {
       alert(error?.response?.data?.message || 'Cập nhật trạng thái thất bại')
     }
   }
 
-  const openLogs = async (entry: QrEntry) => {
+  const handleDelete = async (entry: QrEntry) => {
+    const confirmed = window.confirm(`Ẩn QR "${entry.name}"? QR sẽ không quét được nữa.`)
+    if (!confirmed) return
+
+    try {
+      await apiClient.delete(`/owner/qr/${entry.id}`)
+      if (showLogsFor?.id === entry.id) setShowLogsFor(null)
+      await fetchData({ silent: true })
+    } catch (error: any) {
+      alert(error?.response?.data?.message || 'Ẩn QR thất bại')
+    }
+  }
+
+  const openLogs = async (entry: QrEntry, silent = false) => {
+    setShowAllLogs(false)
     setShowLogsFor(entry)
-    setLogsLoading(true)
+    if (!silent) setLogsLoading(true)
     try {
       const response = await apiClient.get(`/owner/qr/${entry.id}/logs`)
       setLogs(response.data || [])
     } catch (error) {
       console.error('Failed to fetch logs', error)
-      alert('Không tải được lịch sử quét')
+      if (!silent) alert('Không tải được lịch sử quét')
     } finally {
-      setLogsLoading(false)
+      if (!silent) setLogsLoading(false)
     }
   }
 
-  const formatDate = (value?: string | null) =>
-    value ? new Date(value).toLocaleString('vi-VN') : 'Chưa có'
-
-  const getQrUrl = (entryCode: string) => `${form.pwaBaseUrl.trim().replace(/\/$/, '')}/qr/${entryCode}`
-  const getQrImageUrl = (entryCode: string) =>
-    `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(getQrUrl(entryCode))}`
+  const openAllLogs = async (silent = false) => {
+    setShowLogsFor(null)
+    setShowAllLogs(true)
+    if (!silent) setAllLogsLoading(true)
+    try {
+      const response = await apiClient.get('/owner/qr/logs')
+      setAllLogs(response.data || [])
+    } catch (error) {
+      console.error('Failed to fetch all logs', error)
+      if (!silent) alert('Không tải được lịch sử quét tổng')
+    } finally {
+      if (!silent) setAllLogsLoading(false)
+    }
+  }
 
   return (
     <ProtectedRoute>
-      <div className="flex bg-dark min-h-screen">
+      <div className="flex min-h-screen bg-dark">
         <Sidebar />
-        <main className="flex-1 p-8">
-          <div className="max-w-7xl space-y-8">
-            <div className="flex items-center justify-between">
+        <main className="flex-1 p-6">
+          <div className="mx-auto max-w-7xl space-y-6">
+            <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
                 <h1 className="text-4xl font-bold text-white">QR cho POI</h1>
-                <p className="mt-2 text-gray-400">Tạo QR cho từng POI, quản lý số lượt quét miễn phí, in mã và xem lịch sử quét.</p>
+                <p className="mt-2 text-gray-400">Mỗi QR gắn với một POI. Mỗi thiết bị chỉ được tặng nghe miễn phí một lần duy nhất trên toàn hệ thống.</p>
               </div>
-              <button
-                onClick={fetchData}
-                className="inline-flex items-center gap-2 rounded-lg bg-secondary px-4 py-2 text-white hover:bg-secondary/80"
-              >
-                <RefreshCw size={18} />
-                Làm mới
-              </button>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => openAllLogs()}
+                  className="inline-flex items-center gap-2 rounded-lg bg-primary/15 px-4 py-2 text-primary hover:bg-primary/25"
+                >
+                  <History size={18} />
+                  Xem toàn bộ lịch sử
+                </button>
+                <button
+                  onClick={() => fetchData()}
+                  className="inline-flex items-center gap-2 rounded-lg bg-secondary px-4 py-2 text-white hover:bg-secondary/80"
+                >
+                  <RefreshCw size={18} />
+                  Làm mới
+                </button>
+              </div>
             </div>
 
-            <section className="rounded-xl border border-gray-700 bg-secondary p-6">
-              <h2 className="mb-4 text-xl font-bold text-white">Tạo QR mới</h2>
-              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+            <section className="rounded-xl border border-gray-700 bg-secondary p-5">
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <h2 className="text-xl font-bold text-white">Tạo QR mới</h2>
+                <p className="text-sm text-emerald-300">Link quét cố định: {FIXED_PWA_URL}</p>
+              </div>
+              <div className="grid gap-3 md:grid-cols-[1.2fr,1fr,0.7fr,auto]">
                 <select
                   value={form.poiId}
                   onChange={(event) => setForm((prev) => ({ ...prev, poiId: event.target.value }))}
@@ -244,7 +346,7 @@ export default function SellerQrPage() {
                 <input
                   value={form.name}
                   onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
-                  placeholder="Tên QR"
+                  placeholder="Tên QR hiển thị"
                   className="rounded-lg border border-gray-700 bg-dark px-4 py-3 text-white placeholder:text-gray-500"
                 />
 
@@ -257,13 +359,6 @@ export default function SellerQrPage() {
                   className="rounded-lg border border-gray-700 bg-dark px-4 py-3 text-white"
                 />
 
-                <input
-                  type="datetime-local"
-                  value={form.expiresAt}
-                  onChange={(event) => setForm((prev) => ({ ...prev, expiresAt: event.target.value }))}
-                  className="rounded-lg border border-gray-700 bg-dark px-4 py-3 text-white"
-                />
-
                 <button
                   onClick={handleCreate}
                   disabled={submitting}
@@ -273,31 +368,9 @@ export default function SellerQrPage() {
                   {submitting ? 'Đang tạo...' : 'Tạo QR'}
                 </button>
               </div>
-
-              <div className="mt-4">
-                <input
-                  value={form.pwaBaseUrl}
-                  onChange={(event) => setForm((prev) => ({ ...prev, pwaBaseUrl: event.target.value }))}
-                  placeholder="PWA URL, ví dụ https://abc.ngrok-free.app"
-                  className="w-full rounded-lg border border-gray-700 bg-dark px-4 py-3 text-white placeholder:text-gray-500"
-                />
-                {isPhoneUnsafePwaUrl ? (
-                  <p className="mt-2 text-sm text-amber-300">
-                    PWA URL hiện chưa dùng được cho điện thoại. Hãy nhập link public của web app, ví dụ link ngrok của cổng 3002.
-                  </p>
-                ) : looksLikeApiUrl ? (
-                  <p className="mt-2 text-sm text-amber-300">
-                    Link này đang giống link API. QR cần trỏ tới web app PWA, không phải backend API.
-                  </p>
-                ) : (
-                  <p className="mt-2 text-sm text-emerald-300">
-                    QR sẽ mở bằng link này trên điện thoại: {form.pwaBaseUrl.trim().replace(/\/$/, '')}
-                  </p>
-                )}
-              </div>
             </section>
 
-            <section className="rounded-xl border border-gray-700 bg-secondary p-6">
+            <section className="rounded-xl border border-gray-700 bg-secondary p-5">
               <div className="mb-4 flex flex-wrap items-center gap-3">
                 <select
                   value={filter}
@@ -306,28 +379,23 @@ export default function SellerQrPage() {
                 >
                   <option value="all">Tất cả trạng thái</option>
                   <option value="active">Đang hoạt động</option>
-                  <option value="inactive">Tạm ngưng</option>
-                  <option value="expired">Hết hạn</option>
+                  <option value="inactive">Đã ẩn</option>
+                  <option value="expired">Hết lượt</option>
                 </select>
 
                 <select
-                  value={sortBy}
-                  onChange={(event) => setSortBy(event.target.value as any)}
+                  value={sortMode}
+                  onChange={(event) => setSortMode(event.target.value as SortMode)}
                   className="rounded-lg border border-gray-700 bg-dark px-4 py-2 text-white"
                 >
-                  <option value="updated">Mới cập nhật</option>
-                  <option value="remaining">Lượt còn lại</option>
-                  <option value="used">Lượt đã dùng</option>
-                  <option value="name">Tên QR</option>
-                </select>
-
-                <select
-                  value={sortOrder}
-                  onChange={(event) => setSortOrder(event.target.value as any)}
-                  className="rounded-lg border border-gray-700 bg-dark px-4 py-2 text-white"
-                >
-                  <option value="desc">Giảm dần</option>
-                  <option value="asc">Tăng dần</option>
+                  <option value="updated_desc">Mới cập nhật nhất</option>
+                  <option value="updated_asc">Mới cập nhật cũ nhất</option>
+                  <option value="remaining_desc">Lượt còn lại nhiều nhất</option>
+                  <option value="remaining_asc">Lượt còn lại ít nhất</option>
+                  <option value="used_desc">Lượt đã dùng nhiều nhất</option>
+                  <option value="used_asc">Lượt đã dùng ít nhất</option>
+                  <option value="name_asc">Tên A đến Z</option>
+                  <option value="name_desc">Tên Z đến A</option>
                 </select>
               </div>
 
@@ -340,17 +408,21 @@ export default function SellerQrPage() {
               ) : (
                 <div className="grid gap-4 xl:grid-cols-2">
                   {filteredEntries.map((entry) => (
-                    <div key={entry.id} className="rounded-xl border border-gray-700 bg-dark/50 p-5">
-                      <div className="grid gap-5 lg:grid-cols-[220px,1fr]">
-                        <div className="rounded-xl bg-white p-4 text-center">
-                          <img src={getQrImageUrl(entry.entryCode)} alt={entry.name} className="mx-auto h-[180px] w-[180px]" />
-                          <p className="mt-3 text-xs font-semibold text-gray-700">{entry.entryCode}</p>
+                    <div key={entry.id} className="rounded-xl border border-gray-700 bg-dark/50 p-4">
+                      <div className="grid gap-4 lg:grid-cols-[170px,1fr]">
+                        <div className="flex flex-col items-center gap-3">
+                          <div className="inline-flex w-fit rounded-2xl bg-white p-3 shadow-sm">
+                            <img src={getQrImageUrl(entry.entryCode)} alt={entry.name} className="h-[148px] w-[148px]" />
+                          </div>
+                          <div className="text-center">
+                            <p className="text-xs font-semibold tracking-[0.18em] text-gray-300">{entry.entryCode}</p>
+                          </div>
                         </div>
 
                         <div className="space-y-3">
                           <div className="flex items-start justify-between gap-3">
                             <div>
-                              <h3 className="text-xl font-bold text-white">{entry.name}</h3>
+                              <h3 className="text-lg font-bold text-white">{entry.name}</h3>
                               <p className="mt-1 text-sm text-gray-400">{entry.poi_name}</p>
                             </div>
                             <span
@@ -362,11 +434,11 @@ export default function SellerQrPage() {
                                   : 'bg-gray-500/15 text-gray-300'
                               }`}
                             >
-                              {entry.status}
+                              {statusLabel[entry.status] || entry.status}
                             </span>
                           </div>
 
-                          <div className="grid grid-cols-3 gap-3 text-sm">
+                          <div className="grid grid-cols-3 gap-2 text-sm">
                             <div className="rounded-lg bg-secondary p-3">
                               <p className="text-gray-400">Tổng lượt</p>
                               <p className="mt-1 text-lg font-bold text-white">{entry.totalScans}</p>
@@ -381,13 +453,12 @@ export default function SellerQrPage() {
                             </div>
                           </div>
 
-                          <div className="space-y-1 text-sm text-gray-300">
-                            <p>Hết hạn: <span className="text-white">{formatDate(entry.expiresAt)}</span></p>
+                          <div className="grid gap-1 text-sm text-gray-300 sm:grid-cols-2">
                             <p>Lần quét gần nhất: <span className="text-white">{formatDate(entry.last_scanned_at)}</span></p>
-                            <p>Tổng log quét: <span className="text-white">{entry.total_logs}</span></p>
+                            <p>Tổng lượt quét ghi log: <span className="text-white">{entry.total_logs}</span></p>
                           </div>
 
-                          <div className="grid gap-2 sm:grid-cols-2">
+                          <div className="grid gap-2 sm:grid-cols-3">
                             <button
                               onClick={() => navigator.clipboard.writeText(getQrUrl(entry.entryCode))}
                               className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary/15 px-4 py-2 text-primary hover:bg-primary/25"
@@ -400,14 +471,21 @@ export default function SellerQrPage() {
                               className="inline-flex items-center justify-center gap-2 rounded-lg bg-secondary px-4 py-2 text-white hover:bg-secondary/80"
                             >
                               <Eye size={16} />
-                              Mở thử QR
+                              Mở thử
+                            </button>
+                            <button
+                              onClick={() => printSingleQr(entry)}
+                              className="inline-flex items-center justify-center gap-2 rounded-lg bg-secondary px-4 py-2 text-white hover:bg-secondary/80"
+                            >
+                              <Printer size={16} />
+                              In QR
                             </button>
                             <button
                               onClick={() => handleTopup(entry)}
                               className="inline-flex items-center justify-center gap-2 rounded-lg bg-yellow-500/15 px-4 py-2 text-yellow-400 hover:bg-yellow-500/25"
                             >
                               <Plus size={16} />
-                              Gia hạn lượt
+                              Cộng lượt
                             </button>
                             <button
                               onClick={() => handleStatusToggle(entry)}
@@ -417,18 +495,18 @@ export default function SellerQrPage() {
                               {entry.status === 'active' ? 'Tạm ngưng' : 'Kích hoạt'}
                             </button>
                             <button
-                              onClick={() => window.print()}
-                              className="inline-flex items-center justify-center gap-2 rounded-lg bg-secondary px-4 py-2 text-white hover:bg-secondary/80"
+                              onClick={() => handleDelete(entry)}
+                              className="inline-flex items-center justify-center gap-2 rounded-lg bg-red-500/15 px-4 py-2 text-red-300 hover:bg-red-500/25"
                             >
-                              <Printer size={16} />
-                              In QR
+                              <Trash2 size={16} />
+                              Ẩn QR
                             </button>
                             <button
                               onClick={() => openLogs(entry)}
-                              className="inline-flex items-center justify-center gap-2 rounded-lg bg-secondary px-4 py-2 text-white hover:bg-secondary/80"
+                              className="sm:col-span-3 inline-flex items-center justify-center gap-2 rounded-lg bg-secondary px-4 py-2 text-white hover:bg-secondary/80"
                             >
                               <QrCode size={16} />
-                              Lịch sử quét
+                              Xem lịch sử của QR này
                             </button>
                           </div>
                         </div>
@@ -440,15 +518,27 @@ export default function SellerQrPage() {
             </section>
           </div>
 
-          {showLogsFor ? (
+          {(showLogsFor || showAllLogs) ? (
             <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/70 p-4">
-              <div className="w-full max-w-4xl rounded-xl border border-gray-700 bg-secondary p-6">
+              <div className="w-full max-w-6xl rounded-xl border border-gray-700 bg-secondary p-6">
                 <div className="mb-4 flex items-center justify-between">
                   <div>
-                    <h2 className="text-2xl font-bold text-white">Lịch sử quét</h2>
-                    <p className="text-sm text-gray-400">{showLogsFor.name}</p>
+                    <h2 className="text-2xl font-bold text-white">
+                      {showAllLogs ? 'Toàn bộ lịch sử quét' : 'Lịch sử quét của QR'}
+                    </h2>
+                    <p className="text-sm text-gray-400">
+                      {showAllLogs ? 'Danh sách tất cả lượt quét của seller' : showLogsFor?.name}
+                    </p>
                   </div>
-                  <button onClick={() => setShowLogsFor(null)} className="rounded-lg bg-dark px-4 py-2 text-white">Đóng</button>
+                  <button
+                    onClick={() => {
+                      setShowLogsFor(null)
+                      setShowAllLogs(false)
+                    }}
+                    className="rounded-lg bg-dark px-4 py-2 text-white"
+                  >
+                    Đóng
+                  </button>
                 </div>
 
                 <div className="mb-4 flex flex-wrap gap-3">
@@ -458,29 +548,31 @@ export default function SellerQrPage() {
                     className="rounded-lg border border-gray-700 bg-dark px-4 py-2 text-white"
                   >
                     <option value="all">Tất cả trạng thái</option>
-                    <option value="granted">Được cấp free</option>
-                    <option value="duplicate_device">Thiết bị đã quét</option>
-                    <option value="quota_exceeded">Hết lượt</option>
-                    <option value="subscription_active">Thiết bị đã có gói</option>
+                    <option value="granted">Được tặng nghe miễn phí</option>
+                    <option value="free_already_used">Thiết bị đã dùng free trước đó</option>
+                    <option value="subscription_active">Đã có gói còn hạn</option>
+                    <option value="quota_exceeded">QR đã hết lượt</option>
                   </select>
                   <select
                     value={logSort}
                     onChange={(event) => setLogSort(event.target.value as any)}
                     className="rounded-lg border border-gray-700 bg-dark px-4 py-2 text-white"
                   >
-                    <option value="desc">Mới nhất</option>
-                    <option value="asc">Cũ nhất</option>
+                    <option value="desc">Mới nhất trước</option>
+                    <option value="asc">Cũ nhất trước</option>
                   </select>
                 </div>
 
-                {logsLoading ? (
+                {(showAllLogs ? allLogsLoading : logsLoading) ? (
                   <div className="py-12 text-center text-gray-400">Đang tải log...</div>
                 ) : (
-                  <div className="max-h-[60vh] overflow-auto rounded-lg border border-gray-700">
+                  <div className="max-h-[65vh] overflow-auto rounded-lg border border-gray-700">
                     <table className="min-w-full text-sm">
                       <thead className="bg-dark/80 text-left text-gray-300">
                         <tr>
                           <th className="px-4 py-3">Thời gian</th>
+                          {showAllLogs ? <th className="px-4 py-3">QR</th> : null}
+                          <th className="px-4 py-3">POI</th>
                           <th className="px-4 py-3">Thiết bị</th>
                           <th className="px-4 py-3">Trạng thái</th>
                           <th className="px-4 py-3">Free listen</th>
@@ -490,14 +582,21 @@ export default function SellerQrPage() {
                         {filteredLogs.map((log) => (
                           <tr key={log.id} className="border-t border-gray-700 text-gray-200">
                             <td className="px-4 py-3">{formatDate(log.scannedAt)}</td>
+                            {showAllLogs ? (
+                              <td className="px-4 py-3">
+                                <div className="font-medium text-white">{log.qr_name}</div>
+                                <div className="text-xs text-gray-400">{log.entry_code}</div>
+                              </td>
+                            ) : null}
+                            <td className="px-4 py-3">{log.poi_name || '-'}</td>
                             <td className="px-4 py-3">{log.device_label}</td>
-                            <td className="px-4 py-3">{log.scanStatus}</td>
+                            <td className="px-4 py-3">{scanStatusLabel[log.scanStatus] || log.scanStatus}</td>
                             <td className="px-4 py-3">{log.grantedFreeListen ? 'Có' : 'Không'}</td>
                           </tr>
                         ))}
                         {!filteredLogs.length ? (
                           <tr>
-                            <td colSpan={4} className="px-4 py-8 text-center text-gray-400">Chưa có log phù hợp</td>
+                            <td colSpan={showAllLogs ? 6 : 5} className="px-4 py-8 text-center text-gray-400">Chưa có log phù hợp</td>
                           </tr>
                         ) : null}
                       </tbody>

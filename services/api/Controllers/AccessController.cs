@@ -9,7 +9,6 @@ namespace SmartGuideAPI.Controllers;
 [Route("api/[controller]")]
 public class AccessController : ControllerBase
 {
-    private static readonly TimeSpan EntryGrantCooldown = TimeSpan.FromHours(24);
     private static readonly TimeSpan EntryGrantExpiry = TimeSpan.FromHours(24);
 
     private readonly AppDbContext _db;
@@ -50,6 +49,22 @@ public class AccessController : ControllerBase
         return await _db.Subscriptions.AnyAsync(x => x.DeviceId == deviceId && x.ExpireAt > now);
     }
 
+    private async Task<List<int>> GetSameFingerprintDeviceIdsAsync(Device device)
+    {
+        var currentFingerprint = ExtractFingerprint(device.Metadata);
+        if (string.IsNullOrWhiteSpace(currentFingerprint))
+            return new List<int> { device.Id };
+
+        var matchingDeviceIds = await _db.Devices
+            .Where(x => x.Platform == device.Platform)
+            .ToListAsync();
+
+        return matchingDeviceIds
+            .Where(x => ExtractFingerprint(x.Metadata) == currentFingerprint)
+            .Select(x => x.Id)
+            .ToList();
+    }
+
     [HttpPost("entry")]
     public async Task<IActionResult> RegisterEntry([FromBody] EntryAccessRequest request)
     {
@@ -74,105 +89,8 @@ public class AccessController : ControllerBase
         if (qrEntry.Status != "active")
             return BadRequest(new { message = "QR hiện không khả dụng" });
 
-        if (qrEntry.ExpiresAt.HasValue && qrEntry.ExpiresAt.Value <= now)
-        {
-            qrEntry.Status = "expired";
-            await _db.SaveChangesAsync();
-            return BadRequest(new { message = "QR đã hết hạn" });
-        }
-
         var poiId = !string.IsNullOrWhiteSpace(request.PoiId) ? request.PoiId.Trim() : qrEntry.PoiId;
-        var currentFingerprint = ExtractFingerprint(device.Metadata);
-
-        if (!string.IsNullOrWhiteSpace(currentFingerprint))
-        {
-            var matchingDeviceIds = await _db.Devices
-                .Where(x => x.Platform == device.Platform)
-                .ToListAsync();
-
-            var sameFingerprintDeviceIds = matchingDeviceIds
-                .Where(x => ExtractFingerprint(x.Metadata) == currentFingerprint)
-                .Select(x => x.Id)
-                .ToList();
-
-            var fingerprintAlreadyUsed = await _db.DeviceEntryGrants.AnyAsync(x =>
-                x.QrEntryId == qrEntry.Id &&
-                sameFingerprintDeviceIds.Contains(x.DeviceId));
-
-            if (fingerprintAlreadyUsed)
-            {
-                _db.QrLogs.Add(new QrLog
-                {
-                    QrEntryId = qrEntry.Id,
-                    DeviceId = request.DeviceId,
-                    PoiId = poiId,
-                    Code = normalizedCode,
-                    GrantedFreeListen = false,
-                    ScanStatus = "duplicate_fingerprint",
-                    ScannedAt = now
-                });
-                await _db.SaveChangesAsync();
-
-                return Ok(new
-                {
-                    hasActiveSubscription = false,
-                    granted = false,
-                    freePlaysRemaining = 0,
-                    poiId
-                });
-            }
-        }
-
-        if (hasActiveSubscription)
-        {
-            _db.QrLogs.Add(new QrLog
-            {
-                QrEntryId = qrEntry.Id,
-                DeviceId = request.DeviceId,
-                PoiId = poiId,
-                Code = normalizedCode,
-                GrantedFreeListen = false,
-                ScanStatus = "subscription_active",
-                ScannedAt = now
-            });
-            await _db.SaveChangesAsync();
-
-            return Ok(new
-            {
-                hasActiveSubscription = true,
-                granted = false,
-                freePlaysRemaining = 0,
-                poiId
-            });
-        }
-
-        var latestGrant = await _db.DeviceEntryGrants
-            .Where(x => x.DeviceId == request.DeviceId && x.QrEntryId == qrEntry.Id)
-            .OrderByDescending(x => x.GrantedAt)
-            .FirstOrDefaultAsync();
-
-        if (latestGrant != null && now - latestGrant.GrantedAt < EntryGrantCooldown)
-        {
-            _db.QrLogs.Add(new QrLog
-            {
-                QrEntryId = qrEntry.Id,
-                DeviceId = request.DeviceId,
-                PoiId = poiId,
-                Code = normalizedCode,
-                GrantedFreeListen = false,
-                ScanStatus = "duplicate_device",
-                ScannedAt = now
-            });
-            await _db.SaveChangesAsync();
-
-            return Ok(new
-            {
-                hasActiveSubscription = false,
-                granted = false,
-                freePlaysRemaining = Math.Max(0, latestGrant.FreePlaysTotal - latestGrant.FreePlaysUsed),
-                poiId
-            });
-        }
+        var sameFingerprintDeviceIds = await GetSameFingerprintDeviceIdsAsync(device);
 
         if (qrEntry.UsedScans >= qrEntry.TotalScans)
         {
@@ -197,6 +115,60 @@ public class AccessController : ControllerBase
             });
         }
 
+        qrEntry.UsedScans += 1;
+        qrEntry.UpdatedAt = now;
+        if (qrEntry.UsedScans >= qrEntry.TotalScans)
+            qrEntry.Status = "expired";
+
+        if (hasActiveSubscription)
+        {
+            _db.QrLogs.Add(new QrLog
+            {
+                QrEntryId = qrEntry.Id,
+                DeviceId = request.DeviceId,
+                PoiId = poiId,
+                Code = normalizedCode,
+                GrantedFreeListen = false,
+                ScanStatus = "subscription_active",
+                ScannedAt = now
+            });
+            await _db.SaveChangesAsync();
+
+            return Ok(new
+            {
+                hasActiveSubscription = true,
+                granted = false,
+                freePlaysRemaining = 0,
+                poiId
+            });
+        }
+
+        var hasUsedFreeListenBefore = await _db.DeviceEntryGrants.AnyAsync(x =>
+            sameFingerprintDeviceIds.Contains(x.DeviceId));
+
+        if (hasUsedFreeListenBefore)
+        {
+            _db.QrLogs.Add(new QrLog
+            {
+                QrEntryId = qrEntry.Id,
+                DeviceId = request.DeviceId,
+                PoiId = poiId,
+                Code = normalizedCode,
+                GrantedFreeListen = false,
+                ScanStatus = "free_already_used",
+                ScannedAt = now
+            });
+            await _db.SaveChangesAsync();
+
+            return Ok(new
+            {
+                hasActiveSubscription = false,
+                granted = false,
+                freePlaysRemaining = 0,
+                poiId
+            });
+        }
+
         var grant = new DeviceEntryGrant
         {
             QrEntryId = qrEntry.Id,
@@ -208,9 +180,6 @@ public class AccessController : ControllerBase
             GrantedAt = now,
             ExpiresAt = now.Add(EntryGrantExpiry)
         };
-
-        qrEntry.UsedScans += 1;
-        qrEntry.UpdatedAt = now;
 
         _db.DeviceEntryGrants.Add(grant);
         _db.QrLogs.Add(new QrLog

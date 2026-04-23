@@ -53,7 +53,7 @@ public class OwnerQrController : ControllerBase
             entry.TotalScans,
             entry.UsedScans,
             remaining_scans = Math.Max(0, entry.TotalScans - entry.UsedScans),
-            entry.Status,
+            Status = entry.UsedScans >= entry.TotalScans ? "expired" : entry.Status,
             entry.ExpiresAt,
             entry.CreatedAt,
             entry.UpdatedAt,
@@ -62,6 +62,48 @@ public class OwnerQrController : ControllerBase
         });
 
         return Ok(result);
+    }
+
+    [HttpGet("logs")]
+    public async Task<IActionResult> GetOwnerQrLogs([FromQuery] int ownerId)
+    {
+        var owner = await GetOwnerAsync(ownerId);
+        if (owner == null)
+            return Forbid("Chỉ owner mới có quyền truy cập");
+
+        var entries = await _db.QrEntries
+            .Where(x => x.OwnerId == ownerId)
+            .ToListAsync();
+
+        var entryIds = entries.Select(x => x.Id).ToList();
+        var poiIds = entries.Select(x => x.PoiId).Distinct().ToList();
+        var pois = await _db.Pois.Where(x => poiIds.Contains(x.Id)).ToListAsync();
+
+        var logs = await _db.QrLogs
+            .Where(x => x.QrEntryId != null && entryIds.Contains(x.QrEntryId.Value))
+            .OrderByDescending(x => x.ScannedAt)
+            .ToListAsync();
+
+        return Ok(logs.Select(log =>
+        {
+            var entry = entries.FirstOrDefault(x => x.Id == log.QrEntryId);
+            var poi = pois.FirstOrDefault(x => x.Id == log.PoiId);
+
+            return new
+            {
+                log.Id,
+                log.QrEntryId,
+                entry_code = entry?.EntryCode ?? log.Code,
+                qr_name = entry?.Name ?? log.Code,
+                poi_id = log.PoiId,
+                poi_name = poi?.Name ?? "",
+                log.Code,
+                log.ScannedAt,
+                log.ScanStatus,
+                log.GrantedFreeListen,
+                device_label = $"Thiết bị #{log.DeviceId:D4}"
+            };
+        }));
     }
 
     [HttpPost]
@@ -152,6 +194,24 @@ public class OwnerQrController : ControllerBase
         await _db.SaveChangesAsync();
 
         return Ok(new { message = "Đã cập nhật trạng thái QR" });
+    }
+
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> DeleteQrEntry(int id, [FromQuery] int ownerId)
+    {
+        var owner = await GetOwnerAsync(ownerId);
+        if (owner == null)
+            return Forbid("Chỉ owner mới có quyền truy cập");
+
+        var entry = await _db.QrEntries.FirstOrDefaultAsync(x => x.Id == id && x.OwnerId == ownerId);
+        if (entry == null)
+            return NotFound(new { message = "QR không tồn tại" });
+
+        entry.Status = "inactive";
+        entry.UpdatedAt = DateTime.UtcNow;
+        await _db.SaveChangesAsync();
+
+        return Ok(new { message = "Đã ẩn QR" });
     }
 
     [HttpGet("{id}/logs")]

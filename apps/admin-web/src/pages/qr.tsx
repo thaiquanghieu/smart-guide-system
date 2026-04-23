@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import ProtectedRoute from '@/components/ProtectedRoute'
 import Sidebar from '@/components/Sidebar'
 import apiClient from '@/lib/api'
-import { Eye, RefreshCw } from 'lucide-react'
+import { Eye, History, RefreshCw } from 'lucide-react'
 
 type QrEntry = {
   id: number
@@ -16,7 +16,6 @@ type QrEntry = {
   usedScans: number
   remaining_scans: number
   status: 'active' | 'inactive' | 'expired'
-  expiresAt?: string | null
   createdAt: string
   updatedAt: string
   total_logs: number
@@ -25,26 +24,63 @@ type QrEntry = {
 
 type QrLog = {
   id: number
-  deviceId: number
-  poiId?: string | null
+  qrEntryId?: number | null
+  owner_id?: number | null
+  owner_name: string
+  poi_id?: string | null
+  poi_name: string
+  entry_code: string
+  qr_name: string
+  device_label: string
   code: string
   scanStatus: string
   grantedFreeListen: boolean
   scannedAt: string
 }
 
+type SortMode =
+  | 'updated_desc'
+  | 'updated_asc'
+  | 'remaining_desc'
+  | 'remaining_asc'
+  | 'used_desc'
+  | 'used_asc'
+  | 'owner_asc'
+  | 'owner_desc'
+
+const scanStatusLabel: Record<string, string> = {
+  granted: 'Được tặng nghe miễn phí',
+  subscription_active: 'Đã có gói còn hạn',
+  quota_exceeded: 'QR đã hết lượt',
+  free_already_used: 'Thiết bị đã dùng free trước đó',
+  duplicate_fingerprint: 'Thiết bị đã dùng free trước đó',
+  duplicate_device: 'Thiết bị đã quét trước đó',
+}
+
+const statusLabel: Record<string, string> = {
+  active: 'Đang hoạt động',
+  inactive: 'Đã ẩn',
+  expired: 'Hết lượt',
+}
+
+function formatDate(value?: string | null) {
+  return value ? new Date(value).toLocaleString('vi-VN') : 'Chưa có'
+}
+
 export default function AdminQrPage() {
   const [entries, setEntries] = useState<QrEntry[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<'all' | 'active' | 'inactive' | 'expired'>('all')
-  const [sortBy, setSortBy] = useState<'updated' | 'remaining' | 'used' | 'owner'>('updated')
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
+  const [sortMode, setSortMode] = useState<SortMode>('updated_desc')
   const [selectedEntry, setSelectedEntry] = useState<QrEntry | null>(null)
   const [logs, setLogs] = useState<QrLog[]>([])
   const [logsLoading, setLogsLoading] = useState(false)
+  const [showAllLogs, setShowAllLogs] = useState(false)
+  const [allLogs, setAllLogs] = useState<QrLog[]>([])
+  const [allLogsLoading, setAllLogsLoading] = useState(false)
 
   useEffect(() => {
-    fetchEntries()
+    void fetchEntries()
   }, [])
 
   const fetchEntries = async () => {
@@ -63,16 +99,30 @@ export default function AdminQrPage() {
   const filteredEntries = useMemo(() => {
     const next = filter === 'all' ? [...entries] : entries.filter((entry) => entry.status === filter)
     next.sort((left, right) => {
-      const factor = sortOrder === 'asc' ? 1 : -1
-      if (sortBy === 'remaining') return (left.remaining_scans - right.remaining_scans) * factor
-      if (sortBy === 'used') return (left.usedScans - right.usedScans) * factor
-      if (sortBy === 'owner') return left.owner_name.localeCompare(right.owner_name) * factor
-      return (new Date(left.updatedAt).getTime() - new Date(right.updatedAt).getTime()) * factor
+      switch (sortMode) {
+        case 'updated_asc':
+          return new Date(left.updatedAt).getTime() - new Date(right.updatedAt).getTime()
+        case 'remaining_desc':
+          return right.remaining_scans - left.remaining_scans
+        case 'remaining_asc':
+          return left.remaining_scans - right.remaining_scans
+        case 'used_desc':
+          return right.usedScans - left.usedScans
+        case 'used_asc':
+          return left.usedScans - right.usedScans
+        case 'owner_asc':
+          return left.owner_name.localeCompare(right.owner_name)
+        case 'owner_desc':
+          return right.owner_name.localeCompare(left.owner_name)
+        default:
+          return new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime()
+      }
     })
     return next
-  }, [entries, filter, sortBy, sortOrder])
+  }, [entries, filter, sortMode])
 
   const openLogs = async (entry: QrEntry) => {
+    setShowAllLogs(false)
     setSelectedEntry(entry)
     setLogsLoading(true)
     try {
@@ -83,6 +133,21 @@ export default function AdminQrPage() {
       alert('Không tải được log QR')
     } finally {
       setLogsLoading(false)
+    }
+  }
+
+  const openAllLogs = async () => {
+    setSelectedEntry(null)
+    setShowAllLogs(true)
+    setAllLogsLoading(true)
+    try {
+      const response = await apiClient.get('/admin/qr/logs')
+      setAllLogs(response.data || [])
+    } catch (error) {
+      console.error('Failed to fetch all logs', error)
+      alert('Không tải được log tổng')
+    } finally {
+      setAllLogsLoading(false)
     }
   }
 
@@ -98,26 +163,35 @@ export default function AdminQrPage() {
     }
   }
 
-  const formatDate = (value?: string | null) => (value ? new Date(value).toLocaleString('vi-VN') : 'Chưa có')
+  const logsToRender = showAllLogs ? allLogs : logs
 
   return (
     <ProtectedRoute>
-      <div className="flex bg-dark min-h-screen">
+      <div className="flex min-h-screen bg-dark">
         <Sidebar />
         <main className="flex-1 p-8">
-          <div className="max-w-7xl space-y-8">
+          <div className="mx-auto max-w-7xl space-y-8">
             <div className="flex items-center justify-between">
               <div>
                 <h1 className="text-4xl font-bold text-white">Quản lý QR</h1>
-                <p className="mt-2 text-gray-400">Theo dõi toàn bộ QR của seller, lượt quét, trạng thái và lịch sử quét.</p>
+                <p className="mt-2 text-gray-400">Theo dõi toàn bộ QR của seller, lượt quét, trạng thái và lịch sử quét tổng.</p>
               </div>
-              <button
-                onClick={fetchEntries}
-                className="inline-flex items-center gap-2 rounded-lg bg-secondary px-4 py-2 text-white hover:bg-secondary/80"
-              >
-                <RefreshCw size={18} />
-                Làm mới
-              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={openAllLogs}
+                  className="inline-flex items-center gap-2 rounded-lg bg-primary/15 px-4 py-2 text-primary hover:bg-primary/25"
+                >
+                  <History size={18} />
+                  Xem log tổng
+                </button>
+                <button
+                  onClick={fetchEntries}
+                  className="inline-flex items-center gap-2 rounded-lg bg-secondary px-4 py-2 text-white hover:bg-secondary/80"
+                >
+                  <RefreshCw size={18} />
+                  Làm mới
+                </button>
+              </div>
             </div>
 
             <section className="rounded-xl border border-gray-700 bg-secondary p-6">
@@ -129,26 +203,22 @@ export default function AdminQrPage() {
                 >
                   <option value="all">Tất cả trạng thái</option>
                   <option value="active">Đang hoạt động</option>
-                  <option value="inactive">Tạm ngưng</option>
-                  <option value="expired">Hết hạn</option>
+                  <option value="inactive">Đã ẩn</option>
+                  <option value="expired">Hết lượt</option>
                 </select>
                 <select
-                  value={sortBy}
-                  onChange={(event) => setSortBy(event.target.value as any)}
+                  value={sortMode}
+                  onChange={(event) => setSortMode(event.target.value as SortMode)}
                   className="rounded-lg border border-gray-700 bg-dark px-4 py-2 text-white"
                 >
-                  <option value="updated">Mới cập nhật</option>
-                  <option value="remaining">Lượt còn lại</option>
-                  <option value="used">Lượt đã dùng</option>
-                  <option value="owner">Seller</option>
-                </select>
-                <select
-                  value={sortOrder}
-                  onChange={(event) => setSortOrder(event.target.value as any)}
-                  className="rounded-lg border border-gray-700 bg-dark px-4 py-2 text-white"
-                >
-                  <option value="desc">Giảm dần</option>
-                  <option value="asc">Tăng dần</option>
+                  <option value="updated_desc">Mới cập nhật nhất</option>
+                  <option value="updated_asc">Mới cập nhật cũ nhất</option>
+                  <option value="remaining_desc">Lượt còn lại nhiều nhất</option>
+                  <option value="remaining_asc">Lượt còn lại ít nhất</option>
+                  <option value="used_desc">Lượt đã dùng nhiều nhất</option>
+                  <option value="used_asc">Lượt đã dùng ít nhất</option>
+                  <option value="owner_asc">Seller A đến Z</option>
+                  <option value="owner_desc">Seller Z đến A</option>
                 </select>
               </div>
 
@@ -181,13 +251,13 @@ export default function AdminQrPage() {
                             <div>Đã dùng: {entry.usedScans}</div>
                             <div className="text-xs text-accent">Còn: {entry.remaining_scans}</div>
                           </td>
-                          <td className="px-4 py-3">{entry.status}</td>
+                          <td className="px-4 py-3">{statusLabel[entry.status] || entry.status}</td>
                           <td className="px-4 py-3">{formatDate(entry.last_scanned_at)}</td>
                           <td className="px-4 py-3">
                             <div className="flex flex-wrap gap-2">
                               <button onClick={() => openLogs(entry)} className="rounded bg-primary/20 px-3 py-1 text-primary hover:bg-primary/30">
-                                <Eye size={14} className="inline mr-1" />
-                                Log
+                                <Eye size={14} className="mr-1 inline" />
+                                Log QR
                               </button>
                               {entry.status !== 'active' ? (
                                 <button onClick={() => updateStatus(entry, 'active')} className="rounded bg-green-500/20 px-3 py-1 text-green-400 hover:bg-green-500/30">
@@ -214,44 +284,59 @@ export default function AdminQrPage() {
             </section>
           </div>
 
-          {selectedEntry ? (
+          {(selectedEntry || showAllLogs) ? (
             <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/70 p-4">
-              <div className="w-full max-w-4xl rounded-xl border border-gray-700 bg-secondary p-6">
+              <div className="w-full max-w-6xl rounded-xl border border-gray-700 bg-secondary p-6">
                 <div className="mb-4 flex items-center justify-between">
                   <div>
-                    <h2 className="text-2xl font-bold text-white">Log QR</h2>
-                    <p className="text-sm text-gray-400">{selectedEntry.name}</p>
+                    <h2 className="text-2xl font-bold text-white">{showAllLogs ? 'Toàn bộ log quét' : 'Log QR'}</h2>
+                    <p className="text-sm text-gray-400">{showAllLogs ? 'Log của toàn hệ thống QR' : selectedEntry?.name}</p>
                   </div>
-                  <button onClick={() => setSelectedEntry(null)} className="rounded-lg bg-dark px-4 py-2 text-white">Đóng</button>
+                  <button
+                    onClick={() => {
+                      setSelectedEntry(null)
+                      setShowAllLogs(false)
+                    }}
+                    className="rounded-lg bg-dark px-4 py-2 text-white"
+                  >
+                    Đóng
+                  </button>
                 </div>
 
-                {logsLoading ? (
+                {(showAllLogs ? allLogsLoading : logsLoading) ? (
                   <div className="py-12 text-center text-gray-400">Đang tải log...</div>
                 ) : (
-                  <div className="max-h-[60vh] overflow-auto rounded-lg border border-gray-700">
+                  <div className="max-h-[65vh] overflow-auto rounded-lg border border-gray-700">
                     <table className="min-w-full text-sm">
                       <thead className="bg-dark/80 text-left text-gray-300">
                         <tr>
                           <th className="px-4 py-3">Thời gian</th>
-                          <th className="px-4 py-3">Device ID</th>
+                          <th className="px-4 py-3">QR</th>
+                          <th className="px-4 py-3">Seller</th>
                           <th className="px-4 py-3">POI</th>
+                          <th className="px-4 py-3">Thiết bị</th>
                           <th className="px-4 py-3">Trạng thái</th>
                           <th className="px-4 py-3">Free listen</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {logs.map((log) => (
+                        {logsToRender.map((log) => (
                           <tr key={log.id} className="border-t border-gray-700 text-gray-100">
                             <td className="px-4 py-3">{formatDate(log.scannedAt)}</td>
-                            <td className="px-4 py-3">{log.deviceId}</td>
-                            <td className="px-4 py-3">{log.poiId || '-'}</td>
-                            <td className="px-4 py-3">{log.scanStatus}</td>
+                            <td className="px-4 py-3">
+                              <div className="font-medium text-white">{log.qr_name}</div>
+                              <div className="text-xs text-gray-400">{log.entry_code}</div>
+                            </td>
+                            <td className="px-4 py-3">{log.owner_name || '-'}</td>
+                            <td className="px-4 py-3">{log.poi_name || '-'}</td>
+                            <td className="px-4 py-3">{log.device_label}</td>
+                            <td className="px-4 py-3">{scanStatusLabel[log.scanStatus] || log.scanStatus}</td>
                             <td className="px-4 py-3">{log.grantedFreeListen ? 'Có' : 'Không'}</td>
                           </tr>
                         ))}
-                        {!logs.length ? (
+                        {!logsToRender.length ? (
                           <tr>
-                            <td colSpan={5} className="px-4 py-8 text-center text-gray-400">Chưa có log</td>
+                            <td colSpan={7} className="px-4 py-8 text-center text-gray-400">Chưa có log</td>
                           </tr>
                         ) : null}
                       </tbody>

@@ -8,6 +8,7 @@ export default function App({ Component, pageProps }: AppProps) {
   const { setAdmin } = useAdminStore()
 
   useEffect(() => {
+    if (typeof window === 'undefined') return
     const adminId = localStorage.getItem('adminId')
     if (adminId) {
       apiClient
