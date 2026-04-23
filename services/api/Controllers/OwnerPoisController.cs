@@ -256,16 +256,22 @@ public class OwnerPoisController : ControllerBase
             UpdatedAt = DateTime.UtcNow
         };
 
+        await using var transaction = await _db.Database.BeginTransactionAsync();
+
         try
         {
             _db.Pois.Add(poi);
+            await _db.SaveChangesAsync();
+
             SyncImages(poi.Id, request.Images);
             SyncTranslations(poi.Id, request.Translations);
             SyncAudios(poi.Id, request.Audios);
             await _db.SaveChangesAsync();
+            await transaction.CommitAsync();
         }
         catch (DbUpdateException exception)
         {
+            await transaction.RollbackAsync();
             return StatusCode(500, new { message = "Không lưu được POI vào DB. Kiểm tra migration/schema và dữ liệu nhập.", detail = exception.InnerException?.Message ?? exception.Message });
         }
 
