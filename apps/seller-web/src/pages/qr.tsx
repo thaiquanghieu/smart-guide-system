@@ -70,6 +70,17 @@ export default function SellerQrPage() {
     fetchData()
   }, [])
 
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      fetchData()
+      if (showLogsFor) {
+        void openLogs(showLogsFor)
+      }
+    }, 10000)
+
+    return () => window.clearInterval(interval)
+  }, [showLogsFor])
+
   const isPhoneUnsafePwaUrl = useMemo(() => {
     const value = form.pwaBaseUrl.trim().toLowerCase()
     if (!value) return true

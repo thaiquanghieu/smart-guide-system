@@ -19,6 +19,24 @@ public class AccessController : ControllerBase
         _db = db;
     }
 
+    private static string? ExtractFingerprint(string? metadata)
+    {
+        if (string.IsNullOrWhiteSpace(metadata))
+            return null;
+
+        try
+        {
+            using var document = System.Text.Json.JsonDocument.Parse(metadata);
+            if (document.RootElement.TryGetProperty("fingerprint", out var fingerprint))
+                return fingerprint.GetString();
+        }
+        catch
+        {
+        }
+
+        return null;
+    }
+
     private async Task<Device?> GetActiveDeviceAsync(int deviceId)
     {
         if (deviceId <= 0)
@@ -64,6 +82,46 @@ public class AccessController : ControllerBase
         }
 
         var poiId = !string.IsNullOrWhiteSpace(request.PoiId) ? request.PoiId.Trim() : qrEntry.PoiId;
+        var currentFingerprint = ExtractFingerprint(device.Metadata);
+
+        if (!string.IsNullOrWhiteSpace(currentFingerprint))
+        {
+            var matchingDeviceIds = await _db.Devices
+                .Where(x => x.Platform == device.Platform)
+                .ToListAsync();
+
+            var sameFingerprintDeviceIds = matchingDeviceIds
+                .Where(x => ExtractFingerprint(x.Metadata) == currentFingerprint)
+                .Select(x => x.Id)
+                .ToList();
+
+            var fingerprintAlreadyUsed = await _db.DeviceEntryGrants.AnyAsync(x =>
+                x.QrEntryId == qrEntry.Id &&
+                sameFingerprintDeviceIds.Contains(x.DeviceId));
+
+            if (fingerprintAlreadyUsed)
+            {
+                _db.QrLogs.Add(new QrLog
+                {
+                    QrEntryId = qrEntry.Id,
+                    DeviceId = request.DeviceId,
+                    PoiId = poiId,
+                    Code = normalizedCode,
+                    GrantedFreeListen = false,
+                    ScanStatus = "duplicate_fingerprint",
+                    ScannedAt = now
+                });
+                await _db.SaveChangesAsync();
+
+                return Ok(new
+                {
+                    hasActiveSubscription = false,
+                    granted = false,
+                    freePlaysRemaining = 0,
+                    poiId
+                });
+            }
+        }
 
         if (hasActiveSubscription)
         {

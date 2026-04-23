@@ -1,4 +1,4 @@
-import { useEffect, ReactNode } from 'react'
+import { useEffect, ReactNode, useState } from 'react'
 import { useRouter } from 'next/router'
 import { useAuthStore } from '@/lib/store'
 
@@ -9,14 +9,26 @@ interface ProtectedRouteProps {
 export default function ProtectedRoute({ children }: ProtectedRouteProps) {
   const router = useRouter()
   const { isAuthenticated } = useAuthStore()
+  const [mounted, setMounted] = useState(false)
+  const [hasUserId, setHasUserId] = useState(false)
 
   useEffect(() => {
-    if (!isAuthenticated && !localStorage.getItem('userId')) {
+    setMounted(true)
+    setHasUserId(typeof window !== 'undefined' && !!localStorage.getItem('userId'))
+  }, [])
+
+  useEffect(() => {
+    if (!mounted) return
+    if (!isAuthenticated && !hasUserId) {
       router.push('/auth/login')
     }
-  }, [isAuthenticated, router])
+  }, [hasUserId, isAuthenticated, mounted, router])
 
-  if (!isAuthenticated && !localStorage.getItem('userId')) {
+  if (!mounted) {
+    return null
+  }
+
+  if (!isAuthenticated && !hasUserId) {
     return null
   }
 
