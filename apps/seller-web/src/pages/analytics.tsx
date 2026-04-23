@@ -8,6 +8,9 @@ interface Analytics {
   total_pois: number
   total_listens: number
   avg_duration_seconds: number
+  pending_pois: number
+  approved_pois: number
+  rejected_pois: number
   top_pois: Array<{ id: string; name: string; listened_count: number }>
 }
 
@@ -63,14 +66,14 @@ export default function Analytics() {
                   <div className="bg-secondary border border-gray-700 rounded-lg p-6">
                     <div className="flex justify-between items-start mb-4">
                       <div>
-                        <p className="text-gray-400 text-sm">Thời lượng trung bình</p>
+                        <p className="text-gray-400 text-sm">POI chờ duyệt</p>
                         <p className="text-4xl font-bold text-white mt-2">
-                          {analytics.avg_duration_seconds}s
+                          {analytics.pending_pois}
                         </p>
                       </div>
                       <TrendingDown className="text-yellow-400" size={24} />
                     </div>
-                    <p className="text-gray-400 text-sm">Mỗi lần nghe</p>
+                    <p className="text-gray-400 text-sm">{analytics.approved_pois} đã duyệt, {analytics.rejected_pois} bị từ chối</p>
                   </div>
 
                   <div className="bg-secondary border border-gray-700 rounded-lg p-6">

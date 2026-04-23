@@ -41,7 +41,10 @@ public class OwnerAudioController : ControllerBase
             a.LanguageCode,
             a.LanguageName,
             a.VoiceName,
-            a.ScriptText
+            a.ScriptText,
+            a.AudioUrl,
+            a.ApprovalStatus,
+            a.RejectedReason
         }));
     }
 
@@ -68,6 +71,10 @@ public class OwnerAudioController : ControllerBase
         {
             existingAudio.ScriptText = request.ScriptText;
             existingAudio.VoiceName = request.VoiceName ?? "System";
+            existingAudio.AudioUrl = request.AudioUrl;
+            existingAudio.ApprovalStatus = "pending";
+            existingAudio.RejectedReason = null;
+            existingAudio.UpdatedAt = DateTime.UtcNow;
             _db.AudioGuides.Update(existingAudio);
         }
         else
@@ -79,7 +86,11 @@ public class OwnerAudioController : ControllerBase
                 LanguageCode = request.LanguageCode,
                 LanguageName = request.LanguageName ?? "Tiếng Việt",
                 VoiceName = request.VoiceName ?? "System",
-                ScriptText = request.ScriptText
+                ScriptText = request.ScriptText,
+                AudioUrl = request.AudioUrl,
+                ApprovalStatus = "pending",
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
             };
             _db.AudioGuides.Add(audio);
         }
@@ -108,6 +119,13 @@ public class OwnerAudioController : ControllerBase
 
         if (!string.IsNullOrWhiteSpace(request.VoiceName))
             audio.VoiceName = request.VoiceName;
+
+        if (request.AudioUrl != null)
+            audio.AudioUrl = request.AudioUrl;
+
+        audio.ApprovalStatus = "pending";
+        audio.RejectedReason = null;
+        audio.UpdatedAt = DateTime.UtcNow;
 
         _db.AudioGuides.Update(audio);
         await _db.SaveChangesAsync();
@@ -143,10 +161,12 @@ public class CreateAudioRequest
     public string? LanguageName { get; set; }
     public string? VoiceName { get; set; }
     public string ScriptText { get; set; } = "";
+    public string? AudioUrl { get; set; }
 }
 
 public class UpdateAudioRequest
 {
     public string? ScriptText { get; set; }
     public string? VoiceName { get; set; }
+    public string? AudioUrl { get; set; }
 }

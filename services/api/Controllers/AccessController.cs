@@ -86,6 +86,9 @@ public class AccessController : ControllerBase
         if (qrEntry == null)
             return BadRequest(new { message = "QR không tồn tại" });
 
+        if (qrEntry.Status == "admin_suspended")
+            return BadRequest(new { message = "QR đã bị hệ thống tạm ngưng" });
+
         if (qrEntry.Status != "active")
             return BadRequest(new { message = "QR hiện không khả dụng" });
 

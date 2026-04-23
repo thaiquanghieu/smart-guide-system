@@ -183,4 +183,6 @@ INSERT INTO audio_guides (
 
 ON CONFLICT (id) DO NOTHING;
 
+UPDATE audio_guides SET approval_status = 'approved' WHERE poi_id IN ('1','2','3','4','5');
+
 COMMIT;

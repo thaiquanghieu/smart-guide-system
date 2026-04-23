@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react'
+import Link from 'next/link'
 import Sidebar from '@/components/Sidebar'
 import ProtectedRoute from '@/components/ProtectedRoute'
 import apiClient from '@/lib/api'
-import { Users, MapPin, Volume2, TrendingUp } from 'lucide-react'
+import { Users, MapPin, Smartphone, Store } from 'lucide-react'
 
 interface DashboardStats {
   users: { total: number; owners: number; admins: number }
+  devices: { total: number; online: number; banned: number }
   pois: { total: number; approved: number; pending: number; rejected: number }
   listens: { total: number; avg_duration_seconds: number }
   top_pois: Array<{ id: string; name: string; listened_count: number }>
@@ -54,70 +56,57 @@ export default function Dashboard() {
                 {/* Stats Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
                   {/* Users Card */}
-                  <div className="bg-gradient-to-br from-secondary to-secondary/50 border border-blue-500/30 rounded-xl p-6 hover:border-blue-500/60 transition shadow-lg hover:shadow-blue-500/20">
+                  <Link href="/devices" className="bg-gradient-to-br from-secondary to-secondary/50 border border-emerald-500/30 rounded-xl p-6 hover:border-emerald-500/60 transition shadow-lg hover:shadow-emerald-500/20 block">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-gray-400 text-sm font-medium mb-2">👥 Tổng tài khoản</p>
+                        <p className="text-gray-400 text-sm font-medium mb-2">Thiết bị đang truy cập</p>
+                        <p className="text-4xl font-bold text-white">
+                          {stats.devices?.online || 0}
+                        </p>
+                        <p className="text-sm text-gray-400 mt-2">{stats.devices?.total || 0} thiết bị tổng</p>
+                        <p className="text-sm text-red-400 mt-1">{stats.devices?.banned || 0} bị banned</p>
+                      </div>
+                      <Smartphone className="text-emerald-400" size={40} />
+                    </div>
+                  </Link>
+
+                  <Link href="/users" className="bg-gradient-to-br from-secondary to-secondary/50 border border-blue-500/30 rounded-xl p-6 hover:border-blue-500/60 transition shadow-lg hover:shadow-blue-500/20 block">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-gray-400 text-sm font-medium mb-2">Tổng tài khoản</p>
                         <p className="text-4xl font-bold text-white">
                           {stats.users.total}
                         </p>
-                        <p className="text-sm text-blue-400 mt-2">
-                          🏪 {stats.users.owners} chủ gian hàng
-                        </p>
-                        <p className="text-sm text-red-400 mt-1">
-                          🔐 {stats.users.admins} admin
-                        </p>
+                        <p className="text-sm text-blue-400 mt-2">{stats.users.owners} seller</p>
+                        <p className="text-sm text-red-400 mt-1">{stats.users.admins} admin</p>
                       </div>
-                      <div className="text-5xl opacity-20">👥</div>
+                      <Users className="text-blue-400" size={40} />
                     </div>
-                  </div>
+                  </Link>
 
-                  {/* POI Card */}
-                  <div className="bg-gradient-to-br from-secondary to-secondary/50 border border-green-500/30 rounded-xl p-6 hover:border-green-500/60 transition shadow-lg hover:shadow-green-500/20">
+                  <Link href="/users" className="bg-gradient-to-br from-secondary to-secondary/50 border border-cyan-500/30 rounded-xl p-6 hover:border-cyan-500/60 transition shadow-lg hover:shadow-cyan-500/20 block">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-gray-400 text-sm font-medium mb-2">📍 Tổng POI</p>
+                        <p className="text-gray-400 text-sm font-medium mb-2">Seller đang quản lý</p>
                         <p className="text-4xl font-bold text-white">
-                          {stats.pois.total}
+                          {stats.users.owners}
                         </p>
-                        <div className="text-sm space-y-1 mt-2">
-                          <p className="text-green-400">✅ {stats.pois.approved} phê duyệt</p>
-                          <p className="text-yellow-400">⏳ {stats.pois.pending} chờ duyệt</p>
-                        </div>
+                        <p className="text-sm text-gray-400 mt-2">Bấm để quản lý tài khoản</p>
                       </div>
-                      <div className="text-5xl opacity-20">📍</div>
+                      <Store className="text-cyan-400" size={40} />
                     </div>
-                  </div>
+                  </Link>
 
-                  {/* Listens Card */}
-                  <div className="bg-gradient-to-br from-secondary to-secondary/50 border border-purple-500/30 rounded-xl p-6 hover:border-purple-500/60 transition shadow-lg hover:shadow-purple-500/20">
+                  <Link href="/pois" className="bg-gradient-to-br from-secondary to-secondary/50 border border-yellow-500/30 rounded-xl p-6 hover:border-yellow-500/60 transition shadow-lg hover:shadow-yellow-500/20 block">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-gray-400 text-sm font-medium mb-2">🎵 Lượt Nghe</p>
-                        <p className="text-4xl font-bold text-white">
-                          {stats.listens.total}
-                        </p>
-                        <p className="text-sm text-purple-400 mt-2">
-                          ⏱️ {stats.listens.avg_duration_seconds}s trung bình
-                        </p>
+                        <p className="text-gray-400 text-sm font-medium mb-2">POI chờ duyệt</p>
+                        <p className="text-4xl font-bold text-yellow-400">{stats.pois.pending}</p>
+                        <p className="text-sm text-green-400 mt-2">{stats.pois.approved} đã duyệt</p>
                       </div>
-                      <div className="text-5xl opacity-20">🎵</div>
+                      <MapPin className="text-yellow-400" size={40} />
                     </div>
-                  </div>
-
-                  {/* Status Card */}
-                  <div className="bg-gradient-to-br from-secondary to-secondary/50 border border-emerald-500/30 rounded-xl p-6 hover:border-emerald-500/60 transition shadow-lg hover:shadow-emerald-500/20">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-gray-400 text-sm font-medium mb-2">🟢 Trạng Thái</p>
-                        <p className="text-3xl font-bold text-emerald-400">Hoạt Động</p>
-                        <p className="text-sm text-emerald-400 mt-2">
-                          ✓ Hệ thống hoạt động bình thường
-                        </p>
-                      </div>
-                      <div className="text-5xl opacity-20">🟢</div>
-                    </div>
-                  </div>
+                  </Link>
                 </div>
 
                 {/* Top POIs Section */}

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import ProtectedRoute from '@/components/ProtectedRoute'
 import Sidebar from '@/components/Sidebar'
 import apiClient from '@/lib/api'
-import { Copy, Eye, History, PauseCircle, PlayCircle, Plus, Printer, QrCode, RefreshCw, Trash2 } from 'lucide-react'
+import { AlertTriangle, Copy, Eye, History, PauseCircle, PlayCircle, Plus, Printer, QrCode, RefreshCw, Trash2 } from 'lucide-react'
 
 type PoiOption = {
   id: string
@@ -18,7 +18,10 @@ type QrEntry = {
   totalScans: number
   usedScans: number
   remaining_scans: number
-  status: 'active' | 'inactive' | 'expired'
+  status: 'active' | 'inactive' | 'expired' | 'admin_suspended'
+  suspension_reason?: string | null
+  activation_requested_at?: string | null
+  activation_request_note?: string | null
   createdAt: string
   updatedAt: string
   last_scanned_at?: string | null
@@ -64,6 +67,7 @@ const statusLabel: Record<string, string> = {
   active: 'Đang hoạt động',
   inactive: 'Đã ẩn',
   expired: 'Hết lượt',
+  admin_suspended: 'Hệ thống tạm ngưng',
 }
 
 function formatDate(value?: string | null) {
@@ -125,7 +129,7 @@ export default function SellerQrPage() {
   const [showAllLogs, setShowAllLogs] = useState(false)
   const [allLogs, setAllLogs] = useState<QrLog[]>([])
   const [allLogsLoading, setAllLogsLoading] = useState(false)
-  const [filter, setFilter] = useState<'all' | 'active' | 'inactive' | 'expired'>('all')
+  const [filter, setFilter] = useState<'all' | 'active' | 'inactive' | 'expired' | 'admin_suspended'>('all')
   const [sortMode, setSortMode] = useState<SortMode>('updated_desc')
   const [logFilter, setLogFilter] = useState<'all' | 'granted' | 'free_already_used' | 'quota_exceeded' | 'subscription_active'>('all')
   const [logSort, setLogSort] = useState<'desc' | 'asc'>('desc')
@@ -243,6 +247,19 @@ export default function SellerQrPage() {
   }
 
   const handleStatusToggle = async (entry: QrEntry) => {
+    if (entry.status === 'admin_suspended') {
+      const note = window.prompt('QR do hệ thống tạm ngưng. Nhập ghi chú gửi admin để yêu cầu kích hoạt lại:', entry.activation_request_note || '')
+      if (note === null) return
+      try {
+        await apiClient.post(`/owner/qr/${entry.id}/activation-request`, { note })
+        await fetchData({ silent: true })
+        alert('Đã gửi yêu cầu kích hoạt lại cho admin')
+      } catch (error: any) {
+        alert(error?.response?.data?.message || 'Gửi yêu cầu thất bại')
+      }
+      return
+    }
+
     const status = entry.status === 'active' ? 'inactive' : 'active'
     try {
       await apiClient.put(`/owner/qr/${entry.id}/status`, { status })
@@ -333,7 +350,7 @@ export default function SellerQrPage() {
                 <select
                   value={form.poiId}
                   onChange={(event) => setForm((prev) => ({ ...prev, poiId: event.target.value }))}
-                  className="rounded-lg border border-gray-700 bg-dark px-4 py-3 text-white"
+                  className="rounded-lg border border-gray-700 bg-dark px-4 py-3 pr-10 text-white"
                 >
                   <option value="">Chọn POI</option>
                   {pois.map((poi) => (
@@ -346,7 +363,7 @@ export default function SellerQrPage() {
                 <input
                   value={form.name}
                   onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
-                  placeholder="Tên QR hiển thị"
+                  placeholder="Tên QR hiển thị (không bắt buộc)"
                   className="rounded-lg border border-gray-700 bg-dark px-4 py-3 text-white placeholder:text-gray-500"
                 />
 
@@ -375,18 +392,19 @@ export default function SellerQrPage() {
                 <select
                   value={filter}
                   onChange={(event) => setFilter(event.target.value as any)}
-                  className="rounded-lg border border-gray-700 bg-dark px-4 py-2 text-white"
+                  className="rounded-lg border border-gray-700 bg-dark px-4 py-2 pr-10 text-white"
                 >
                   <option value="all">Tất cả trạng thái</option>
                   <option value="active">Đang hoạt động</option>
                   <option value="inactive">Đã ẩn</option>
                   <option value="expired">Hết lượt</option>
+                  <option value="admin_suspended">Hệ thống tạm ngưng</option>
                 </select>
 
                 <select
                   value={sortMode}
                   onChange={(event) => setSortMode(event.target.value as SortMode)}
-                  className="rounded-lg border border-gray-700 bg-dark px-4 py-2 text-white"
+                  className="rounded-lg border border-gray-700 bg-dark px-4 py-2 pr-10 text-white"
                 >
                   <option value="updated_desc">Mới cập nhật nhất</option>
                   <option value="updated_asc">Mới cập nhật cũ nhất</option>
@@ -426,11 +444,13 @@ export default function SellerQrPage() {
                               <p className="mt-1 text-sm text-gray-400">{entry.poi_name}</p>
                             </div>
                             <span
-                              className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                              className={`rounded-full px-3 py-1 text-xs font-semibold whitespace-nowrap ${
                                 entry.status === 'active'
                                   ? 'bg-green-500/15 text-green-400'
                                   : entry.status === 'expired'
                                   ? 'bg-yellow-500/15 text-yellow-400'
+                                  : entry.status === 'admin_suspended'
+                                  ? 'bg-red-500/15 text-red-300'
                                   : 'bg-gray-500/15 text-gray-300'
                               }`}
                             >
@@ -458,59 +478,74 @@ export default function SellerQrPage() {
                             <p>Tổng lượt quét ghi log: <span className="text-white">{entry.total_logs}</span></p>
                           </div>
 
-                          <div className="grid gap-2 sm:grid-cols-3">
-                            <button
-                              onClick={() => navigator.clipboard.writeText(getQrUrl(entry.entryCode))}
-                              className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary/15 px-4 py-2 text-primary hover:bg-primary/25"
-                            >
-                              <Copy size={16} />
-                              Copy link
+	                          {entry.status === 'admin_suspended' && (
+	                            <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-100">
+                              <div className="flex items-start gap-2">
+                                <AlertTriangle size={18} className="mt-0.5 shrink-0" />
+                                <div>
+                                  <p className="font-semibold">QR do hệ thống tạm ngưng</p>
+                                  <p className="text-red-200/80">{entry.suspension_reason || 'Vui lòng gửi yêu cầu để admin xem xét kích hoạt lại.'}</p>
+                                  {entry.activation_requested_at && (
+                                    <p className="mt-1 text-xs text-yellow-200">Đã gửi yêu cầu: {formatDate(entry.activation_requested_at)}</p>
+                                  )}
+                                </div>
+	                              </div>
+	                            </div>
+	                          )}
+	                        </div>
+
+	                          <div className="grid gap-2 sm:grid-cols-2 lg:col-span-2 xl:grid-cols-7">
+	                            <button
+	                              onClick={() => navigator.clipboard.writeText(getQrUrl(entry.entryCode))}
+	                              className="inline-flex min-h-12 items-center justify-center gap-2 rounded-lg bg-primary/15 px-3 py-2 text-primary hover:bg-primary/25"
+	                            >
+	                              <Copy size={16} />
+	                              Copy link
                             </button>
-                            <button
-                              onClick={() => window.open(getQrUrl(entry.entryCode), '_blank')}
-                              className="inline-flex items-center justify-center gap-2 rounded-lg bg-secondary px-4 py-2 text-white hover:bg-secondary/80"
-                            >
+	                            <button
+	                              onClick={() => window.open(getQrUrl(entry.entryCode), '_blank')}
+	                              className="inline-flex min-h-12 items-center justify-center gap-2 rounded-lg bg-secondary px-3 py-2 text-white hover:bg-secondary/80"
+	                            >
                               <Eye size={16} />
                               Mở thử
                             </button>
-                            <button
-                              onClick={() => printSingleQr(entry)}
-                              className="inline-flex items-center justify-center gap-2 rounded-lg bg-secondary px-4 py-2 text-white hover:bg-secondary/80"
-                            >
+	                            <button
+	                              onClick={() => printSingleQr(entry)}
+	                              className="inline-flex min-h-12 items-center justify-center gap-2 rounded-lg bg-secondary px-3 py-2 text-white hover:bg-secondary/80"
+	                            >
                               <Printer size={16} />
                               In QR
                             </button>
-                            <button
-                              onClick={() => handleTopup(entry)}
-                              className="inline-flex items-center justify-center gap-2 rounded-lg bg-yellow-500/15 px-4 py-2 text-yellow-400 hover:bg-yellow-500/25"
-                            >
+	                            <button
+	                              onClick={() => handleTopup(entry)}
+	                              className="inline-flex min-h-12 items-center justify-center gap-2 rounded-lg bg-yellow-500/15 px-3 py-2 text-yellow-400 hover:bg-yellow-500/25"
+	                            >
                               <Plus size={16} />
                               Cộng lượt
                             </button>
-                            <button
-                              onClick={() => handleStatusToggle(entry)}
-                              className="inline-flex items-center justify-center gap-2 rounded-lg bg-secondary px-4 py-2 text-white hover:bg-secondary/80"
-                            >
+	                            <button
+	                              onClick={() => handleStatusToggle(entry)}
+	                              className="inline-flex min-h-12 items-center justify-center gap-2 rounded-lg bg-secondary px-3 py-2 text-white hover:bg-secondary/80"
+	                            >
                               {entry.status === 'active' ? <PauseCircle size={16} /> : <PlayCircle size={16} />}
-                              {entry.status === 'active' ? 'Tạm ngưng' : 'Kích hoạt'}
+                              {entry.status === 'admin_suspended' ? 'Gửi yêu cầu' : entry.status === 'active' ? 'Tạm ngưng' : 'Kích hoạt'}
                             </button>
-                            <button
-                              onClick={() => handleDelete(entry)}
-                              className="inline-flex items-center justify-center gap-2 rounded-lg bg-red-500/15 px-4 py-2 text-red-300 hover:bg-red-500/25"
-                            >
+	                            <button
+	                              onClick={() => handleDelete(entry)}
+	                              className="inline-flex min-h-12 items-center justify-center gap-2 rounded-lg bg-red-500/15 px-3 py-2 text-red-300 hover:bg-red-500/25"
+	                            >
                               <Trash2 size={16} />
                               Ẩn QR
                             </button>
-                            <button
-                              onClick={() => openLogs(entry)}
-                              className="sm:col-span-3 inline-flex items-center justify-center gap-2 rounded-lg bg-secondary px-4 py-2 text-white hover:bg-secondary/80"
-                            >
+	                            <button
+	                              onClick={() => openLogs(entry)}
+	                              className="inline-flex min-h-12 items-center justify-center gap-2 rounded-lg bg-secondary px-3 py-2 text-white hover:bg-secondary/80"
+	                            >
                               <QrCode size={16} />
                               Xem lịch sử của QR này
-                            </button>
-                          </div>
-                        </div>
-                      </div>
+	                            </button>
+	                          </div>
+	                      </div>
                     </div>
                   ))}
                 </div>

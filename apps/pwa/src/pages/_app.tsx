@@ -2,6 +2,7 @@ import type { AppProps } from "next/app";
 import Head from "next/head";
 import { useEffect, useState } from "react";
 import "@/styles/globals.css";
+import { ensureDeviceReady, sendDeviceHeartbeat } from "@/lib/device";
 
 export default function App({ Component, pageProps }: AppProps) {
   const [mounted, setMounted] = useState(false);
@@ -19,6 +20,24 @@ export default function App({ Component, pageProps }: AppProps) {
     if ("caches" in window) {
       caches.keys().then((keys) => Promise.all(keys.map((key) => caches.delete(key)))).catch(() => undefined);
     }
+  }, []);
+
+  useEffect(() => {
+    let heartbeatTimer: number | undefined;
+
+    const startHeartbeat = async () => {
+      await ensureDeviceReady().catch(() => undefined);
+      await sendDeviceHeartbeat();
+      heartbeatTimer = window.setInterval(() => {
+        void sendDeviceHeartbeat();
+      }, 4000);
+    };
+
+    void startHeartbeat();
+
+    return () => {
+      if (heartbeatTimer) window.clearInterval(heartbeatTimer);
+    };
   }, []);
 
   return (

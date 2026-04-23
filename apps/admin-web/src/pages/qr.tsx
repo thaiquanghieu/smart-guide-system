@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import ProtectedRoute from '@/components/ProtectedRoute'
 import Sidebar from '@/components/Sidebar'
 import apiClient from '@/lib/api'
-import { Eye, History, RefreshCw } from 'lucide-react'
+import { AlertTriangle, CheckCircle, Eye, History, RefreshCw, Trash2, XCircle } from 'lucide-react'
 
 type QrEntry = {
   id: number
@@ -15,7 +15,10 @@ type QrEntry = {
   totalScans: number
   usedScans: number
   remaining_scans: number
-  status: 'active' | 'inactive' | 'expired'
+  status: 'active' | 'inactive' | 'expired' | 'admin_suspended'
+  suspension_reason?: string | null
+  activation_requested_at?: string | null
+  activation_request_note?: string | null
   createdAt: string
   updatedAt: string
   total_logs: number
@@ -61,6 +64,7 @@ const statusLabel: Record<string, string> = {
   active: 'Đang hoạt động',
   inactive: 'Đã ẩn',
   expired: 'Hết lượt',
+  admin_suspended: 'Hệ thống tạm ngưng',
 }
 
 function formatDate(value?: string | null) {
@@ -70,7 +74,7 @@ function formatDate(value?: string | null) {
 export default function AdminQrPage() {
   const [entries, setEntries] = useState<QrEntry[]>([])
   const [loading, setLoading] = useState(true)
-  const [filter, setFilter] = useState<'all' | 'active' | 'inactive' | 'expired'>('all')
+  const [filter, setFilter] = useState<'all' | 'active' | 'inactive' | 'expired' | 'admin_suspended'>('all')
   const [sortMode, setSortMode] = useState<SortMode>('updated_desc')
   const [selectedEntry, setSelectedEntry] = useState<QrEntry | null>(null)
   const [logs, setLogs] = useState<QrLog[]>([])
@@ -121,6 +125,11 @@ export default function AdminQrPage() {
     return next
   }, [entries, filter, sortMode])
 
+  const activationRequests = useMemo(
+    () => entries.filter((entry) => Boolean(entry.activation_requested_at)),
+    [entries]
+  )
+
   const openLogs = async (entry: QrEntry) => {
     setShowAllLogs(false)
     setSelectedEntry(entry)
@@ -151,15 +160,39 @@ export default function AdminQrPage() {
     }
   }
 
-  const updateStatus = async (entry: QrEntry, status: 'active' | 'inactive' | 'expired') => {
+  const updateStatus = async (entry: QrEntry, status: 'active' | 'inactive' | 'expired' | 'admin_suspended') => {
+    const reason = status === 'admin_suspended' ? window.prompt('Lý do admin tạm ngưng QR?', entry.suspension_reason || '') || 'Admin tạm ngưng QR để kiểm tra' : undefined
     try {
-      await apiClient.put(`/admin/qr/${entry.id}/status`, { status })
+      await apiClient.put(`/admin/qr/${entry.id}/status`, { status, reason })
       await fetchEntries()
       if (selectedEntry?.id === entry.id) {
         setSelectedEntry({ ...selectedEntry, status })
       }
     } catch (error: any) {
       alert(error?.response?.data?.message || 'Cập nhật trạng thái thất bại')
+    }
+  }
+
+  const rejectActivationRequest = async (entry: QrEntry) => {
+    const reason = window.prompt('Lý do từ chối yêu cầu kích hoạt lại?', entry.suspension_reason || '') || ''
+    try {
+      await apiClient.post(`/admin/qr/${entry.id}/activation-request/reject`, { reason })
+      await fetchEntries()
+    } catch (error: any) {
+      alert(error?.response?.data?.message || 'Từ chối yêu cầu thất bại')
+    }
+  }
+
+  const hardDeleteQr = async (entry: QrEntry) => {
+    const confirmed = window.confirm(`Xóa hẳn QR "${entry.name}"? Hành động này không thể hoàn tác.`)
+    if (!confirmed) return
+
+    try {
+      await apiClient.delete(`/admin/qr/${entry.id}/hard`)
+      if (selectedEntry?.id === entry.id) setSelectedEntry(null)
+      await fetchEntries()
+    } catch (error: any) {
+      alert(error?.response?.data?.message || error?.response?.data?.detail || 'Xóa hẳn QR thất bại')
     }
   }
 
@@ -195,6 +228,40 @@ export default function AdminQrPage() {
             </div>
 
             <section className="rounded-xl border border-gray-700 bg-secondary p-6">
+              {activationRequests.length > 0 && (
+                <div className="mb-6 rounded-xl border border-yellow-500/30 bg-yellow-500/10 p-4">
+                  <div className="mb-3 flex items-center gap-2 text-yellow-200">
+                    <AlertTriangle size={20} />
+                    <h2 className="text-lg font-bold">Yêu cầu kích hoạt lại QR</h2>
+                  </div>
+                  <p className="mb-4 text-sm text-yellow-100/80">
+                    Seller không thể tự mở QR do admin ngưng. Admin kiểm tra lý do, log quét, rồi chọn mở lại hoặc từ chối.
+                  </p>
+                  <div className="space-y-3">
+                    {activationRequests.map((entry) => (
+                      <div key={entry.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-dark/70 p-4">
+                        <div>
+                          <p className="font-semibold text-white">{entry.name}</p>
+                          <p className="text-sm text-gray-400">{entry.owner_name} • {entry.poi_name}</p>
+                          <p className="text-sm text-yellow-200">Ghi chú: {entry.activation_request_note || 'Không có'}</p>
+                          <p className="text-xs text-gray-500">Gửi lúc: {formatDate(entry.activation_requested_at)}</p>
+                        </div>
+                        <div className="flex gap-2">
+                          <button onClick={() => updateStatus(entry, 'active')} className="inline-flex items-center gap-2 rounded-lg bg-green-500/20 px-3 py-2 text-green-300 hover:bg-green-500/30">
+                            <CheckCircle size={16} />
+                            Kích hoạt
+                          </button>
+                          <button onClick={() => rejectActivationRequest(entry)} className="inline-flex items-center gap-2 rounded-lg bg-red-500/20 px-3 py-2 text-red-300 hover:bg-red-500/30">
+                            <XCircle size={16} />
+                            Từ chối
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <div className="mb-4 flex flex-wrap gap-3">
                 <select
                   value={filter}
@@ -205,6 +272,7 @@ export default function AdminQrPage() {
                   <option value="active">Đang hoạt động</option>
                   <option value="inactive">Đã ẩn</option>
                   <option value="expired">Hết lượt</option>
+                  <option value="admin_suspended">Hệ thống tạm ngưng</option>
                 </select>
                 <select
                   value={sortMode}
@@ -251,23 +319,25 @@ export default function AdminQrPage() {
                             <div>Đã dùng: {entry.usedScans}</div>
                             <div className="text-xs text-accent">Còn: {entry.remaining_scans}</div>
                           </td>
-                          <td className="px-4 py-3">{statusLabel[entry.status] || entry.status}</td>
+                          <td className="px-4 py-3">
+                            <div>{statusLabel[entry.status] || entry.status}</div>
+                            {entry.suspension_reason && <div className="mt-1 text-xs text-red-300">{entry.suspension_reason}</div>}
+                          </td>
                           <td className="px-4 py-3">{formatDate(entry.last_scanned_at)}</td>
                           <td className="px-4 py-3">
                             <div className="flex flex-wrap gap-2">
                               <button onClick={() => openLogs(entry)} className="rounded bg-primary/20 px-3 py-1 text-primary hover:bg-primary/30">
                                 <Eye size={14} className="mr-1 inline" />
-                                Log QR
+                                Xem log
                               </button>
-                              {entry.status !== 'active' ? (
-                                <button onClick={() => updateStatus(entry, 'active')} className="rounded bg-green-500/20 px-3 py-1 text-green-400 hover:bg-green-500/30">
-                                  Kích hoạt
-                                </button>
-                              ) : (
-                                <button onClick={() => updateStatus(entry, 'inactive')} className="rounded bg-yellow-500/20 px-3 py-1 text-yellow-400 hover:bg-yellow-500/30">
-                                  Tạm ngưng
+                              {entry.status !== 'admin_suspended' && (
+                                <button onClick={() => updateStatus(entry, 'admin_suspended')} className="rounded bg-orange-500/20 px-3 py-1 text-orange-300 hover:bg-orange-500/30">
+                                  Ngưng bởi admin
                                 </button>
                               )}
+                              <button onClick={() => hardDeleteQr(entry)} className="rounded bg-red-500/20 px-3 py-1 text-red-300 hover:bg-red-500/30" title="Xóa hẳn QR">
+                                <Trash2 size={14} />
+                              </button>
                             </div>
                           </td>
                         </tr>

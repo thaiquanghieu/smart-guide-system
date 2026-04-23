@@ -25,7 +25,7 @@ public class PoisController : ControllerBase
     public async Task<IActionResult> GetPois([FromQuery] int deviceId, [FromQuery] string? lang)
     {
         var language = NormalizeLanguage(lang);
-        var pois = await _db.Pois.ToListAsync();
+        var pois = await _db.Pois.Where(x => x.Status == "approved").ToListAsync();
         var poiImages = await _db.PoiImages.OrderBy(x => x.SortOrder).ToListAsync();
         var audioGuides = await _db.AudioGuides.ToListAsync();
         var translations = language == "vi"
@@ -70,7 +70,7 @@ public class PoisController : ControllerBase
                     .ToList(),
 
                 audios = audioGuides
-                    .Where(a => a.PoiId == p.Id)
+                    .Where(a => a.PoiId == p.Id && a.ApprovalStatus == "approved")
                     .Select(a => new
                     {
                         a.Id,
@@ -90,7 +90,7 @@ public class PoisController : ControllerBase
     public async Task<IActionResult> GetById(string id, [FromQuery] int deviceId, [FromQuery] string? lang)
     {
         var language = NormalizeLanguage(lang);
-        var poi = await _db.Pois.FirstOrDefaultAsync(x => x.Id == id);
+        var poi = await _db.Pois.FirstOrDefaultAsync(x => x.Id == id && x.Status == "approved");
         if (poi == null) return NotFound();
         var translation = language == "vi"
             ? null
@@ -103,7 +103,7 @@ public class PoisController : ControllerBase
             .ToListAsync();
 
         var audios = await _db.AudioGuides
-            .Where(a => a.PoiId == id)
+            .Where(a => a.PoiId == id && a.ApprovalStatus == "approved")
             .Select(a => new
             {
                 a.Id,

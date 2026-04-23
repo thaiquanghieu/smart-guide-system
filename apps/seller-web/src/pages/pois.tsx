@@ -3,7 +3,7 @@ import Link from 'next/link'
 import Sidebar from '@/components/Sidebar'
 import ProtectedRoute from '@/components/ProtectedRoute'
 import apiClient from '@/lib/api'
-import { Plus, Edit2, Trash2, Eye } from 'lucide-react'
+import { Plus, Edit2, Trash2, Eye, Search, MapPin } from 'lucide-react'
 
 interface POI {
   id: string
@@ -21,6 +21,8 @@ export default function POIs() {
   const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>(
     'all'
   )
+  const [query, setQuery] = useState('')
+  const [sort, setSort] = useState<'newest' | 'oldest' | 'listens_desc' | 'rating_desc' | 'name_asc'>('newest')
 
   useEffect(() => {
     fetchPois()
@@ -50,8 +52,15 @@ export default function POIs() {
     }
   }
 
-  const filteredPois =
-    filter === 'all' ? pois : pois.filter((p) => p.status === filter)
+  const filteredPois = (filter === 'all' ? pois : pois.filter((p) => p.status === filter))
+    .filter((poi) => `${poi.name} ${poi.description}`.toLowerCase().includes(query.toLowerCase()))
+    .sort((a, b) => {
+      if (sort === 'oldest') return new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+      if (sort === 'listens_desc') return b.listened_count - a.listened_count
+      if (sort === 'rating_desc') return b.rating_avg - a.rating_avg
+      if (sort === 'name_asc') return a.name.localeCompare(b.name)
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    })
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -119,6 +128,29 @@ export default function POIs() {
               ))}
             </div>
 
+            <div className="grid md:grid-cols-[1fr_260px] gap-3 mb-6">
+              <div className="relative">
+                <Search className="absolute left-3 top-3 text-gray-500" size={18} />
+                <input
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  className="w-full pl-10 pr-4 py-3 bg-secondary border border-gray-700 rounded-xl text-white"
+                  placeholder="Tìm theo tên hoặc mô tả POI..."
+                />
+              </div>
+              <select
+                value={sort}
+                onChange={(event) => setSort(event.target.value as any)}
+                className="w-full px-4 py-3 bg-secondary border border-gray-700 rounded-xl text-white"
+              >
+                <option value="newest">Mới tạo nhất</option>
+                <option value="oldest">Cũ nhất</option>
+                <option value="listens_desc">Lượt nghe nhiều nhất</option>
+                <option value="rating_desc">Đánh giá cao nhất</option>
+                <option value="name_asc">Tên A-Z</option>
+              </select>
+            </div>
+
             {/* POI List */}
             {loading ? (
               <div className="text-center py-12">
@@ -167,15 +199,13 @@ export default function POIs() {
                         <Eye size={16} />
                         Xem
                       </Link>
-                      {poi.status === 'pending' && (
-                        <Link
-                          href={`/pois/${poi.id}/edit`}
-                          className="flex items-center gap-2 px-3 py-1 bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/30 rounded transition text-sm"
-                        >
-                          <Edit2 size={16} />
-                          Sửa
-                        </Link>
-                      )}
+                      <Link
+                        href={`/pois/${poi.id}/edit`}
+                        className="flex items-center gap-2 px-3 py-1 bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/30 rounded transition text-sm"
+                      >
+                        <Edit2 size={16} />
+                        Sửa
+                      </Link>
                       <button
                         onClick={() => handleDelete(poi.id)}
                         className="flex items-center gap-2 px-3 py-1 bg-red-500/20 text-red-400 hover:bg-red-500/30 rounded transition text-sm"
@@ -205,5 +235,3 @@ export default function POIs() {
     </ProtectedRoute>
   )
 }
-
-import { MapPin } from 'lucide-react'

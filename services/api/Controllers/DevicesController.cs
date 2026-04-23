@@ -74,6 +74,9 @@ public class DevicesController : ControllerBase
             device.DeviceUuid = request.DeviceUuid;
         }
 
+        if (device.Status == "banned")
+            return StatusCode(403, new { message = "Thiết bị đã bị khóa", reason = device.BanReason });
+
         device.Name = normalizedName;
         device.Platform = normalizedPlatform;
         device.Model = normalizedModel;
@@ -81,6 +84,8 @@ public class DevicesController : ControllerBase
         device.PushToken = request.PushToken?.Trim();
         device.QrCode = string.IsNullOrWhiteSpace(request.QrCode) ? device.QrCode : request.QrCode.Trim();
         device.IsActive = true;
+        device.Status = device.Status == "banned" ? "banned" : "active";
+        device.DeletedAt = null;
         device.Metadata = request.Metadata.ValueKind is JsonValueKind.Object or JsonValueKind.Array
             ? request.Metadata.GetRawText()
             : "{}";
@@ -124,6 +129,8 @@ public class DevicesController : ControllerBase
         var now = DateTime.UtcNow;
 
         device.IsActive = false;
+        device.Status = "user_deleted";
+        device.DeletedAt = now;
         device.LastSeen = now;
 
         var subscriptions = await _db.Subscriptions
@@ -138,6 +145,28 @@ public class DevicesController : ControllerBase
         await _db.SaveChangesAsync();
 
         return Ok(new { message = "Đã xóa thiết bị" });
+    }
+
+    [HttpPost("{deviceId}/heartbeat")]
+    public async Task<IActionResult> Heartbeat(int deviceId)
+    {
+        var device = await _db.Devices.FirstOrDefaultAsync(x => x.Id == deviceId);
+        if (device == null)
+            return NotFound(new { message = "Không tìm thấy thiết bị" });
+
+        if (device.Status == "banned")
+            return StatusCode(403, new { message = "Thiết bị đã bị khóa", reason = device.BanReason });
+
+        if (device.Status == "user_deleted")
+            return StatusCode(410, new { message = "Thiết bị đã bị người dùng xóa" });
+
+        device.IsActive = true;
+        device.Status = "active";
+        device.LastSeen = DateTime.UtcNow;
+
+        await _db.SaveChangesAsync();
+
+        return Ok(new { ok = true, deviceId = device.Id, lastSeen = device.LastSeen });
     }
 }
 

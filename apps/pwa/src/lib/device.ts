@@ -141,6 +141,13 @@ export async function ensureDeviceReady() {
   return response.data;
 }
 
+export async function sendDeviceHeartbeat() {
+  const deviceId = getDeviceId();
+  if (!deviceId) return;
+
+  await apiClient.post(`/devices/${deviceId}/heartbeat`).catch(() => undefined);
+}
+
 export function setPendingPoiId(poiId: string) {
   const storage = getStorage();
   if (!storage) return;

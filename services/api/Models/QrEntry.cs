@@ -31,6 +31,15 @@ public class QrEntry
     [Column("status")]
     public string Status { get; set; } = "active";
 
+    [Column("suspension_reason")]
+    public string? SuspensionReason { get; set; }
+
+    [Column("activation_requested_at", TypeName = "timestamptz")]
+    public DateTime? ActivationRequestedAt { get; set; }
+
+    [Column("activation_request_note")]
+    public string? ActivationRequestNote { get; set; }
+
     [Column("expires_at", TypeName = "timestamptz")]
     public DateTime? ExpiresAt { get; set; }
 

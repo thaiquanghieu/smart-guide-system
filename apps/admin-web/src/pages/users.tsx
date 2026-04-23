@@ -36,13 +36,14 @@ export default function Users() {
 
   const handleToggleActive = async (userId: number) => {
     try {
-      await apiClient.put(`/admin/users/${userId}/toggle-active`)
-      setUsers((prev) =>
-        prev.map((u) => (u.id === userId ? { ...u, isActive: !u.isActive } : u))
-      )
-    } catch (error) {
+      const target = users.find((u) => u.id === userId)
+      const action = target?.isActive ? 'khóa' : 'mở khóa'
+      if (!confirm(`Bạn chắc chắn muốn ${action} tài khoản "${target?.userName || userId}"?`)) return
+      await apiClient.put(`/admin/users/${userId}/status`, { isActive: !target?.isActive })
+      setUsers((prev) => prev.map((u) => (u.id === userId ? { ...u, isActive: !u.isActive } : u)))
+    } catch (error: any) {
       console.error('Failed to toggle account:', error)
-      alert('Cập nhật trạng thái thất bại')
+      alert(error?.response?.data?.message || error?.response?.data?.detail || 'Cập nhật trạng thái thất bại')
     }
   }
 
@@ -162,10 +163,15 @@ export default function Users() {
                             <div className="flex gap-2 justify-end">
                               <button
                                 onClick={() => handleToggleActive(user.id)}
-                                className="flex items-center gap-1 px-2 py-1 bg-warning/20 text-warning hover:bg-warning/30 rounded text-sm transition"
-                              >
-                                <Ban size={14} />
-                              </button>
+                              className={`flex items-center gap-1 px-3 py-1 rounded text-sm transition ${
+                                user.isActive
+                                  ? 'bg-red-500/20 text-red-300 hover:bg-red-500/30'
+                                  : 'bg-green-500/20 text-green-300 hover:bg-green-500/30'
+                              }`}
+                            >
+                              <Ban size={14} />
+                              {user.isActive ? 'Khóa' : 'Mở khóa'}
+                            </button>
                               <button
                                 onClick={() => handleDelete(user.id)}
                                 className="flex items-center gap-1 px-2 py-1 bg-danger/20 text-danger hover:bg-danger/30 rounded text-sm transition"

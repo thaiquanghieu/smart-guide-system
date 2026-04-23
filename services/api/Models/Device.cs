@@ -34,6 +34,18 @@ public class Device
     [Column("is_active")]
     public bool IsActive { get; set; } = true;
 
+    [Column("status")]
+    public string Status { get; set; } = "active";
+
+    [Column("deleted_at", TypeName = "timestamptz")]
+    public DateTime? DeletedAt { get; set; }
+
+    [Column("banned_at", TypeName = "timestamptz")]
+    public DateTime? BannedAt { get; set; }
+
+    [Column("ban_reason")]
+    public string? BanReason { get; set; }
+
     [Column("last_seen", TypeName = "timestamptz")]
     public DateTime? LastSeen { get; set; }
 

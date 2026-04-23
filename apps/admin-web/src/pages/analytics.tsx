@@ -6,14 +6,24 @@ import { BarChart3, TrendingUp } from 'lucide-react'
 
 interface Analytics {
   users: { total: number; owners: number; admins: number }
+  devices: { total: number; online: number; banned: number }
   pois: { total: number; approved: number; pending: number; rejected: number }
   listens: { total: number; avg_duration_seconds: number }
   top_pois: Array<{ id: string; name: string; listened_count: number }>
   top_owners: Array<{ owner_id: number; poi_count: number; total_listens: number }>
 }
 
+type QrEntry = {
+  id: number
+  status: 'active' | 'inactive' | 'expired' | 'admin_suspended'
+  usedScans: number
+  totalScans: number
+  activation_requested_at?: string | null
+}
+
 export default function Analytics() {
   const [analytics, setAnalytics] = useState<Analytics | null>(null)
+  const [qrEntries, setQrEntries] = useState<QrEntry[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -22,14 +32,22 @@ export default function Analytics() {
 
   const fetchAnalytics = async () => {
     try {
-      const response = await apiClient.get('/admin/analytics/dashboard')
-      setAnalytics(response.data)
+      const [analyticsResponse, qrResponse] = await Promise.all([
+        apiClient.get('/admin/analytics/dashboard'),
+        apiClient.get('/admin/qr'),
+      ])
+      setAnalytics(analyticsResponse.data)
+      setQrEntries(qrResponse.data || [])
     } catch (error) {
       console.error('Failed to fetch analytics:', error)
     } finally {
       setLoading(false)
     }
   }
+
+  const qrUsedScans = qrEntries.reduce((sum, entry) => sum + entry.usedScans, 0)
+  const qrTotalScans = qrEntries.reduce((sum, entry) => sum + entry.totalScans, 0)
+  const qrRequests = qrEntries.filter((entry) => entry.activation_requested_at).length
 
   return (
     <ProtectedRoute>
@@ -78,12 +96,12 @@ export default function Analytics() {
                   </div>
 
                   <div className="bg-gradient-to-br from-secondary to-secondary/50 border border-purple-500/30 rounded-xl p-6 hover:border-purple-500/60 transition shadow-lg hover:shadow-purple-500/20">
-                    <p className="text-gray-400 text-sm font-medium mb-2">🎵 Tổng Nghe</p>
+                    <p className="text-gray-400 text-sm font-medium mb-2">Thiết bị</p>
                     <p className="text-4xl font-bold text-white mb-2">
-                      {analytics.listens.total}
+                      {analytics.devices?.total || 0}
                     </p>
                     <p className="text-sm text-purple-400">
-                      ⏱️ {analytics.listens.avg_duration_seconds}s trung bình
+                      Online: {analytics.devices?.online || 0} / Banned: {analytics.devices?.banned || 0}
                     </p>
                   </div>
 
@@ -100,6 +118,30 @@ export default function Analytics() {
 
                 {/* Two Column Layout */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                  <div className="bg-gradient-to-br from-secondary to-secondary/50 border border-cyan-500/30 rounded-xl p-6 shadow-lg lg:col-span-2">
+                    <h2 className="text-2xl font-bold text-white mb-4 flex items-center gap-2">
+                      QR Operations
+                    </h2>
+                    <div className="grid gap-4 md:grid-cols-4">
+                      <div className="rounded-xl bg-dark/60 p-4">
+                        <p className="text-sm text-gray-400">QR đang hoạt động</p>
+                        <p className="mt-2 text-3xl font-bold text-green-300">{qrEntries.filter((entry) => entry.status === 'active').length}</p>
+                      </div>
+                      <div className="rounded-xl bg-dark/60 p-4">
+                        <p className="text-sm text-gray-400">Bị hệ thống tạm ngưng</p>
+                        <p className="mt-2 text-3xl font-bold text-red-300">{qrEntries.filter((entry) => entry.status === 'admin_suspended').length}</p>
+                      </div>
+                      <div className="rounded-xl bg-dark/60 p-4">
+                        <p className="text-sm text-gray-400">Yêu cầu kích hoạt lại</p>
+                        <p className="mt-2 text-3xl font-bold text-yellow-300">{qrRequests}</p>
+                      </div>
+                      <div className="rounded-xl bg-dark/60 p-4">
+                        <p className="text-sm text-gray-400">Lượt QR đã dùng</p>
+                        <p className="mt-2 text-3xl font-bold text-primary">{qrUsedScans}/{qrTotalScans}</p>
+                      </div>
+                    </div>
+                  </div>
+
                   {/* Top POIs */}
                   <div className="bg-gradient-to-br from-secondary to-secondary/50 border border-gray-700 rounded-xl p-6 shadow-lg">
                     <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-2">

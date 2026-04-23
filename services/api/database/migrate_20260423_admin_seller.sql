@@ -1,5 +1,9 @@
 BEGIN;
 
+ALTER TABLE users
+  ADD COLUMN IF NOT EXISTS updated_at timestamptz DEFAULT now(),
+  ADD COLUMN IF NOT EXISTS last_login_at timestamptz;
+
 ALTER TABLE devices
   ADD COLUMN IF NOT EXISTS status text DEFAULT 'active',
   ADD COLUMN IF NOT EXISTS deleted_at timestamptz,

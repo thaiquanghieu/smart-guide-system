@@ -1,13 +1,17 @@
 import { useState, useEffect } from 'react'
+import Link from 'next/link'
 import Sidebar from '@/components/Sidebar'
 import ProtectedRoute from '@/components/ProtectedRoute'
 import apiClient from '@/lib/api'
-import { TrendingUp, MapPin, Volume2, BarChart3 } from 'lucide-react'
+import { MapPin, Volume2, QrCode, Clock } from 'lucide-react'
 
 interface Analytics {
   total_pois: number
   total_listens: number
   avg_duration_seconds: number
+  pending_pois: number
+  approved_pois: number
+  rejected_pois: number
   top_pois: Array<{ id: string; name: string; listened_count: number }>
 }
 
@@ -47,7 +51,7 @@ export default function Dashboard() {
               <>
                 {/* Stats Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                  <div className="bg-secondary border border-gray-700 rounded-lg p-6">
+                  <Link href="/pois" className="bg-secondary border border-gray-700 rounded-lg p-6 hover:border-primary/60 transition block">
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-gray-400 text-sm mb-1">POI của bạn</p>
@@ -57,9 +61,9 @@ export default function Dashboard() {
                       </div>
                       <MapPin className="text-primary" size={32} />
                     </div>
-                  </div>
+                  </Link>
 
-                  <div className="bg-secondary border border-gray-700 rounded-lg p-6">
+                  <Link href="/analytics" className="bg-secondary border border-gray-700 rounded-lg p-6 hover:border-primary/60 transition block">
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-gray-400 text-sm mb-1">Tổng lượt nghe</p>
@@ -69,31 +73,31 @@ export default function Dashboard() {
                       </div>
                       <Volume2 className="text-primary" size={32} />
                     </div>
-                  </div>
+                  </Link>
 
-                  <div className="bg-secondary border border-gray-700 rounded-lg p-6">
+                  <Link href="/pois?status=pending" className="bg-secondary border border-gray-700 rounded-lg p-6 hover:border-yellow-400/60 transition block">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-gray-400 text-sm mb-1">
-                          Thời lượng trung bình
-                        </p>
+                        <p className="text-gray-400 text-sm mb-1">Chờ duyệt</p>
                         <p className="text-4xl font-bold text-white">
-                          {analytics.avg_duration_seconds}s
+                          {analytics.pending_pois}
                         </p>
+                        <p className="text-sm text-green-400 mt-2">{analytics.approved_pois} đã duyệt</p>
                       </div>
-                      <BarChart3 className="text-primary" size={32} />
+                      <Clock className="text-yellow-400" size={32} />
                     </div>
-                  </div>
+                  </Link>
 
-                  <div className="bg-secondary border border-gray-700 rounded-lg p-6">
+                  <Link href="/qr" className="bg-secondary border border-gray-700 rounded-lg p-6 hover:border-primary/60 transition block">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-gray-400 text-sm mb-1">Tăng trưởng</p>
-                        <p className="text-4xl font-bold text-primary">↗</p>
+                        <p className="text-gray-400 text-sm mb-1">QR & chiến dịch</p>
+                        <p className="text-4xl font-bold text-primary">QR</p>
+                        <p className="text-sm text-gray-400 mt-2">Tạo, in và xem lượt quét</p>
                       </div>
-                      <TrendingUp className="text-accent" size={32} />
+                      <QrCode className="text-accent" size={32} />
                     </div>
-                  </div>
+                  </Link>
                 </div>
 
                 {/* Top POIs */}

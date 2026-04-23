@@ -47,6 +47,9 @@ public class AdminQrController : ControllerBase
             entry.UsedScans,
             remaining_scans = Math.Max(0, entry.TotalScans - entry.UsedScans),
             Status = entry.UsedScans >= entry.TotalScans ? "expired" : entry.Status,
+            suspension_reason = entry.SuspensionReason,
+            activation_requested_at = entry.ActivationRequestedAt,
+            activation_request_note = entry.ActivationRequestNote,
             entry.ExpiresAt,
             entry.CreatedAt,
             entry.UpdatedAt,
@@ -126,7 +129,7 @@ public class AdminQrController : ControllerBase
         if (!await IsAdminAsync(adminId))
             return Forbid("Chỉ admin mới có quyền truy cập");
 
-        if (request.Status is not ("active" or "inactive" or "expired"))
+        if (request.Status is not ("active" or "inactive" or "expired" or "admin_suspended"))
             return BadRequest(new { message = "Trạng thái không hợp lệ" });
 
         var entry = await _db.QrEntries.FirstOrDefaultAsync(x => x.Id == id);
@@ -134,9 +137,70 @@ public class AdminQrController : ControllerBase
             return NotFound(new { message = "QR không tồn tại" });
 
         entry.Status = request.Status;
+        entry.SuspensionReason = request.Status == "admin_suspended" ? request.Reason : null;
+        if (request.Status == "active")
+        {
+            entry.ActivationRequestedAt = null;
+            entry.ActivationRequestNote = null;
+        }
         entry.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync();
 
         return Ok(new { message = "Đã cập nhật trạng thái QR" });
     }
+
+    [HttpPost("{id}/activation-request/reject")]
+    public async Task<IActionResult> RejectActivationRequest(int id, [FromBody] RejectActivationRequest request, [FromQuery] int adminId)
+    {
+        if (!await IsAdminAsync(adminId))
+            return Forbid("Chỉ admin mới có quyền truy cập");
+
+        var entry = await _db.QrEntries.FirstOrDefaultAsync(x => x.Id == id);
+        if (entry == null)
+            return NotFound(new { message = "QR không tồn tại" });
+
+        entry.Status = "admin_suspended";
+        entry.SuspensionReason = string.IsNullOrWhiteSpace(request.Reason)
+            ? entry.SuspensionReason ?? "Admin từ chối yêu cầu kích hoạt lại"
+            : request.Reason.Trim();
+        entry.ActivationRequestedAt = null;
+        entry.ActivationRequestNote = null;
+        entry.UpdatedAt = DateTime.UtcNow;
+
+        await _db.SaveChangesAsync();
+
+        return Ok(new { message = "Đã từ chối yêu cầu kích hoạt lại" });
+    }
+
+    [HttpDelete("{id}/hard")]
+    public async Task<IActionResult> HardDeleteQr(int id, [FromQuery] int adminId)
+    {
+        if (!await IsAdminAsync(adminId))
+            return Forbid("Chỉ admin mới có quyền truy cập");
+
+        var entry = await _db.QrEntries.FirstOrDefaultAsync(x => x.Id == id);
+        if (entry == null)
+            return NotFound(new { message = "QR không tồn tại" });
+
+        var logs = await _db.QrLogs.Where(x => x.QrEntryId == id).ToListAsync();
+        var grants = await _db.DeviceEntryGrants.Where(x => x.QrEntryId == id).ToListAsync();
+        try
+        {
+            _db.DeviceEntryGrants.RemoveRange(grants);
+            _db.QrLogs.RemoveRange(logs);
+            _db.QrEntries.Remove(entry);
+            await _db.SaveChangesAsync();
+        }
+        catch (DbUpdateException exception)
+        {
+            return StatusCode(500, new { message = "Xóa QR thất bại do còn dữ liệu liên quan.", detail = exception.InnerException?.Message ?? exception.Message });
+        }
+
+        return Ok(new { message = "Đã xóa hẳn QR" });
+    }
+}
+
+public class RejectActivationRequest
+{
+    public string? Reason { get; set; }
 }

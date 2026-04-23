@@ -54,6 +54,9 @@ public class OwnerQrController : ControllerBase
             entry.UsedScans,
             remaining_scans = Math.Max(0, entry.TotalScans - entry.UsedScans),
             Status = entry.UsedScans >= entry.TotalScans ? "expired" : entry.Status,
+            suspension_reason = entry.SuspensionReason,
+            activation_requested_at = entry.ActivationRequestedAt,
+            activation_request_note = entry.ActivationRequestNote,
             entry.ExpiresAt,
             entry.CreatedAt,
             entry.UpdatedAt,
@@ -167,6 +170,9 @@ public class OwnerQrController : ControllerBase
         entry.TotalScans += request.AdditionalScans;
         if (request.ExpiresAt.HasValue)
             entry.ExpiresAt = request.ExpiresAt;
+        if (entry.Status == "admin_suspended")
+            return BadRequest(new { message = "QR đang bị hệ thống tạm ngưng. Vui lòng gửi yêu cầu kích hoạt lại." });
+
         if (entry.Status == "expired" || entry.Status == "inactive")
             entry.Status = "active";
         entry.UpdatedAt = DateTime.UtcNow;
@@ -188,6 +194,9 @@ public class OwnerQrController : ControllerBase
         var entry = await _db.QrEntries.FirstOrDefaultAsync(x => x.Id == id && x.OwnerId == ownerId);
         if (entry == null)
             return NotFound(new { message = "QR không tồn tại" });
+
+        if (entry.Status == "admin_suspended" && request.Status == "active")
+            return StatusCode(423, new { message = "QR do hệ thống tạm ngưng. Hãy gửi yêu cầu kích hoạt lại để admin xử lý." });
 
         entry.Status = request.Status;
         entry.UpdatedAt = DateTime.UtcNow;
@@ -212,6 +221,30 @@ public class OwnerQrController : ControllerBase
         await _db.SaveChangesAsync();
 
         return Ok(new { message = "Đã ẩn QR" });
+    }
+
+    [HttpPost("{id}/activation-request")]
+    public async Task<IActionResult> RequestActivation(int id, [FromBody] ActivationRequest request, [FromQuery] int ownerId)
+    {
+        var owner = await GetOwnerAsync(ownerId);
+        if (owner == null)
+            return Forbid("Chỉ owner mới có quyền truy cập");
+
+        var entry = await _db.QrEntries.FirstOrDefaultAsync(x => x.Id == id && x.OwnerId == ownerId);
+        if (entry == null)
+            return NotFound(new { message = "QR không tồn tại" });
+
+        if (entry.Status != "admin_suspended")
+            return BadRequest(new { message = "QR này không bị hệ thống tạm ngưng" });
+
+        entry.ActivationRequestedAt = DateTime.UtcNow;
+        entry.ActivationRequestNote = string.IsNullOrWhiteSpace(request.Note)
+            ? "Seller yêu cầu kích hoạt lại QR"
+            : request.Note.Trim();
+        entry.UpdatedAt = DateTime.UtcNow;
+        await _db.SaveChangesAsync();
+
+        return Ok(new { message = "Đã gửi yêu cầu kích hoạt lại cho admin" });
     }
 
     [HttpGet("{id}/logs")]
@@ -260,4 +293,10 @@ public class TopUpQrEntryRequest
 public class UpdateQrEntryStatusRequest
 {
     public string Status { get; set; } = "active";
+    public string? Reason { get; set; }
+}
+
+public class ActivationRequest
+{
+    public string? Note { get; set; }
 }
