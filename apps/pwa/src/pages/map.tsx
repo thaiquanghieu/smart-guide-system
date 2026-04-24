@@ -9,8 +9,10 @@ import apiClient, { assetUrl } from "@/lib/api";
 import { translatePois, useAppI18n } from "@/lib/i18n";
 import { playPoiAudio, stopSpeech } from "@/lib/audio";
 import {
+  clearPendingPoiId,
   clearTrackingTargetPoiId,
   ensureDeviceReady,
+  getAutoPlay,
   getTrackingEnabled,
   getTrackingTargetPoiId,
   getBatterySaver,
@@ -76,6 +78,7 @@ export default function MapPage() {
   const candidateRef = useRef<{ poiId: string; hits: number }>({ poiId: "", hits: 0 });
   const globalCooldownUntilRef = useRef(0);
   const qrTargetPoiRef = useRef("");
+  const qrAutoPlayedPoiRef = useRef("");
 
   useEffect(() => {
     const load = async () => {
@@ -153,7 +156,7 @@ export default function MapPage() {
 
         setSubscriptionActive(hasActiveSubscription);
         setFreePlaysRemaining(remainingFreePlays);
-        setTrackingEnabled(getTrackingEnabled() || !!targetPoiId);
+        setTrackingEnabled(getTrackingEnabled());
         setHasLoadedMap(true);
       } catch (error: any) {
         setErrorMessage(error?.response?.data?.message || t("map.loadError"));
@@ -239,6 +242,59 @@ export default function MapPage() {
     return `${selectedPoi.distanceKm.toFixed(1).replace(".", ",")} km`;
   }, [selectedPoi]);
 
+  const playMapPoi = async (targetPoi: Poi, options?: { redirectToPaywallAfterFree?: boolean }) => {
+    const shouldRedirectToPaywallAfterFree = options?.redirectToPaywallAfterFree ?? false;
+
+    if (!subscriptionActive && freePlaysRemaining <= 0) {
+      setReturnTo(`/map?poiId=${targetPoi.id}`);
+      router.push(`/paywall?returnTo=${encodeURIComponent(`/map?poiId=${targetPoi.id}`)}`);
+      return;
+    }
+
+    setPendingPoiId(targetPoi.id);
+    setPlayingPoiId(targetPoi.id);
+    updatePoi(targetPoi.id, (current) => ({ ...current, listened_count: current.listened_count + 1 }));
+
+    try {
+      const result = await playPoiAudio(targetPoi, {
+        consumeFreeListen: !subscriptionActive,
+        onListenedCount: (count) => {
+          updatePoi(targetPoi.id, (current) => ({ ...current, listened_count: count }));
+          notifyProfileDataChanged();
+        },
+      });
+      if (result.listenedCount) {
+        updatePoi(targetPoi.id, (current) => ({ ...current, listened_count: result.listenedCount || current.listened_count }));
+        notifyProfileDataChanged();
+      }
+      if (qrTargetPoiRef.current === targetPoi.id) {
+        qrTargetPoiRef.current = "";
+        clearTrackingTargetPoiId();
+      }
+    } finally {
+      setPlayingPoiId("");
+    }
+
+    if (!subscriptionActive) {
+      setFreePlaysRemaining((value) => Math.max(0, value - 1));
+      if (shouldRedirectToPaywallAfterFree) {
+        clearPendingPoiId();
+        setReturnTo(`/map?poiId=${targetPoi.id}`);
+        router.push(`/paywall?returnTo=${encodeURIComponent(`/map?poiId=${targetPoi.id}`)}`);
+      }
+    }
+  };
+
+  useEffect(() => {
+    if (!selectedPoi || playingPoiId || trackingEnabled || subscriptionActive || freePlaysRemaining <= 0) return;
+    if (!getAutoPlay()) return;
+    if (!qrTargetPoiRef.current || qrTargetPoiRef.current !== selectedPoi.id) return;
+    if (qrAutoPlayedPoiRef.current === selectedPoi.id) return;
+
+    qrAutoPlayedPoiRef.current = selectedPoi.id;
+    void playMapPoi(selectedPoi, { redirectToPaywallAfterFree: true });
+  }, [freePlaysRemaining, playingPoiId, selectedPoi, subscriptionActive, trackingEnabled]);
+
   useEffect(() => {
     if (!trackingEnabled || !navigator.geolocation || !enrichedPois.length) return undefined;
 
@@ -256,6 +312,7 @@ export default function MapPage() {
           };
           setUserLocation(currentLocation);
 
+          const now = Date.now();
           const candidatePoi = [...enrichedPois]
             .map((poi) => ({
               ...poi,
@@ -263,7 +320,8 @@ export default function MapPage() {
             }))
             .filter((poi) => {
               const poiRadiusKm = Math.max(0.01, Number(poi.radius || 100) / 1000);
-              return poi.distanceKm <= poiRadiusKm;
+              const poiCooldownUntil = (lastPlayedAtRef.current[poi.id] || 0) + poiCooldownMs;
+              return poi.distanceKm <= poiRadiusKm && now >= poiCooldownUntil;
             })
             .sort((left, right) => {
               const targetPoiId = qrTargetPoiRef.current;
@@ -294,39 +352,15 @@ export default function MapPage() {
           setSelectedPoiId(candidatePoi.id);
           setMapCenter({ latitude: candidatePoi.latitude, longitude: candidatePoi.longitude });
 
-          const now = Date.now();
-          const poiCooldownUntil = (lastPlayedAtRef.current[candidatePoi.id] || 0) + poiCooldownMs;
           const canAutoPlay =
             candidateRef.current.hits >= requiredStableHits &&
             !playingPoiId &&
-            now >= globalCooldownUntilRef.current &&
-            now >= poiCooldownUntil;
+            now >= globalCooldownUntilRef.current;
 
           if (canAutoPlay) {
             lastPlayedAtRef.current[candidatePoi.id] = now;
             globalCooldownUntilRef.current = now + globalCooldownMs;
-            setPlayingPoiId(candidatePoi.id);
-
-            try {
-              updatePoi(candidatePoi.id, (current) => ({ ...current, listened_count: current.listened_count + 1 }));
-              const result = await playPoiAudio(candidatePoi, {
-                consumeFreeListen: !subscriptionActive,
-                onListenedCount: (count) => {
-                  updatePoi(candidatePoi.id, (current) => ({ ...current, listened_count: count }));
-                  notifyProfileDataChanged();
-                },
-              });
-              if (result.listenedCount) {
-                updatePoi(candidatePoi.id, (current) => ({ ...current, listened_count: result.listenedCount || current.listened_count }));
-                notifyProfileDataChanged();
-              }
-              if (qrTargetPoiRef.current === candidatePoi.id) {
-                qrTargetPoiRef.current = "";
-                clearTrackingTargetPoiId();
-              }
-            } finally {
-              setPlayingPoiId("");
-            }
+            await playMapPoi(candidatePoi);
           }
         },
         () => undefined,
@@ -515,31 +549,7 @@ export default function MapPage() {
                     return;
                   }
 
-                  setPendingPoiId(selectedPoi.id);
-                  setPlayingPoiId(selectedPoi.id);
-                  updatePoi(selectedPoi.id, (current) => ({ ...current, listened_count: current.listened_count + 1 }));
-
-                  try {
-                    const result = await playPoiAudio(selectedPoi, {
-                      consumeFreeListen: !subscriptionActive,
-                      onListenedCount: (count) => {
-                        updatePoi(selectedPoi.id, (current) => ({ ...current, listened_count: count }));
-                        notifyProfileDataChanged();
-                      },
-                    });
-                    if (result.listenedCount) {
-                      updatePoi(selectedPoi.id, (current) => ({ ...current, listened_count: result.listenedCount || current.listened_count }));
-                      notifyProfileDataChanged();
-                    }
-                  } finally {
-                    setPlayingPoiId("");
-                  }
-
-                  if (!subscriptionActive) {
-                    setFreePlaysRemaining((value) => Math.max(0, value - 1));
-                    setReturnTo(`/map?poiId=${selectedPoi.id}`);
-                    router.push(`/paywall?returnTo=${encodeURIComponent(`/map?poiId=${selectedPoi.id}`)}`);
-                  }
+                  await playMapPoi(selectedPoi, { redirectToPaywallAfterFree: !subscriptionActive });
                 }}
               >
                 <img src={playingPoiId === selectedPoi.id ? "/assets/audio.png" : "/assets/audio2.png"} alt="Audio" className="h-[18px] w-[18px]" />

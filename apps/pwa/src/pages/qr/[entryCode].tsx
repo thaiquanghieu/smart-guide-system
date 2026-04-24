@@ -48,9 +48,10 @@ function EntryQrPageInner() {
 
         const targetPoiId = response.data?.poiId || poiId;
         if (targetPoiId) {
+          setPendingPoiId(targetPoiId);
           setTrackingTargetPoiId(targetPoiId);
         }
-        setTrackingEnabled(true);
+        setTrackingEnabled(false);
         const target = targetPoiId ? `/map?poiId=${encodeURIComponent(targetPoiId)}` : "/map";
         router.replace(target);
       } catch (error: any) {

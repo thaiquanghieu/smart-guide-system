@@ -293,6 +293,8 @@ public class AdminController : ControllerBase
             .Select(g => new { device_id = g.Key, count = g.Count() })
             .ToListAsync();
 
+        // Lấy các thiết bị đang hoạt động:
+        // một thiết bị được xem là online khi status = active và last_seen còn trong 5 giây gần nhất.
         return Ok(devices.Select(d =>
         {
             var lastSeen = d.LastSeen;
@@ -437,6 +439,7 @@ public class AdminController : ControllerBase
         var totalOwners = await _db.Users.Where(x => x.Role == "owner").CountAsync();
         var onlineCutoff = DateTime.UtcNow.AddSeconds(-5);
         var totalDevices = await _db.Devices.CountAsync();
+        // Lấy các thiết bị đang hoạt động cho dashboard.
         var onlineDevices = await _db.Devices.CountAsync(x => x.Status == "active" && x.LastSeen != null && x.LastSeen > onlineCutoff);
         var bannedDevices = await _db.Devices.CountAsync(x => x.Status == "banned");
         var totalPois = await _db.Pois.CountAsync();
