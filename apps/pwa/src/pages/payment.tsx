@@ -9,11 +9,11 @@ import {
   clearReturnTo,
   clearTrackingTargetPoiId,
   ensureDeviceReady,
+  getEntryContext,
   getDeviceId,
   getPendingPoiId,
   getReturnTo,
   setTrackingEnabled,
-  setTrackingTargetPoiId,
 } from "@/lib/device";
 
 type PaymentPreview = {
@@ -86,16 +86,20 @@ export default function PaymentPage() {
           markProfileForRefresh();
           const pendingPoiId = getPendingPoiId();
           const returnTo = getReturnTo();
-          if (pendingPoiId) {
+          const entryContext = getEntryContext();
+          const fromQrEntry = !!entryContext?.entryCode;
+          if (pendingPoiId && fromQrEntry) {
             setTrackingEnabled(true);
-            setTrackingTargetPoiId(pendingPoiId);
+            clearTrackingTargetPoiId();
+          } else if (pendingPoiId) {
+            setTrackingEnabled(true);
           } else {
             clearTrackingTargetPoiId();
           }
           clearReturnTo();
           clearPendingPoiId();
           clearEntryContext();
-          router.replace(pendingPoiId ? `/map?poiId=${pendingPoiId}` : returnTo || "/map");
+          router.replace(fromQrEntry ? "/map" : pendingPoiId ? `/map?poiId=${pendingPoiId}` : returnTo || "/map");
           return;
         }
 
