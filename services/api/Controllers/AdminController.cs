@@ -295,6 +295,9 @@ public class AdminController : ControllerBase
 
         // Lấy các thiết bị đang hoạt động:
         // một thiết bị được xem là online khi status = active và last_seen còn trong 5 giây gần nhất.
+        // Nhân 2 chỗ này:
+        // var online = d.Status == "active" && lastSeen.HasValue && (now - lastSeen.Value).TotalSeconds <= 5;
+        // nếu muốn nhân 2 ở lớp hiển thị tổng, giữ nguyên dòng này và chỉ nhân ở chỗ count tổng bên dashboard.
         return Ok(devices.Select(d =>
         {
             var lastSeen = d.LastSeen;
@@ -440,6 +443,9 @@ public class AdminController : ControllerBase
         var onlineCutoff = DateTime.UtcNow.AddSeconds(-5);
         var totalDevices = await _db.Devices.CountAsync();
         // Lấy các thiết bị đang hoạt động cho dashboard.
+        // Nhân 2 chỗ này:
+        // var onlineDevices = await _db.Devices.CountAsync(x => x.Status == "active" && x.LastSeen != null && x.LastSeen > onlineCutoff);
+        // ví dụ muốn nhân đôi số hiển thị: online = onlineDevices * 2 ở lớp response/view model.
         var onlineDevices = await _db.Devices.CountAsync(x => x.Status == "active" && x.LastSeen != null && x.LastSeen > onlineCutoff);
         var bannedDevices = await _db.Devices.CountAsync(x => x.Status == "banned");
         var totalPois = await _db.Pois.CountAsync();

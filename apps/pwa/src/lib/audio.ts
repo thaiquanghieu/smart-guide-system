@@ -52,33 +52,26 @@ export async function playPoiAudio(
 
   stopRequested = false;
 
-  const requests = [];
-
-  if (options?.consumeFreeListen) {
-    requests.push(
-      apiClient.post("/access/free-listen/consume", {
-        deviceId: getDeviceId(),
-        poiId: poi.id,
-      }).catch(() => null)
-    );
-  }
-
-  const listenedPromise = apiClient
-    .post(`/pois/listened/${poi.id}?deviceId=${getDeviceId()}`)
-    .then((response) => {
-      const listenedCount = Number(response?.data?.listened_count || 0);
-      if (listenedCount) {
-        options?.onListenedCount?.(listenedCount);
-      }
-      return response;
-    })
-    .catch(() => null);
-
-  requests.push(listenedPromise);
-
   const speechPromise = new Promise<void>((resolve, reject) => {
     const utterance = new SpeechSynthesisUtterance(audio.scriptText);
     const speechLang = resolveSpeechLanguage(audio.languageCode);
+    let started = false;
+    let settled = false;
+    const startGuard = window.setTimeout(() => {
+      if (!started && !settled) {
+        settled = true;
+        window.speechSynthesis.cancel();
+        reject(new Error("Audio không khởi động được"));
+      }
+    }, 1500);
+
+    const finish = (handler: () => void) => {
+      if (settled) return;
+      settled = true;
+      window.clearTimeout(startGuard);
+      handler();
+    };
+
     utterance.lang = speechLang;
     utterance.rate = 1;
     utterance.pitch = 1;
@@ -93,14 +86,17 @@ export async function playPoiAudio(
       utterance.voice = matchedVoice;
     }
 
-    utterance.onend = () => resolve();
+    utterance.onstart = () => {
+      started = true;
+    };
+    utterance.onend = () => finish(resolve);
     utterance.onerror = () => {
       if (stopRequested) {
-        resolve();
+        finish(resolve);
         return;
       }
 
-      reject(new Error("Phát audio thất bại"));
+      finish(() => reject(new Error("Phát audio thất bại")));
     };
 
     window.speechSynthesis.cancel();
@@ -108,10 +104,25 @@ export async function playPoiAudio(
     window.speechSynthesis.speak(utterance);
   });
 
-  const [, listenedResponse] = await Promise.all([
-    speechPromise,
-    Promise.all(requests).then((items) => items[items.length - 1]),
-  ]);
+  await speechPromise;
+
+  if (options?.consumeFreeListen) {
+    await apiClient.post("/access/free-listen/consume", {
+      deviceId: getDeviceId(),
+      poiId: poi.id,
+    }).catch(() => null);
+  }
+
+  const listenedResponse = await apiClient
+    .post(`/pois/listened/${poi.id}?deviceId=${getDeviceId()}`)
+    .then((response) => {
+      const listenedCount = Number(response?.data?.listened_count || 0);
+      if (listenedCount) {
+        options?.onListenedCount?.(listenedCount);
+      }
+      return response;
+    })
+    .catch(() => null);
 
   const listenedCount = Number((listenedResponse as any)?.data?.listened_count || 0);
 

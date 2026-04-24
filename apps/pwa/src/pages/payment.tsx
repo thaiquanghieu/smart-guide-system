@@ -99,7 +99,13 @@ export default function PaymentPage() {
           clearReturnTo();
           clearPendingPoiId();
           clearEntryContext();
-          router.replace(fromQrEntry ? "/map" : pendingPoiId ? `/map?poiId=${pendingPoiId}` : returnTo || "/map");
+          router.replace(
+            fromQrEntry
+              ? `/map?refresh=${Date.now()}`
+              : pendingPoiId
+                ? `/map?poiId=${pendingPoiId}&refresh=${Date.now()}`
+                : `${returnTo || "/map"}${(returnTo || "/map").includes("?") ? "&" : "?"}refresh=${Date.now()}`
+          );
           return;
         }
 
