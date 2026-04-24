@@ -2,7 +2,7 @@ import dynamic from "next/dynamic";
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
 import apiClient from "@/lib/api";
-import { ensureDeviceReady, getDeviceId, saveEntryContext, setPendingPoiId, setReturnTo } from "@/lib/device";
+import { ensureDeviceReady, getDeviceId, saveEntryContext, setPendingPoiId, setReturnTo, setTrackingEnabled, setTrackingTargetPoiId } from "@/lib/device";
 import { useAppI18n } from "@/lib/i18n";
 
 function EntryQrPageInner() {
@@ -34,6 +34,7 @@ function EntryQrPageInner() {
 
         if (poiId) {
           setPendingPoiId(poiId);
+          setTrackingTargetPoiId(poiId);
           setReturnTo(`/map?poiId=${encodeURIComponent(poiId)}`);
         } else {
           setReturnTo("/map");
@@ -46,6 +47,10 @@ function EntryQrPageInner() {
         });
 
         const targetPoiId = response.data?.poiId || poiId;
+        if (targetPoiId) {
+          setTrackingTargetPoiId(targetPoiId);
+        }
+        setTrackingEnabled(true);
         const target = targetPoiId ? `/map?poiId=${encodeURIComponent(targetPoiId)}` : "/map";
         router.replace(target);
       } catch (error: any) {

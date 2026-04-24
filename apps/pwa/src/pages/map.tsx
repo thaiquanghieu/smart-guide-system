@@ -9,10 +9,14 @@ import apiClient, { assetUrl } from "@/lib/api";
 import { translatePois, useAppI18n } from "@/lib/i18n";
 import { playPoiAudio, stopSpeech } from "@/lib/audio";
 import {
+  clearTrackingTargetPoiId,
   ensureDeviceReady,
+  getTrackingEnabled,
+  getTrackingTargetPoiId,
   getBatterySaver,
   getDeviceId,
   getTrackingIntervalMs,
+  setTrackingEnabled as persistTrackingEnabled,
   notifyProfileDataChanged,
   setPendingPoiId,
   setReturnTo,
@@ -68,10 +72,10 @@ export default function MapPage() {
   const [toast, setToast] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const trackingTimerRef = useRef<number | null>(null);
-  const lastTrackedPoiRef = useRef("");
   const lastPlayedAtRef = useRef<Record<string, number>>({});
   const candidateRef = useRef<{ poiId: string; hits: number }>({ poiId: "", hits: 0 });
   const globalCooldownUntilRef = useRef(0);
+  const qrTargetPoiRef = useRef("");
 
   useEffect(() => {
     const load = async () => {
@@ -122,9 +126,13 @@ export default function MapPage() {
         const items = translatePois<Poi>(poiResponse.data || [], lang);
         const hasActiveSubscription = !!accessResponse.data?.hasActiveSubscription;
         const remainingFreePlays = Number(accessResponse.data?.freePlaysRemaining || 0);
+        const grantPoiId = String(accessResponse.data?.poiId || "");
+        const targetPoiIdFromStorage = getTrackingTargetPoiId();
+        const targetPoiId = queryPoiId || targetPoiIdFromStorage || grantPoiId;
+        qrTargetPoiRef.current = targetPoiId;
 
         if (!hasActiveSubscription && remainingFreePlays <= 0) {
-          const poiId = typeof router.query.poiId === "string" ? router.query.poiId : "";
+          const poiId = targetPoiId;
           const returnTo = poiId ? `/map?poiId=${encodeURIComponent(poiId)}` : "/map";
           setReturnTo(returnTo);
           router.replace(`/paywall?returnTo=${encodeURIComponent(returnTo)}`);
@@ -133,7 +141,7 @@ export default function MapPage() {
 
         setPois(items);
 
-        const poiId = queryPoiId;
+        const poiId = targetPoiId;
         const selectedPoi = poiId ? items.find((item: Poi) => item.id === poiId) : null;
 
         if (selectedPoi) {
@@ -145,6 +153,7 @@ export default function MapPage() {
 
         setSubscriptionActive(hasActiveSubscription);
         setFreePlaysRemaining(remainingFreePlays);
+        setTrackingEnabled(getTrackingEnabled() || !!targetPoiId);
         setHasLoadedMap(true);
       } catch (error: any) {
         setErrorMessage(error?.response?.data?.message || t("map.loadError"));
@@ -257,6 +266,11 @@ export default function MapPage() {
               return poi.distanceKm <= poiRadiusKm;
             })
             .sort((left, right) => {
+              const targetPoiId = qrTargetPoiRef.current;
+              if (targetPoiId) {
+                if (left.id === targetPoiId && right.id !== targetPoiId) return -1;
+                if (right.id === targetPoiId && left.id !== targetPoiId) return 1;
+              }
               const priorityDiff = Number(right.priority || 0) - Number(left.priority || 0);
               if (priorityDiff !== 0) return priorityDiff;
               const distanceDiff = left.distanceKm - right.distanceKm;
@@ -284,13 +298,11 @@ export default function MapPage() {
           const poiCooldownUntil = (lastPlayedAtRef.current[candidatePoi.id] || 0) + poiCooldownMs;
           const canAutoPlay =
             candidateRef.current.hits >= requiredStableHits &&
-            lastTrackedPoiRef.current !== candidatePoi.id &&
             !playingPoiId &&
             now >= globalCooldownUntilRef.current &&
             now >= poiCooldownUntil;
 
           if (canAutoPlay) {
-            lastTrackedPoiRef.current = candidatePoi.id;
             lastPlayedAtRef.current[candidatePoi.id] = now;
             globalCooldownUntilRef.current = now + globalCooldownMs;
             setPlayingPoiId(candidatePoi.id);
@@ -307,6 +319,10 @@ export default function MapPage() {
               if (result.listenedCount) {
                 updatePoi(candidatePoi.id, (current) => ({ ...current, listened_count: result.listenedCount || current.listened_count }));
                 notifyProfileDataChanged();
+              }
+              if (qrTargetPoiRef.current === candidatePoi.id) {
+                qrTargetPoiRef.current = "";
+                clearTrackingTargetPoiId();
               }
             } finally {
               setPlayingPoiId("");
@@ -438,7 +454,13 @@ export default function MapPage() {
           type="button"
           className="absolute right-4 z-30 flex h-20 w-20 flex-col items-center justify-center rounded-full bg-[#374151] text-white shadow-[0_10px_18px_rgba(0,0,0,0.18)] transition-all duration-200"
           style={{ bottom: trackingBottom }}
-          onClick={() => setTrackingEnabled((value) => !value)}
+          onClick={() =>
+            setTrackingEnabled((value) => {
+              const nextValue = !value;
+              persistTrackingEnabled(nextValue);
+              return nextValue;
+            })
+          }
         >
           <img
             src={trackingEnabled ? "/assets/tracking_active.png" : "/assets/tracking.png"}

@@ -7,10 +7,13 @@ import {
   clearEntryContext,
   clearPendingPoiId,
   clearReturnTo,
+  clearTrackingTargetPoiId,
   ensureDeviceReady,
   getDeviceId,
   getPendingPoiId,
   getReturnTo,
+  setTrackingEnabled,
+  setTrackingTargetPoiId,
 } from "@/lib/device";
 
 type PaymentPreview = {
@@ -83,6 +86,12 @@ export default function PaymentPage() {
           markProfileForRefresh();
           const pendingPoiId = getPendingPoiId();
           const returnTo = getReturnTo();
+          if (pendingPoiId) {
+            setTrackingEnabled(true);
+            setTrackingTargetPoiId(pendingPoiId);
+          } else {
+            clearTrackingTargetPoiId();
+          }
           clearReturnTo();
           clearPendingPoiId();
           clearEntryContext();

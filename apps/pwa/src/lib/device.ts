@@ -13,6 +13,8 @@ const TRACKING_RADIUS_KEY = "pwa_tracking_radius";
 const TRACKING_INTERVAL_KEY = "pwa_tracking_interval";
 const AUDIO_CUSTOM_KEY = "pwa_audio_custom";
 const PROFILE_REFRESH_PENDING_KEY = "pwa_profile_refresh_pending";
+const TRACKING_ENABLED_KEY = "pwa_tracking_enabled";
+const TRACKING_TARGET_POI_KEY = "pwa_tracking_target_poi";
 
 export const DEVICE_BLOCKED_EVENT = "smartguide-device-blocked";
 export const DEVICE_RESTORED_EVENT = "smartguide-device-restored";
@@ -148,6 +150,7 @@ export function initializeSettingsDefaults() {
   if (!storage.getItem(AUDIO_CUSTOM_KEY)) storage.setItem(AUDIO_CUSTOM_KEY, "false");
   if (!storage.getItem(TRACKING_RADIUS_KEY)) storage.setItem(TRACKING_RADIUS_KEY, "0.2");
   if (!storage.getItem(TRACKING_INTERVAL_KEY)) storage.setItem(TRACKING_INTERVAL_KEY, "5000");
+  if (!storage.getItem(TRACKING_ENABLED_KEY)) storage.setItem(TRACKING_ENABLED_KEY, "false");
 }
 
 export function getDeviceUuid() {
@@ -371,6 +374,36 @@ export function getTrackingIntervalMs() {
   const storage = getStorage();
   if (!storage) return 5000;
   return Number(storage.getItem(TRACKING_INTERVAL_KEY) || 5000);
+}
+
+export function setTrackingEnabled(value: boolean) {
+  const storage = getStorage();
+  if (!storage) return;
+  storage.setItem(TRACKING_ENABLED_KEY, String(value));
+}
+
+export function getTrackingEnabled() {
+  const storage = getStorage();
+  if (!storage) return false;
+  return storage.getItem(TRACKING_ENABLED_KEY) === "true";
+}
+
+export function setTrackingTargetPoiId(poiId: string) {
+  const storage = getStorage();
+  if (!storage) return;
+  storage.setItem(TRACKING_TARGET_POI_KEY, poiId);
+}
+
+export function getTrackingTargetPoiId() {
+  const storage = getStorage();
+  if (!storage) return "";
+  return storage.getItem(TRACKING_TARGET_POI_KEY) || "";
+}
+
+export function clearTrackingTargetPoiId() {
+  const storage = getStorage();
+  if (!storage) return;
+  storage.removeItem(TRACKING_TARGET_POI_KEY);
 }
 
 export function setAudioCustom(value: boolean) {
