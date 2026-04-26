@@ -28,6 +28,7 @@ public class PaymentsController : ControllerBase
     private string SepayAccountNumber => _configuration["SEPAY_ACCOUNT_NUMBER"] ?? "4001012005";
     private string SepayAccountName => _configuration["SEPAY_ACCOUNT_NAME"] ?? "THAI QUANG HIEU";
     private string? SepayApiKey => _configuration["SEPAY_API_KEY"];
+    private string? SepayWebhookSecret => _configuration["SEPAY_WEBHOOK_SECRET"];
 
     private async Task<Device?> GetActiveDeviceAsync(int deviceId)
     {
@@ -240,18 +241,18 @@ public class PaymentsController : ControllerBase
 
     private bool IsValidSepayWebhook()
     {
-        if (string.IsNullOrWhiteSpace(SepayApiKey))
-            return false;
-
-        var authHeader = Request.Headers.Authorization.ToString();
-        if (authHeader.Equals($"Apikey {SepayApiKey}", StringComparison.Ordinal))
+        if (string.IsNullOrWhiteSpace(SepayWebhookSecret))
             return true;
 
-        if (authHeader.Equals($"ApiKey {SepayApiKey}", StringComparison.Ordinal))
+        var authHeader = Request.Headers.Authorization.ToString();
+        if (authHeader.Equals($"Apikey {SepayWebhookSecret}", StringComparison.Ordinal))
+            return true;
+
+        if (authHeader.Equals($"ApiKey {SepayWebhookSecret}", StringComparison.Ordinal))
             return true;
 
         var secretHeader = Request.Headers["X-Secret-Key"].ToString();
-        return secretHeader.Equals(SepayApiKey, StringComparison.Ordinal);
+        return secretHeader.Equals(SepayWebhookSecret, StringComparison.Ordinal);
     }
 
     private static string? ResolvePaymentCode(SepayWebhookRequest payload)
@@ -299,68 +300,77 @@ public class PaymentsController : ControllerBase
         if (string.IsNullOrWhiteSpace(normalizedCode))
             return false;
 
-        var transactionDateMin = Uri.EscapeDataString(payment.CreatedAt.AddMinutes(-10).ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture));
-        var requestUrl = $"https://my.sepay.vn/userapi/transactions/list?account_number={Uri.EscapeDataString(SepayAccountNumber)}&transaction_date_min={transactionDateMin}&amount_in={payment.Amount}&limit=20";
-
-        using var request = new HttpRequestMessage(HttpMethod.Get, requestUrl);
-        request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", SepayApiKey);
-        request.Headers.TryAddWithoutValidation("Accept", "application/json");
-
-        using var response = await SepayHttpClient.SendAsync(request);
-        if (!response.IsSuccessStatusCode)
-            return false;
-
-        await using var stream = await response.Content.ReadAsStreamAsync();
-        using var document = await JsonDocument.ParseAsync(stream);
-
-        if (!document.RootElement.TryGetProperty("transactions", out var transactions) || transactions.ValueKind != JsonValueKind.Array)
-            return false;
-
-        foreach (var transaction in transactions.EnumerateArray())
+        foreach (var requestUrl in BuildSepayTransactionLookupUrls(payment))
         {
-            var codeFromApi = transaction.TryGetProperty("code", out var codeElement) ? codeElement.GetString() : null;
-            var contentFromApi = transaction.TryGetProperty("transaction_content", out var contentElement) ? contentElement.GetString() : null;
-            var amountIn = transaction.TryGetProperty("amount_in", out var amountElement) ? amountElement.GetString() : null;
-            var normalizedCandidates = new[]
-            {
-                NormalizePaymentCode(codeFromApi),
-                NormalizePaymentCode(contentFromApi)
-            };
+            using var request = new HttpRequestMessage(HttpMethod.Get, requestUrl);
+            request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", SepayApiKey);
+            request.Headers.TryAddWithoutValidation("Accept", "application/json");
 
-            var matchesCode = normalizedCandidates.Any(candidate => !string.IsNullOrWhiteSpace(candidate) && candidate.Contains(normalizedCode, StringComparison.OrdinalIgnoreCase));
-            if (!matchesCode)
+            using var response = await SepayHttpClient.SendAsync(request);
+            if (!response.IsSuccessStatusCode)
                 continue;
 
-            if (decimal.TryParse(amountIn, NumberStyles.Any, CultureInfo.InvariantCulture, out var paidAmountDecimal) &&
-                paidAmountDecimal < payment.Amount)
-            {
+            await using var stream = await response.Content.ReadAsStreamAsync();
+            using var document = await JsonDocument.ParseAsync(stream);
+
+            if (!document.RootElement.TryGetProperty("transactions", out var transactions) || transactions.ValueKind != JsonValueKind.Array)
                 continue;
-            }
 
-            var transactionId = transaction.TryGetProperty("id", out var idElement) ? idElement.GetString() : null;
-            var referenceNumber = transaction.TryGetProperty("reference_number", out var referenceElement) ? referenceElement.GetString() : null;
-            var transactionDate = transaction.TryGetProperty("transaction_date", out var dateElement) ? dateElement.GetString() : null;
-
-            DateTime? paidAt = null;
-            if (!string.IsNullOrWhiteSpace(transactionDate) &&
-                DateTime.TryParse(transactionDate, CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out var parsedDate))
+            foreach (var transaction in transactions.EnumerateArray())
             {
-                paidAt = parsedDate.ToUniversalTime();
+                var codeFromApi = transaction.TryGetProperty("code", out var codeElement) ? codeElement.GetString() : null;
+                var contentFromApi = transaction.TryGetProperty("transaction_content", out var contentElement) ? contentElement.GetString() : null;
+                var amountIn = transaction.TryGetProperty("amount_in", out var amountElement) ? amountElement.GetString() : null;
+                var normalizedCandidates = new[]
+                {
+                    NormalizePaymentCode(codeFromApi),
+                    NormalizePaymentCode(contentFromApi)
+                };
+
+                var matchesCode = normalizedCandidates.Any(candidate => !string.IsNullOrWhiteSpace(candidate) && candidate.Contains(normalizedCode, StringComparison.OrdinalIgnoreCase));
+                if (!matchesCode)
+                    continue;
+
+                if (decimal.TryParse(amountIn, NumberStyles.Any, CultureInfo.InvariantCulture, out var paidAmountDecimal) &&
+                    paidAmountDecimal < payment.Amount)
+                {
+                    continue;
+                }
+
+                var transactionId = transaction.TryGetProperty("id", out var idElement) ? idElement.GetString() : null;
+                var referenceNumber = transaction.TryGetProperty("reference_number", out var referenceElement) ? referenceElement.GetString() : null;
+                var transactionDate = transaction.TryGetProperty("transaction_date", out var dateElement) ? dateElement.GetString() : null;
+
+                DateTime? paidAt = null;
+                if (!string.IsNullOrWhiteSpace(transactionDate) &&
+                    DateTime.TryParse(transactionDate, CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out var parsedDate))
+                {
+                    paidAt = parsedDate.ToUniversalTime();
+                }
+
+                await ApplySuccessfulPaymentAsync(
+                    payment,
+                    providerTransactionId: transactionId,
+                    providerReferenceCode: referenceNumber,
+                    paidAmount: (int?)Math.Round(paidAmountDecimal),
+                    paidAt: paidAt,
+                    providerPayload: transaction.GetRawText());
+
+                await _db.SaveChangesAsync();
+                return true;
             }
-
-            await ApplySuccessfulPaymentAsync(
-                payment,
-                providerTransactionId: transactionId,
-                providerReferenceCode: referenceNumber,
-                paidAmount: (int?)Math.Round(paidAmountDecimal),
-                paidAt: paidAt,
-                providerPayload: transaction.GetRawText());
-
-            await _db.SaveChangesAsync();
-            return true;
         }
 
         return false;
+    }
+
+    private IEnumerable<string> BuildSepayTransactionLookupUrls(Payment payment)
+    {
+        var transactionDateMin = Uri.EscapeDataString(payment.CreatedAt.AddDays(-2).ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture));
+        var baseUrl = $"https://my.sepay.vn/userapi/transactions/list?transaction_date_min={transactionDateMin}&amount_in={payment.Amount}&limit=50";
+
+        yield return $"{baseUrl}&account_number={Uri.EscapeDataString(SepayAccountNumber)}";
+        yield return baseUrl;
     }
 
     private async Task<IActionResult?> EnsureAdminAsync(int adminId)
