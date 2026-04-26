@@ -720,6 +720,100 @@ public class PaymentsController : ControllerBase
         }));
     }
 
+    [HttpGet("sepay/debug-match")]
+    public async Task<IActionResult> DebugSepayMatch([FromQuery] int adminId, [FromQuery] string code)
+    {
+        var forbidden = await EnsureAdminAsync(adminId);
+        if (forbidden != null) return forbidden;
+
+        if (string.IsNullOrWhiteSpace(code))
+            return BadRequest(new { message = "Thiếu code thanh toán" });
+
+        var normalizedCode = NormalizePaymentCode(code);
+        var payment = await _db.Payments
+            .OrderByDescending(x => x.CreatedAt)
+            .FirstOrDefaultAsync(x => NormalizePaymentCode(x.Code) == normalizedCode);
+
+        if (payment == null)
+            return NotFound(new { message = "Không tìm thấy payment trong DB", code, normalized_code = normalizedCode });
+
+        if (string.IsNullOrWhiteSpace(SepayApiKey))
+        {
+            return Ok(new
+            {
+                message = "Thiếu SEPAY_API_KEY trên Railway",
+                payment = ToPaymentStatusResponse(payment)
+            });
+        }
+
+        var attempts = new List<object>();
+        foreach (var requestUrl in BuildSepayTransactionLookupUrls(payment))
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Get, requestUrl);
+            request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", SepayApiKey);
+            request.Headers.TryAddWithoutValidation("Accept", "application/json");
+
+            using var response = await SepayHttpClient.SendAsync(request);
+            var body = await response.Content.ReadAsStringAsync();
+
+            var matched = new List<object>();
+            if (response.IsSuccessStatusCode)
+            {
+                try
+                {
+                    using var document = JsonDocument.Parse(body);
+                    if (document.RootElement.TryGetProperty("transactions", out var transactions) &&
+                        transactions.ValueKind == JsonValueKind.Array)
+                    {
+                        foreach (var transaction in transactions.EnumerateArray())
+                        {
+                            var codeFromApi = transaction.TryGetProperty("code", out var codeElement) ? codeElement.GetString() : null;
+                            var contentFromApi = transaction.TryGetProperty("transaction_content", out var contentElement) ? contentElement.GetString() : null;
+                            var amountIn = transaction.TryGetProperty("amount_in", out var amountElement) ? amountElement.GetString() : null;
+                            var normalizedCandidates = new[]
+                            {
+                                NormalizePaymentCode(codeFromApi),
+                                NormalizePaymentCode(contentFromApi)
+                            };
+                            var matchesCode = normalizedCandidates.Any(candidate => !string.IsNullOrWhiteSpace(candidate) && candidate.Contains(normalizedCode, StringComparison.OrdinalIgnoreCase));
+
+                            matched.Add(new
+                            {
+                                id = transaction.TryGetProperty("id", out var idElement) ? idElement.GetString() : null,
+                                code = codeFromApi,
+                                transaction_content = contentFromApi,
+                                amount_in = amountIn,
+                                transaction_date = transaction.TryGetProperty("transaction_date", out var dateElement) ? dateElement.GetString() : null,
+                                matches_code = matchesCode
+                            });
+                        }
+                    }
+                }
+                catch
+                {
+                    // debug response keeps raw body below
+                }
+            }
+
+            attempts.Add(new
+            {
+                url = requestUrl,
+                status_code = (int)response.StatusCode,
+                is_success = response.IsSuccessStatusCode,
+                body_preview = body.Length > 4000 ? body[..4000] : body,
+                parsed_transactions = matched
+            });
+        }
+
+        return Ok(new
+        {
+            payment = ToPaymentStatusResponse(payment),
+            normalized_code = normalizedCode,
+            sepay_account = SepayAccountNumber,
+            lookup_attempts = attempts
+        });
+    }
+
     [HttpPut("/api/admin/payments/{id}/status")]
     public async Task<IActionResult> UpdatePaymentStatus(int id, [FromQuery] int adminId, [FromBody] UpdatePaymentStatusRequest request)
     {
