@@ -730,9 +730,13 @@ public class PaymentsController : ControllerBase
             return BadRequest(new { message = "Thiếu code thanh toán" });
 
         var normalizedCode = NormalizePaymentCode(code);
-        var payment = await _db.Payments
+        var recentPayments = await _db.Payments
             .OrderByDescending(x => x.CreatedAt)
-            .FirstOrDefaultAsync(x => NormalizePaymentCode(x.Code) == normalizedCode);
+            .Take(200)
+            .ToListAsync();
+
+        var payment = recentPayments
+            .FirstOrDefault(x => NormalizePaymentCode(x.Code) == normalizedCode);
 
         if (payment == null)
             return NotFound(new { message = "Không tìm thấy payment trong DB", code, normalized_code = normalizedCode });
