@@ -245,7 +245,7 @@ public class OwnerPoisController : ControllerBase
                     Amount = request.UpgradeAmount,
                     Status = "pending",
                     Code = string.IsNullOrWhiteSpace(request.UpgradePaymentCode)
-                        ? $"SGUP_{Guid.NewGuid().ToString("N")[..8]}"
+                        ? $"SGUP{Guid.NewGuid().ToString("N")[..8].ToUpperInvariant()}"
                         : request.UpgradePaymentCode.Trim(),
                     Description = string.IsNullOrWhiteSpace(request.UpgradeDescription)
                         ? $"Nâng cấp POI: bán kính {poi.Radius}m, ưu tiên {poi.Priority}"

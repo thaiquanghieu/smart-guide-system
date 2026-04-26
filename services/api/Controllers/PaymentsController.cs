@@ -390,7 +390,7 @@ public class PaymentsController : ControllerBase
         {
             DeviceId = deviceId,
             PlanId = planId,
-            Code = $"SGPAY_{Guid.NewGuid().ToString("N")[..8].ToUpperInvariant()}",
+            Code = $"SGPAY{Guid.NewGuid().ToString("N")[..8].ToUpperInvariant()}",
             PayerType = "device",
             PaymentType = "user_plan",
             Provider = "sepay",
@@ -429,7 +429,7 @@ public class PaymentsController : ControllerBase
             Amount = request.UpgradeAmount,
             Status = "pending",
             Code = string.IsNullOrWhiteSpace(request.UpgradePaymentCode)
-                ? $"SGUP_{Guid.NewGuid().ToString("N")[..8].ToUpperInvariant()}"
+                ? $"SGUP{Guid.NewGuid().ToString("N")[..8].ToUpperInvariant()}"
                 : request.UpgradePaymentCode.Trim(),
             Description = string.IsNullOrWhiteSpace(request.UpgradeDescription)
                 ? $"Nâng cấp POI: {request.Name}"

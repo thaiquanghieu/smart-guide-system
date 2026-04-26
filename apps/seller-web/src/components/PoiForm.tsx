@@ -507,7 +507,7 @@ export default function PoiForm({ mode, initialValue, poiId, onDone }: Props) {
         await apiClient.put(`/owner/pois/${poiId}`, payload)
         setSuccess('Đã cập nhật POI và gửi duyệt lại')
       } else if (upgradeAmount > 0) {
-        const paymentCode = `SGUP_${Date.now().toString(36).toUpperCase()}`
+        const paymentCode = `SGUP${Date.now().toString(36).toUpperCase()}`
         const response = await apiClient.post('/owner/payments/prepare-poi-upgrade', {
           ...payload,
           upgradeAmount,
