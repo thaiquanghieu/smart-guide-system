@@ -11,7 +11,7 @@ namespace SmartGuideAPI.Controllers;
 [Route("api/[controller]")]
 public class PaymentsController : ControllerBase
 {
-    private static readonly Regex PaymentCodeRegex = new(@"(SGPAY|SGUP|SGQR)_[A-Za-z0-9]+", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+    private static readonly Regex PaymentCodeRegex = new(@"(SGPAY|SGUP|SGQR)_?[A-Za-z0-9]+", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
     private readonly AppDbContext _db;
     private readonly IConfiguration _configuration;
@@ -271,6 +271,20 @@ public class PaymentsController : ControllerBase
         return match.Success ? match.Value.Trim() : null;
     }
 
+    private static string NormalizePaymentCode(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return string.Empty;
+
+        var chars = value
+            .Trim()
+            .Where(char.IsLetterOrDigit)
+            .Select(char.ToUpperInvariant)
+            .ToArray();
+
+        return new string(chars);
+    }
+
     private async Task<IActionResult?> EnsureAdminAsync(int adminId)
     {
         var admin = await _db.Users.FindAsync(adminId);
@@ -400,9 +414,12 @@ public class PaymentsController : ControllerBase
         if (string.IsNullOrWhiteSpace(paymentCode))
             return Ok(new { message = "Không tìm thấy mã thanh toán hợp lệ" });
 
-        var payment = await _db.Payments.FirstOrDefaultAsync(x => x.Code == paymentCode);
+        var normalizedIncomingCode = NormalizePaymentCode(paymentCode);
+        var payment = _db.Payments
+            .AsEnumerable()
+            .FirstOrDefault(x => NormalizePaymentCode(x.Code) == normalizedIncomingCode);
         if (payment == null)
-            return Ok(new { message = "Không tìm thấy payment tương ứng", code = paymentCode });
+            return Ok(new { message = "Không tìm thấy payment tương ứng", code = paymentCode, normalized_code = normalizedIncomingCode });
 
         if (payment.IsUsed || payment.Status == "used")
             return Ok(new { message = "Payment đã được xử lý trước đó", code = paymentCode });
