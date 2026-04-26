@@ -40,6 +40,27 @@ public class Payment
     [Column("code")]
     public string Code { get; set; } = "";
 
+    [Column("provider")]
+    public string Provider { get; set; } = "manual";
+
+    [Column("provider_transaction_id")]
+    public string? ProviderTransactionId { get; set; }
+
+    [Column("provider_reference_code")]
+    public string? ProviderReferenceCode { get; set; }
+
+    [Column("paid_amount")]
+    public int? PaidAmount { get; set; }
+
+    [Column("paid_at", TypeName = "timestamptz")]
+    public DateTime? PaidAt { get; set; }
+
+    [Column("provider_payload", TypeName = "jsonb")]
+    public string? ProviderPayload { get; set; }
+
+    [Column("draft_payload", TypeName = "jsonb")]
+    public string? DraftPayload { get; set; }
+
     [Column("is_used")]
     public bool IsUsed { get; set; }
 
@@ -54,4 +75,7 @@ public class Payment
 
     [Column("rejected_reason")]
     public string? RejectedReason { get; set; }
+
+    [Column("submitted_at", TypeName = "timestamptz")]
+    public DateTime? SubmittedAt { get; set; }
 }

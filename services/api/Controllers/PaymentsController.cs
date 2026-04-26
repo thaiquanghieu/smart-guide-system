@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SmartGuideAPI.Data;
 using SmartGuideAPI.Models;
+using System.Text.Json;
+using System.Text.RegularExpressions;
 
 namespace SmartGuideAPI.Controllers;
 
@@ -9,12 +11,21 @@ namespace SmartGuideAPI.Controllers;
 [Route("api/[controller]")]
 public class PaymentsController : ControllerBase
 {
-    private readonly AppDbContext _db;
+    private static readonly Regex PaymentCodeRegex = new(@"(SGPAY|SGUP|SGQR)_[A-Za-z0-9]+", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
-    public PaymentsController(AppDbContext db)
+    private readonly AppDbContext _db;
+    private readonly IConfiguration _configuration;
+
+    public PaymentsController(AppDbContext db, IConfiguration configuration)
     {
         _db = db;
+        _configuration = configuration;
     }
+
+    private string SepayBank => _configuration["SEPAY_BANK"] ?? "Techcombank";
+    private string SepayAccountNumber => _configuration["SEPAY_ACCOUNT_NUMBER"] ?? "4001012005";
+    private string SepayAccountName => _configuration["SEPAY_ACCOUNT_NAME"] ?? "THAI QUANG HIEU";
+    private string? SepayApiKey => _configuration["SEPAY_API_KEY"];
 
     private async Task<Device?> GetActiveDeviceAsync(int deviceId)
     {
@@ -33,6 +44,88 @@ public class PaymentsController : ControllerBase
             "rejected" => "Đã từ chối",
             "used" => "Thanh toán thành công",
             _ => "Đang chờ"
+        };
+    }
+
+    private string BuildSepayQrUrl(int amount, string code)
+    {
+        var accountNumber = Uri.EscapeDataString(SepayAccountNumber);
+        var bank = Uri.EscapeDataString(SepayBank);
+        var description = Uri.EscapeDataString(code);
+        return $"https://qr.sepay.vn/img?acc={accountNumber}&bank={bank}&amount={amount}&des={description}&template=compact2";
+    }
+
+    private string BuildDescription(Payment payment, string? planName = null, string? poiName = null)
+    {
+        return payment.Description ?? planName ?? poiName ?? "Thanh toán";
+    }
+
+    private string? GetDraftPoiName(Payment payment)
+    {
+        return PoiDraftWorkflow.ExtractPoiName(payment.DraftPayload);
+    }
+
+    private object ToPaymentStatusResponse(Payment payment, string? planName = null, string? poiName = null)
+    {
+        var resolvedPoiName = poiName ?? GetDraftPoiName(payment);
+
+        return new
+        {
+            payment.Id,
+            payment.Code,
+            payment.Amount,
+            payment.Status,
+            status_label = PaymentStatusLabel(payment.Status),
+            payment_type = payment.PaymentType,
+            payer_type = payment.PayerType,
+            payment.DeviceId,
+            payment.OwnerId,
+            payment.PoiId,
+            plan_name = planName,
+            poi_name = resolvedPoiName,
+            description = BuildDescription(payment, planName, resolvedPoiName),
+            created_at = payment.CreatedAt,
+            used_at = payment.UsedAt,
+            confirmed_at = payment.ConfirmedAt,
+            rejected_reason = payment.RejectedReason,
+            provider = payment.Provider,
+            provider_transaction_id = payment.ProviderTransactionId,
+            provider_reference_code = payment.ProviderReferenceCode,
+            paid_amount = payment.PaidAmount,
+            paid_at = payment.PaidAt
+        };
+    }
+
+    private object ToCheckoutResponse(Payment payment, Plan? plan = null, string? poiName = null)
+    {
+        var resolvedPoiName = poiName ?? GetDraftPoiName(payment);
+        return new
+        {
+            payment.Id,
+            payment.Code,
+            payment.Amount,
+            payment.Status,
+            status_label = PaymentStatusLabel(payment.Status),
+            payment_type = payment.PaymentType,
+            payer_type = payment.PayerType,
+            plan = plan == null
+                ? null
+                : new
+                {
+                    plan.Id,
+                    plan.Name,
+                    plan.Days,
+                    plan.Price
+                },
+            poi_name = resolvedPoiName,
+            description = BuildDescription(payment, plan?.Name, resolvedPoiName),
+            qr_url = BuildSepayQrUrl(payment.Amount, payment.Code),
+            bank_name = SepayBank,
+            account_number = SepayAccountNumber,
+            account_name = SepayAccountName,
+            created_at = payment.CreatedAt,
+            confirmed_at = payment.ConfirmedAt,
+            rejected_reason = payment.RejectedReason
         };
     }
 
@@ -67,32 +160,115 @@ public class PaymentsController : ControllerBase
         payment.IsUsed = true;
         payment.UsedAt = now;
         payment.ConfirmedAt = now;
+        payment.PaidAt ??= now;
         payment.Status = "used";
         payment.RejectedReason = null;
     }
 
-    private object ToPaymentStatusResponse(Payment payment, string? planName = null, string? poiName = null)
+    private async Task ConfirmPoiUpgradeAsync(Payment payment)
     {
-        return new
+        var now = DateTime.UtcNow;
+
+        if (string.IsNullOrWhiteSpace(payment.PoiId))
         {
-            payment.Id,
-            payment.Code,
-            payment.Amount,
-            payment.Status,
-            status_label = PaymentStatusLabel(payment.Status),
-            payment_type = payment.PaymentType,
-            payer_type = payment.PayerType,
-            payment.DeviceId,
-            payment.OwnerId,
-            payment.PoiId,
-            plan_name = planName,
-            poi_name = poiName,
-            description = payment.Description ?? planName ?? poiName ?? "Thanh toán",
-            created_at = payment.CreatedAt,
-            used_at = payment.UsedAt,
-            confirmed_at = payment.ConfirmedAt,
-            rejected_reason = payment.RejectedReason
-        };
+            if (!payment.OwnerId.HasValue)
+                throw new InvalidOperationException("Thiếu owner để tạo POI từ thanh toán nâng cấp.");
+
+            var draft = PoiDraftWorkflow.DeserializeRequest(payment.DraftPayload);
+            if (draft == null)
+                throw new InvalidOperationException("Không tìm thấy dữ liệu POI nháp để hoàn tất thanh toán.");
+
+            await using var transaction = await _db.Database.BeginTransactionAsync();
+
+            var poi = await PoiDraftWorkflow.CreatePoiFromDraftAsync(_db, draft, payment.OwnerId.Value, now);
+            payment.PoiId = poi.Id;
+            payment.IsUsed = true;
+            payment.UsedAt = now;
+            payment.ConfirmedAt = now;
+            payment.PaidAt ??= now;
+            payment.Status = "used";
+            payment.RejectedReason = null;
+
+            await _db.SaveChangesAsync();
+            await transaction.CommitAsync();
+            return;
+        }
+
+        payment.IsUsed = true;
+        payment.UsedAt = now;
+        payment.ConfirmedAt = now;
+        payment.PaidAt ??= now;
+        payment.Status = "used";
+        payment.RejectedReason = null;
+    }
+
+    private async Task ApplySuccessfulPaymentAsync(
+        Payment payment,
+        string? providerTransactionId = null,
+        string? providerReferenceCode = null,
+        int? paidAmount = null,
+        DateTime? paidAt = null,
+        string? providerPayload = null)
+    {
+        payment.Provider = "sepay";
+        payment.ProviderTransactionId = providerTransactionId ?? payment.ProviderTransactionId;
+        payment.ProviderReferenceCode = providerReferenceCode ?? payment.ProviderReferenceCode;
+        payment.PaidAmount = paidAmount ?? payment.PaidAmount ?? payment.Amount;
+        payment.PaidAt = paidAt ?? payment.PaidAt ?? DateTime.UtcNow;
+        payment.ProviderPayload = providerPayload ?? payment.ProviderPayload;
+
+        if (payment.PaymentType == "user_plan")
+        {
+            await ActivateUserPlanAsync(payment);
+            return;
+        }
+
+        if (payment.PaymentType == "poi_upgrade")
+        {
+            await ConfirmPoiUpgradeAsync(payment);
+            return;
+        }
+
+        payment.IsUsed = true;
+        payment.UsedAt = DateTime.UtcNow;
+        payment.ConfirmedAt = DateTime.UtcNow;
+        payment.Status = "used";
+        payment.RejectedReason = null;
+    }
+
+    private bool IsValidSepayWebhook()
+    {
+        if (string.IsNullOrWhiteSpace(SepayApiKey))
+            return false;
+
+        var authHeader = Request.Headers.Authorization.ToString();
+        if (authHeader.Equals($"Apikey {SepayApiKey}", StringComparison.Ordinal))
+            return true;
+
+        if (authHeader.Equals($"ApiKey {SepayApiKey}", StringComparison.Ordinal))
+            return true;
+
+        var secretHeader = Request.Headers["X-Secret-Key"].ToString();
+        return secretHeader.Equals(SepayApiKey, StringComparison.Ordinal);
+    }
+
+    private static string? ResolvePaymentCode(SepayWebhookRequest payload)
+    {
+        if (!string.IsNullOrWhiteSpace(payload.Code))
+            return payload.Code.Trim();
+
+        var combined = string.Join(" ", new[]
+        {
+            payload.Content,
+            payload.Description,
+            payload.ReferenceCode
+        }.Where(value => !string.IsNullOrWhiteSpace(value)));
+
+        if (string.IsNullOrWhiteSpace(combined))
+            return null;
+
+        var match = PaymentCodeRegex.Match(combined);
+        return match.Success ? match.Value.Trim() : null;
     }
 
     private async Task<IActionResult?> EnsureAdminAsync(int adminId)
@@ -107,9 +283,6 @@ public class PaymentsController : ControllerBase
         return owner == null || owner.Role != "owner" ? Forbid("Chỉ seller mới có quyền") : null;
     }
 
-    // =========================
-    // TẠO QR
-    // =========================
     [HttpPost("create")]
     public async Task<IActionResult> CreatePayment(int deviceId, int planId)
     {
@@ -117,9 +290,6 @@ public class PaymentsController : ControllerBase
         if (device == null)
             return BadRequest(new { message = "Thiết bị không hợp lệ hoặc đã bị khóa" });
 
-        var now = DateTime.UtcNow;
-
-        var code = $"SGPAY_{Guid.NewGuid().ToString().Substring(0,8)}";
         var plan = await _db.Plans.FindAsync(planId);
         if (plan == null)
             return BadRequest(new { message = "Plan không tồn tại" });
@@ -128,102 +298,59 @@ public class PaymentsController : ControllerBase
         {
             DeviceId = deviceId,
             PlanId = planId,
-            Code = code,
+            Code = $"SGPAY_{Guid.NewGuid().ToString("N")[..8].ToUpperInvariant()}",
             PayerType = "device",
             PaymentType = "user_plan",
+            Provider = "sepay",
             Amount = plan.Price,
             Status = "pending",
             Description = $"Mua {plan.Name}",
             IsUsed = false,
-            CreatedAt = DateTime.SpecifyKind(now, DateTimeKind.Utc)
+            CreatedAt = DateTime.UtcNow
         };
 
         _db.Payments.Add(payment);
         await _db.SaveChangesAsync();
 
-        return Ok(new
-        {
-            code,
-            plan = new
-            {
-                plan.Id,
-                plan.Name,
-                plan.Days,
-                plan.Price
-            }
-        });
+        return Ok(ToCheckoutResponse(payment, plan));
     }
 
-    // =========================
-    // SCAN QR
-    // =========================
-    [HttpPost("scan")]
-    public async Task<IActionResult> Scan(string code, int deviceId)
+    [HttpPost("/api/owner/payments/prepare-poi-upgrade")]
+    public async Task<IActionResult> PreparePoiUpgradePayment([FromBody] CreatePoiRequest request, [FromQuery] int ownerId)
     {
-        var device = await GetActiveDeviceAsync(deviceId);
-        if (device == null)
-            return BadRequest(new { message = "Thiết bị không hợp lệ hoặc đã bị khóa" });
+        var forbidden = await EnsureOwnerAsync(ownerId);
+        if (forbidden != null) return forbidden;
 
-        var now = DateTime.UtcNow;
+        var validationError = PoiDraftWorkflow.Validate(request);
+        if (!string.IsNullOrWhiteSpace(validationError))
+            return BadRequest(new { message = validationError });
 
-        var payment = await _db.Payments
-            .FirstOrDefaultAsync(x => x.Code == code);
+        if (request.UpgradeAmount <= 0)
+            return BadRequest(new { message = "POI này không có gói nâng cấp cần thanh toán." });
 
-        if (payment == null)
-            return BadRequest(new { message = "QR không tồn tại" });
-
-        if (payment.IsUsed)
-            return BadRequest(new { message = "QR đã dùng" });
-
-        if (payment.DeviceId != deviceId)
-            return BadRequest(new { message = "QR không thuộc thiết bị này" });
-
-        if (!payment.PlanId.HasValue)
-            return BadRequest(new { message = "QR chưa gắn gói sử dụng" });
-
-        var plan = await _db.Plans.FindAsync(payment.PlanId.Value);
-
-        if (plan == null)
-            return BadRequest(new { message = "Plan không tồn tại" });
-
-        var sub = await _db.Subscriptions
-            .FirstOrDefaultAsync(x => x.DeviceId == deviceId);
-
-        if (sub == null)
+        var payment = new Payment
         {
-            sub = new Subscription
-            {
-                DeviceId = deviceId,
-                ExpireAt = DateTime.SpecifyKind(now.AddDays(plan.Days), DateTimeKind.Utc)
-            };
-            _db.Subscriptions.Add(sub);
-        }
-        else
-        {
-            if (sub.ExpireAt > now)
-                sub.ExpireAt = DateTime.SpecifyKind(sub.ExpireAt.AddDays(plan.Days), DateTimeKind.Utc);
-            else
-                sub.ExpireAt = DateTime.SpecifyKind(now.AddDays(plan.Days), DateTimeKind.Utc);
-        }
+            OwnerId = ownerId,
+            PayerType = "seller",
+            PaymentType = "poi_upgrade",
+            Provider = "sepay",
+            Amount = request.UpgradeAmount,
+            Status = "pending",
+            Code = string.IsNullOrWhiteSpace(request.UpgradePaymentCode)
+                ? $"SGUP_{Guid.NewGuid().ToString("N")[..8].ToUpperInvariant()}"
+                : request.UpgradePaymentCode.Trim(),
+            Description = string.IsNullOrWhiteSpace(request.UpgradeDescription)
+                ? $"Nâng cấp POI: {request.Name}"
+                : request.UpgradeDescription.Trim(),
+            DraftPayload = PoiDraftWorkflow.SerializeRequest(request),
+            IsUsed = false,
+            CreatedAt = DateTime.UtcNow
+        };
 
-        payment.IsUsed = true;
-        payment.UsedAt = now;
-        payment.Status = "used";
-        payment.ConfirmedAt = now;
-
-        _db.QrLogs.Add(new QrLog
-        {
-            DeviceId = deviceId,
-            Code = code
-        });
-
+        _db.Payments.Add(payment);
         await _db.SaveChangesAsync();
 
-        return Ok(new
-        {
-            message = "Activated",
-            expire = sub.ExpireAt
-        });
+        return Ok(ToCheckoutResponse(payment, null, request.Name));
     }
 
     [HttpPost("submit")]
@@ -237,10 +364,11 @@ public class PaymentsController : ControllerBase
         if (payment == null)
             return NotFound(new { message = "Không tìm thấy yêu cầu thanh toán" });
 
-        if (payment.Status == "used" || payment.Status == "confirmed")
+        if (payment.Status is "used" or "confirmed")
             return Ok(new { message = "Thanh toán đã được xác nhận trước đó", payment = ToPaymentStatusResponse(payment) });
 
         payment.Status = "submitted";
+        payment.SubmittedAt = DateTime.UtcNow;
         payment.RejectedReason = null;
         await _db.SaveChangesAsync();
 
@@ -259,7 +387,41 @@ public class PaymentsController : ControllerBase
             return NotFound(new { message = "Không tìm thấy thanh toán" });
 
         var plan = payment.PlanId.HasValue ? await _db.Plans.FindAsync(payment.PlanId.Value) : null;
-        return Ok(ToPaymentStatusResponse(payment, plan?.Name));
+        return Ok(ToCheckoutResponse(payment, plan));
+    }
+
+    [HttpPost("sepay/webhook")]
+    public async Task<IActionResult> HandleSepayWebhook([FromBody] SepayWebhookRequest payload)
+    {
+        if (!IsValidSepayWebhook())
+            return Unauthorized(new { message = "Webhook SePay không hợp lệ" });
+
+        var paymentCode = ResolvePaymentCode(payload);
+        if (string.IsNullOrWhiteSpace(paymentCode))
+            return Ok(new { message = "Không tìm thấy mã thanh toán hợp lệ" });
+
+        var payment = await _db.Payments.FirstOrDefaultAsync(x => x.Code == paymentCode);
+        if (payment == null)
+            return Ok(new { message = "Không tìm thấy payment tương ứng", code = paymentCode });
+
+        if (payment.IsUsed || payment.Status == "used")
+            return Ok(new { message = "Payment đã được xử lý trước đó", code = paymentCode });
+
+        if (payload.TransferAmount > 0 && payload.TransferAmount < payment.Amount)
+            return Ok(new { message = "Số tiền chuyển chưa đủ để xác nhận", code = paymentCode, expected = payment.Amount, actual = payload.TransferAmount });
+
+        var paidAt = payload.TransactionDate ?? DateTime.UtcNow;
+        await ApplySuccessfulPaymentAsync(
+            payment,
+            providerTransactionId: payload.Id?.ToString(),
+            providerReferenceCode: payload.ReferenceCode,
+            paidAmount: payload.TransferAmount > 0 ? payload.TransferAmount : null,
+            paidAt: DateTime.SpecifyKind(paidAt, DateTimeKind.Utc),
+            providerPayload: JsonSerializer.Serialize(payload));
+
+        await _db.SaveChangesAsync();
+
+        return Ok(new { success = true, code = paymentCode, status = payment.Status });
     }
 
     [HttpGet("check")]
@@ -269,14 +431,11 @@ public class PaymentsController : ControllerBase
         if (device == null)
             return Ok(new { isActive = false, reason = "device_inactive" });
 
-        var sub = await _db.Subscriptions
-            .FirstOrDefaultAsync(x => x.DeviceId == deviceId);
-
+        var sub = await _db.Subscriptions.FirstOrDefaultAsync(x => x.DeviceId == deviceId);
         if (sub == null)
             return Ok(new { isActive = false });
 
         var now = DateTime.UtcNow;
-
         if (sub.ExpireAt > now)
             return Ok(new { isActive = true, expire = sub.ExpireAt });
 
@@ -309,7 +468,7 @@ public class PaymentsController : ControllerBase
                 payment.Status,
                 status_label = PaymentStatusLabel(payment.Status),
                 payment_type = payment.PaymentType,
-                description = payment.Description ?? plan?.Name ?? "Thanh toán",
+                description = BuildDescription(payment, plan?.Name, null),
                 plan_name = plan?.Name,
                 plan_days = plan?.Days,
                 created_at = payment.CreatedAt,
@@ -354,7 +513,7 @@ public class PaymentsController : ControllerBase
             return NotFound(new { message = "Không tìm thấy thanh toán" });
 
         var poi = !string.IsNullOrWhiteSpace(payment.PoiId) ? await _db.Pois.FindAsync(payment.PoiId) : null;
-        return Ok(ToPaymentStatusResponse(payment, null, poi?.Name));
+        return Ok(ToCheckoutResponse(payment, null, poi?.Name));
     }
 
     [HttpPost("/api/owner/payments/submit")]
@@ -367,7 +526,11 @@ public class PaymentsController : ControllerBase
         if (payment == null)
             return NotFound(new { message = "Không tìm thấy thanh toán" });
 
+        if (payment.Status is "used" or "confirmed")
+            return Ok(new { message = "Thanh toán đã được xác nhận trước đó", payment = ToPaymentStatusResponse(payment) });
+
         payment.Status = "submitted";
+        payment.SubmittedAt = DateTime.UtcNow;
         payment.RejectedReason = null;
         await _db.SaveChangesAsync();
 
@@ -418,13 +581,18 @@ public class PaymentsController : ControllerBase
                 payment.DeviceId,
                 device_name = device?.Name,
                 payment.PoiId,
-                poi_name = poi?.Name,
+                poi_name = poi?.Name ?? GetDraftPoiName(payment),
                 plan_name = plan?.Name,
-                description = payment.Description ?? plan?.Name ?? "Thanh toán",
+                description = BuildDescription(payment, plan?.Name, poi?.Name ?? GetDraftPoiName(payment)),
                 created_at = payment.CreatedAt,
                 used_at = payment.UsedAt,
                 confirmed_at = payment.ConfirmedAt,
-                rejected_reason = payment.RejectedReason
+                rejected_reason = payment.RejectedReason,
+                provider = payment.Provider,
+                provider_transaction_id = payment.ProviderTransactionId,
+                provider_reference_code = payment.ProviderReferenceCode,
+                paid_amount = payment.PaidAmount,
+                paid_at = payment.PaidAt
             };
         }));
     }
@@ -442,18 +610,9 @@ public class PaymentsController : ControllerBase
         if (payment == null)
             return NotFound(new { message = "Không tìm thấy thanh toán" });
 
-        if (request.Status == "confirmed")
+        if (request.Status == "confirmed" || request.Status == "used")
         {
-            if (payment.PaymentType == "user_plan")
-            {
-                await ActivateUserPlanAsync(payment);
-            }
-            else
-            {
-                payment.Status = "confirmed";
-                payment.ConfirmedAt = DateTime.UtcNow;
-                payment.RejectedReason = null;
-            }
+            await ApplySuccessfulPaymentAsync(payment);
         }
         else
         {
@@ -471,4 +630,20 @@ public class UpdatePaymentStatusRequest
 {
     public string Status { get; set; } = "submitted";
     public string? Reason { get; set; }
+}
+
+public class SepayWebhookRequest
+{
+    public long? Id { get; set; }
+    public string? Gateway { get; set; }
+    public DateTime? TransactionDate { get; set; }
+    public string? AccountNumber { get; set; }
+    public string? SubAccount { get; set; }
+    public string? Content { get; set; }
+    public string? Code { get; set; }
+    public string? ReferenceCode { get; set; }
+    public string? Description { get; set; }
+    public string? TransferType { get; set; }
+    public int TransferAmount { get; set; }
+    public long? Accumulated { get; set; }
 }

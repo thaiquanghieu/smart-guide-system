@@ -22,6 +22,10 @@ type PaymentPreview = {
   status?: string;
   status_label?: string;
   rejected_reason?: string;
+  qr_url?: string;
+  bank_name?: string;
+  account_number?: string;
+  account_name?: string;
   plan: {
     id: number;
     name: string;
@@ -127,7 +131,7 @@ export default function PaymentPage() {
   const qrUrl =
     payment == null
       ? ""
-      : `https://img.vietqr.io/image/TCB-4001012005-compact2.png?amount=${payment.plan.price}&addInfo=${payment.code}&accountName=THAI%20QUANG%20HIEU`;
+      : payment.qr_url || "";
 
   return (
     <main className="min-h-screen bg-[#041B2D] px-5 pb-8 text-white" style={{ paddingTop: "calc(env(safe-area-inset-top) + 20px)" }}>
@@ -165,9 +169,9 @@ export default function PaymentPage() {
 
             <div className="rounded-[16px] bg-[#F4F9FF] p-4 text-[#111827]">
               <div className="space-y-2">
-                <p>Techcombank</p>
-                <p>4001012005</p>
-                <p>THAI QUANG HIEU</p>
+                <p>{payment.bank_name || "Techcombank"}</p>
+                <p>{payment.account_number || "4001012005"}</p>
+                <p>{payment.account_name || "THAI QUANG HIEU"}</p>
                 <p className="font-bold">{t("payment.transferContent")}</p>
                 <p className="font-bold text-[#0F5BD7]">{payment.code}</p>
               </div>

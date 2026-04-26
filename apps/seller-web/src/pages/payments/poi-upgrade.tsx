@@ -1,19 +1,8 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/router'
 import Sidebar from '@/components/Sidebar'
 import ProtectedRoute from '@/components/ProtectedRoute'
 import apiClient from '@/lib/api'
-
-type PendingUpgrade = {
-  payload: Record<string, any>
-  submitted?: boolean
-  payment: {
-    code: string
-    amount: number
-    description: string
-    poiName: string
-  }
-}
 
 type PaymentStatus = {
   id: number
@@ -21,108 +10,97 @@ type PaymentStatus = {
   amount: number
   status: string
   status_label: string
+  description: string
+  poi_name?: string
+  qr_url?: string
+  bank_name?: string
+  account_number?: string
+  account_name?: string
   rejected_reason?: string
 }
 
 export default function PoiUpgradePaymentPage() {
   const router = useRouter()
-  const [pending, setPending] = useState<PendingUpgrade | null>(null)
+  const [payment, setPayment] = useState<PaymentStatus | null>(null)
   const [loading, setLoading] = useState(false)
-  const [message, setMessage] = useState('')
-  const [paymentStatus, setPaymentStatus] = useState<PaymentStatus | null>(null)
+  const [message, setMessage] = useState('Đang tải thanh toán...')
   const [showRejectedNotice, setShowRejectedNotice] = useState(false)
   const [canRetryRejected, setCanRetryRejected] = useState(false)
 
+  const code = typeof router.query.code === 'string' ? router.query.code : ''
+
   useEffect(() => {
-    if (typeof window === 'undefined') return
-    const raw = sessionStorage.getItem('pendingPoiUpgrade')
-    if (!raw) {
+    if (!router.isReady) return
+    if (!code) {
       router.replace('/pois/create')
       return
     }
 
-    try {
-      const parsed = JSON.parse(raw)
-      setPending(parsed)
-      if (parsed.submitted) {
-        setMessage('Đợi hệ thống xác minh thanh toán...')
+    const load = async () => {
+      try {
+        const response = await apiClient.get('/owner/payments/status', { params: { code } })
+        setPayment(response.data)
+        setMessage(response.data?.status === 'rejected' ? response.data?.rejected_reason || 'Thanh toán đã bị từ chối.' : 'Đợi SePay xác nhận giao dịch...')
+      } catch (error: any) {
+        setMessage(error?.response?.data?.message || 'Không tải được thanh toán nâng cấp.')
       }
-    } catch {
-      sessionStorage.removeItem('pendingPoiUpgrade')
-      router.replace('/pois/create')
     }
-  }, [router])
+
+    load()
+  }, [code, router, router.isReady])
 
   useEffect(() => {
-    if (!pending?.submitted || !pending.payment.code) {
+    if (!payment || !code || (payment.status !== 'pending' && payment.status !== 'submitted')) {
       return undefined
     }
 
     const timer = window.setInterval(async () => {
       try {
-        const response = await apiClient.get('/owner/payments/status', {
-          params: { code: pending.payment.code },
-        })
-        const nextStatus = response.data as PaymentStatus
-        setPaymentStatus(nextStatus)
+        const response = await apiClient.get('/owner/payments/status', { params: { code } })
+        const nextPayment = response.data as PaymentStatus
+        setPayment(nextPayment)
 
-        if (nextStatus.status === 'confirmed' || nextStatus.status === 'used') {
-          setMessage('Thanh toán đã được xác nhận. Đang chuyển về danh sách POI...')
+        if (nextPayment.status === 'used' || nextPayment.status === 'confirmed') {
+          setMessage('SePay đã xác nhận giao dịch. Đang chuyển về danh sách POI...')
           window.clearInterval(timer)
-          sessionStorage.removeItem('pendingPoiUpgrade')
           setTimeout(() => router.replace('/pois'), 900)
           return
         }
 
-        if (nextStatus.status === 'rejected') {
-          setMessage(nextStatus.rejected_reason || 'Hệ thống chưa xác minh được thanh toán này.')
+        if (nextPayment.status === 'rejected') {
+          setMessage(nextPayment.rejected_reason || 'Giao dịch chưa được SePay xác minh.')
           setCanRetryRejected(false)
           window.clearInterval(timer)
           return
         }
 
-        setMessage('Đợi hệ thống xác minh thanh toán...')
+        setMessage('Đợi SePay xác nhận giao dịch...')
       } catch {
         // silent polling
       }
     }, 3000)
 
     return () => window.clearInterval(timer)
-  }, [pending, router])
-
-  const qrUrl = useMemo(() => {
-    if (!pending) return ''
-    return `https://img.vietqr.io/image/TCB-4001012005-compact2.png?amount=${pending.payment.amount}&addInfo=${encodeURIComponent(pending.payment.code)}&accountName=THAI%20QUANG%20HIEU`
-  }, [pending])
+  }, [code, payment, router])
 
   const confirmPayment = async () => {
-    if (!pending) return
+    if (!payment) return
 
-    if (paymentStatus?.status === 'rejected' && !canRetryRejected) {
+    if (payment.status === 'rejected' && !canRetryRejected) {
       setShowRejectedNotice(true)
       return
     }
 
     setLoading(true)
-    setMessage('')
-
     try {
-      if (!pending.submitted) {
-        await apiClient.post('/owner/pois', pending.payload)
-        const nextPending = { ...pending, submitted: true }
-        setPending(nextPending)
-        sessionStorage.setItem('pendingPoiUpgrade', JSON.stringify(nextPending))
-      } else if (paymentStatus?.status === 'rejected') {
-        const response = await apiClient.post('/owner/payments/submit', null, {
-          params: { code: pending.payment.code },
-        })
-        setPaymentStatus(response.data?.payment || null)
-      }
-
-      setMessage('Đợi hệ thống xác minh thanh toán...')
+      const response = await apiClient.post('/owner/payments/submit', null, {
+        params: { code },
+      })
+      setPayment((prev) => ({ ...(prev || payment), ...(response.data?.payment || {}) }))
+      setMessage('Đang chờ SePay xác nhận giao dịch...')
       setCanRetryRejected(false)
     } catch (error: any) {
-      setMessage(error?.response?.data?.message || 'Không gửi được POI sau thanh toán. Vui lòng kiểm tra lại.')
+      setMessage(error?.response?.data?.message || 'Không gửi được yêu cầu xác minh.')
     } finally {
       setLoading(false)
     }
@@ -138,55 +116,59 @@ export default function PoiUpgradePaymentPage() {
               ← Quay lại
             </button>
             <h1 className="text-4xl font-bold text-white">Thanh toán nâng cấp POI</h1>
-            <p className="mt-2 text-gray-400">Chuyển khoản theo mã bên dưới, sau đó bấm xác nhận để gửi POI cho admin duyệt.</p>
+            <p className="mt-2 text-gray-400">SePay sẽ tự xác nhận giao dịch khi chuyển khoản đúng số tiền và đúng nội dung.</p>
 
-            {pending ? (
+            {payment ? (
               <div className="mt-8 grid gap-6 md:grid-cols-[280px,1fr]">
                 <div className="rounded-2xl border border-gray-700 bg-secondary p-5">
                   <div className="rounded-2xl bg-white p-4">
-                    <img src={qrUrl} alt="QR thanh toán" className="mx-auto h-[300px] w-[300px] max-w-full object-contain" />
+                    <img src={payment.qr_url} alt="QR thanh toán" className="mx-auto h-[300px] w-[300px] max-w-full object-contain" />
                   </div>
                 </div>
 
                 <div className="space-y-4 rounded-2xl border border-gray-700 bg-secondary p-6">
                   <div>
-                    <p className="text-sm text-gray-400">POI</p>
-                    <p className="text-xl font-bold text-white">{pending.payment.poiName}</p>
+                    <p className="text-sm text-gray-400">POI nháp</p>
+                    <p className="text-xl font-bold text-white">{payment.poi_name || 'POI mới'}</p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-400">Nâng cấp</p>
-                    <p className="text-white">{pending.payment.description}</p>
+                    <p className="text-white">{payment.description}</p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-400">Số tiền</p>
-                    <p className="text-3xl font-bold text-yellow-300">{pending.payment.amount.toLocaleString('vi-VN')}đ</p>
+                    <p className="text-3xl font-bold text-yellow-300">{payment.amount.toLocaleString('vi-VN')}đ</p>
                   </div>
                   <div className="rounded-xl bg-dark/60 p-4 text-gray-200">
-                    <p>Techcombank</p>
-                    <p>4001012005</p>
-                    <p>THAI QUANG HIEU</p>
+                    <p>{payment.bank_name || 'Techcombank'}</p>
+                    <p>{payment.account_number || '4001012005'}</p>
+                    <p>{payment.account_name || 'THAI QUANG HIEU'}</p>
                     <p className="mt-3 text-sm text-gray-400">Nội dung chuyển khoản</p>
-                    <p className="font-bold text-primary">{pending.payment.code}</p>
+                    <p className="font-bold text-primary">{payment.code}</p>
                   </div>
 
                   {message ? <p className="rounded-xl bg-dark/60 p-3 text-sm text-gray-200">{message}</p> : null}
 
                   <button
                     onClick={confirmPayment}
-                    disabled={loading}
+                    disabled={loading || payment.status === 'used' || payment.status === 'confirmed'}
                     className="w-full rounded-xl bg-yellow-400 py-4 font-bold text-black hover:bg-yellow-300 disabled:opacity-60"
                   >
                     {loading
                       ? 'Đang gửi...'
-                      : paymentStatus?.status === 'rejected' && canRetryRejected
-                        ? 'Gửi lại yêu cầu xác minh'
-                        : pending.submitted
-                          ? 'Đang chờ xác minh'
-                          : 'Tôi đã thanh toán'}
+                      : payment.status === 'used' || payment.status === 'confirmed'
+                        ? 'Thanh toán thành công'
+                        : payment.status === 'rejected' && canRetryRejected
+                          ? 'Gửi lại yêu cầu xác minh'
+                          : payment.status === 'submitted'
+                            ? 'Đang chờ SePay xác nhận'
+                            : 'Tôi đã thanh toán'}
                   </button>
                 </div>
               </div>
-            ) : null}
+            ) : (
+              <p className="mt-8 text-gray-300">{message}</p>
+            )}
           </div>
         </main>
       </div>
@@ -196,7 +178,7 @@ export default function PoiUpgradePaymentPage() {
           <div className="w-full max-w-[380px] rounded-2xl bg-secondary p-6">
             <h3 className="text-xl font-bold text-white">Thanh toán chưa được xác minh</h3>
             <p className="mt-3 text-sm leading-6 text-gray-300">
-              {paymentStatus?.rejected_reason || 'Hệ thống chưa ghi nhận giao dịch này. Vui lòng kiểm tra lại chuyển khoản rồi gửi yêu cầu xác minh lần nữa.'}
+              {payment?.rejected_reason || 'SePay chưa ghi nhận giao dịch này. Vui lòng kiểm tra lại chuyển khoản rồi gửi yêu cầu xác minh lần nữa.'}
             </p>
             <button
               onClick={() => {

@@ -219,53 +219,20 @@ public class OwnerPoisController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> CreatePoi([FromBody] CreatePoiRequest request, [FromQuery] int ownerId)
     {
-        if (string.IsNullOrWhiteSpace(request.Name))
-            return BadRequest(new { message = "Tên POI không được để trống" });
-
-        if (request.Latitude < -90 || request.Latitude > 90)
-            return BadRequest(new { message = "Latitude không hợp lệ" });
-
-        if (request.Longitude < -180 || request.Longitude > 180)
-            return BadRequest(new { message = "Longitude không hợp lệ" });
+        var validationError = PoiDraftWorkflow.Validate(request);
+        if (!string.IsNullOrWhiteSpace(validationError))
+            return BadRequest(new { message = validationError });
 
         var user = await _db.Users.FindAsync(ownerId);
         if (user == null || user.Role != "owner")
             return Forbid("Chỉ owner mới có thể tạo POI");
 
-        var poi = new Poi
-        {
-            Id = Guid.NewGuid().ToString("N").Substring(0, 20),
-            OwnerId = ownerId,
-            Name = request.Name,
-            ShortDescription = request.ShortDescription,
-            Description = request.Description,
-            Address = request.Address,
-            Latitude = request.Latitude,
-            Longitude = request.Longitude,
-            Radius = request.Radius ?? 100,
-            Priority = request.Priority ?? 0,
-            Status = "pending",
-            Category = request.Category ?? "Khác",
-            CategoriesJson = SerializeCategories(request.Categories, request.Category),
-            OpenTime = request.OpenTime ?? "",
-            CloseTime = request.CloseTime ?? "",
-            PriceText = request.PriceText ?? "",
-            Phone = request.Phone,
-            WebsiteUrl = request.WebsiteUrl,
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
-        };
-
         await using var transaction = await _db.Database.BeginTransactionAsync();
+        Poi? poi = null;
 
         try
         {
-            _db.Pois.Add(poi);
-            await _db.SaveChangesAsync();
-
-            SyncImages(poi.Id, request.Images);
-            SyncTranslations(poi.Id, request.Translations);
-            SyncAudios(poi.Id, request.Audios);
+            poi = await PoiDraftWorkflow.CreatePoiFromDraftAsync(_db, request, ownerId);
 
             if (request.UpgradeAmount > 0)
             {
@@ -276,13 +243,14 @@ public class OwnerPoisController : ControllerBase
                     PayerType = "seller",
                     PaymentType = "poi_upgrade",
                     Amount = request.UpgradeAmount,
-                    Status = "submitted",
+                    Status = "pending",
                     Code = string.IsNullOrWhiteSpace(request.UpgradePaymentCode)
                         ? $"SGUP_{Guid.NewGuid().ToString("N")[..8]}"
                         : request.UpgradePaymentCode.Trim(),
                     Description = string.IsNullOrWhiteSpace(request.UpgradeDescription)
                         ? $"Nâng cấp POI: bán kính {poi.Radius}m, ưu tiên {poi.Priority}"
                         : request.UpgradeDescription.Trim(),
+                    Provider = "manual",
                     IsUsed = false,
                     CreatedAt = DateTime.UtcNow
                 });
@@ -297,7 +265,7 @@ public class OwnerPoisController : ControllerBase
             return StatusCode(500, new { message = "Không lưu được POI vào DB. Kiểm tra migration/schema và dữ liệu nhập.", detail = exception.InnerException?.Message ?? exception.Message });
         }
 
-        return Ok(new { poi.Id, message = "POI được tạo thành công" });
+        return Ok(new { poiId = poi?.Id, message = "POI được tạo thành công" });
     }
 
     [HttpPost("uploads/images")]

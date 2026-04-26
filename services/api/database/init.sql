@@ -260,10 +260,18 @@ CREATE TABLE payments (
     status text DEFAULT 'pending' CHECK (status IN ('pending', 'submitted', 'confirmed', 'rejected', 'used')),
     description text,
     code VARCHAR(100) UNIQUE,
+    provider text DEFAULT 'manual',
+    provider_transaction_id text,
+    provider_reference_code text,
+    paid_amount integer,
+    paid_at timestamptz,
+    provider_payload jsonb,
+    draft_payload jsonb,
     is_used BOOLEAN DEFAULT FALSE,
     created_at timestamptz DEFAULT NOW(),
     used_at timestamptz,
     confirmed_at timestamptz,
+    submitted_at timestamptz,
     rejected_reason text,
 
     CONSTRAINT fk_pay_device

@@ -508,24 +508,13 @@ export default function PoiForm({ mode, initialValue, poiId, onDone }: Props) {
         setSuccess('Đã cập nhật POI và gửi duyệt lại')
       } else if (upgradeAmount > 0) {
         const paymentCode = `SGUP_${Date.now().toString(36).toUpperCase()}`
-        sessionStorage.setItem(
-          'pendingPoiUpgrade',
-          JSON.stringify({
-            payload: {
-              ...payload,
-              upgradeAmount,
-              upgradePaymentCode: paymentCode,
-              upgradeDescription,
-            },
-            payment: {
-              code: paymentCode,
-              amount: upgradeAmount,
-              description: upgradeDescription || 'Nâng cấp POI',
-              poiName: payload.name,
-            },
-          })
-        )
-        router.push('/payments/poi-upgrade')
+        const response = await apiClient.post('/owner/payments/prepare-poi-upgrade', {
+          ...payload,
+          upgradeAmount,
+          upgradePaymentCode: paymentCode,
+          upgradeDescription,
+        })
+        router.push(`/payments/poi-upgrade?code=${encodeURIComponent(response.data?.code || paymentCode)}`)
         return
       } else {
         await apiClient.post('/owner/pois', payload)
