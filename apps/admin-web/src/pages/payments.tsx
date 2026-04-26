@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import Sidebar from '@/components/Sidebar'
 import ProtectedRoute from '@/components/ProtectedRoute'
 import apiClient from '@/lib/api'
-import { CheckCircle, Search, XCircle } from 'lucide-react'
+import { CheckCircle, Search } from 'lucide-react'
 
 type Payment = {
   id: number
@@ -30,7 +30,6 @@ function formatDate(value?: string) {
 function statusClass(status: string) {
   if (status === 'confirmed' || status === 'used') return 'bg-green-400/10 text-green-300'
   if (status === 'rejected') return 'bg-red-400/10 text-red-300'
-  if (status === 'submitted') return 'bg-yellow-400/10 text-yellow-300'
   return 'bg-gray-400/10 text-gray-300'
 }
 
@@ -59,12 +58,6 @@ export default function AdminPayments() {
     return () => window.clearInterval(timer)
   }, [status, type])
 
-  const updateStatus = async (id: number, nextStatus: string) => {
-    const reason = nextStatus === 'rejected' ? prompt('Lý do từ chối?') || '' : ''
-    await apiClient.put(`/admin/payments/${id}/status`, { status: nextStatus, reason })
-    await fetchPayments(true)
-  }
-
   const visiblePayments = useMemo(() => {
     const keyword = query.trim().toLowerCase()
     return payments
@@ -84,7 +77,7 @@ export default function AdminPayments() {
         <main className="flex-1 p-8">
           <div className="max-w-7xl">
             <h1 className="text-4xl font-bold text-white">Quản lý thanh toán</h1>
-            <p className="mt-2 text-gray-400">Xem lịch sử user mua gói, seller nâng cấp POI và xử lý xác nhận khi cần.</p>
+            <p className="mt-2 text-gray-400">Xem lịch sử user mua gói và seller nâng cấp POI. Thanh toán được SePay xác nhận hoàn toàn tự động.</p>
 
             <div className="mt-6 grid gap-3 lg:grid-cols-[1fr_200px_200px_220px]">
               <div className="relative">
@@ -94,8 +87,6 @@ export default function AdminPayments() {
               <select value={status} onChange={(event) => setStatus(event.target.value)} className="rounded-xl border border-gray-700 bg-secondary px-4 py-3 text-white">
                 <option value="all">Tất cả trạng thái</option>
                 <option value="pending">Đang chờ</option>
-                <option value="submitted">Đã báo thanh toán</option>
-                <option value="confirmed">Đã xác nhận</option>
                 <option value="used">Đã kích hoạt</option>
                 <option value="rejected">Đã từ chối</option>
               </select>
@@ -117,17 +108,16 @@ export default function AdminPayments() {
               {loading ? <p className="p-6 text-gray-400">Đang tải...</p> : null}
               {!loading && visiblePayments.length === 0 ? <p className="p-6 text-gray-400">Chưa có thanh toán phù hợp.</p> : null}
               {visiblePayments.length > 0 ? (
-                <div className="hidden border-b border-gray-700 bg-dark/30 px-5 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-gray-400 xl:grid xl:grid-cols-[1.4fr_1fr_160px_170px_190px_120px]">
+                <div className="hidden border-b border-gray-700 bg-dark/30 px-5 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-gray-400 xl:grid xl:grid-cols-[1.4fr_1fr_160px_170px_120px]">
                   <span>Nội dung</span>
                   <span>Thông tin</span>
                   <span>Số tiền</span>
                   <span>Trạng thái</span>
-                  <span>Thao tác</span>
                   <span>Chi tiết</span>
                 </div>
               ) : null}
               {visiblePayments.map((payment) => (
-                <div key={payment.id} className="grid gap-4 border-b border-gray-700 p-5 last:border-b-0 xl:grid-cols-[1.4fr_1fr_160px_170px_190px_120px]">
+                <div key={payment.id} className="grid gap-4 border-b border-gray-700 p-5 last:border-b-0 xl:grid-cols-[1.4fr_1fr_160px_170px_120px]">
                   <div>
                     <p className="font-bold text-white">{payment.poi_name || payment.plan_name || payment.description}</p>
                     <p className="mt-1 text-sm text-gray-400">{payment.description}</p>
@@ -141,23 +131,6 @@ export default function AdminPayments() {
                   </div>
                   <p className="text-xl font-bold text-yellow-300">{payment.amount.toLocaleString('vi-VN')}đ</p>
                   <span className={`h-fit rounded-full px-3 py-1 text-center text-sm font-semibold ${statusClass(payment.status)}`}>{payment.status_label}</span>
-                  <div className="flex flex-wrap gap-2">
-                    {payment.status !== 'confirmed' && payment.status !== 'used' ? (
-                      <button onClick={() => updateStatus(payment.id, 'confirmed')} className="inline-flex items-center gap-1 rounded-lg bg-green-500/15 px-3 py-2 text-sm text-green-300 hover:bg-green-500/25">
-                        <CheckCircle size={15} /> Xác nhận
-                      </button>
-                    ) : null}
-                    {payment.status !== 'rejected' && payment.status !== 'confirmed' && payment.status !== 'used' ? (
-                      <button onClick={() => updateStatus(payment.id, 'rejected')} className="inline-flex items-center gap-1 rounded-lg bg-red-500/15 px-3 py-2 text-sm text-red-300 hover:bg-red-500/25">
-                        <XCircle size={15} /> Từ chối
-                      </button>
-                    ) : null}
-                    {payment.status === 'confirmed' || payment.status === 'used' ? (
-                      <span className="inline-flex items-center gap-1 rounded-lg bg-green-500/15 px-3 py-2 text-sm text-green-300">
-                        <CheckCircle size={15} /> Thanh toán thành công
-                      </span>
-                    ) : null}
-                  </div>
                   <div className="flex items-start xl:justify-end">
                     <button
                       type="button"

@@ -70,7 +70,7 @@ export default function PaymentPage() {
   }, [router, t]);
 
   useEffect(() => {
-    if (!payment || (payment.status !== "submitted" && payment.status !== "pending")) {
+    if (!payment || payment.status !== "pending") {
       return undefined;
     }
 
@@ -114,11 +114,10 @@ export default function PaymentPage() {
         }
 
         if (nextPayment.status === "rejected") {
-          setMessage(nextPayment.rejected_reason || "Hệ thống chưa xác nhận được thanh toán này. Vui lòng kiểm tra lại và gửi yêu cầu mới.");
-          setCanRetryRejected(false);
-          window.clearInterval(timer);
-        } else if (nextPayment.status === "submitted") {
-          setMessage("Đợi hệ thống xác minh thanh toán...");
+          setMessage(nextPayment.rejected_reason || "Chưa ghi nhận giao dịch. Vui lòng kiểm tra lại nội dung chuyển khoản.");
+          setCanRetryRejected(true);
+        } else {
+          setMessage("Đang kiểm tra giao dịch từ SePay...");
         }
       } catch {
         // silent polling
@@ -196,9 +195,9 @@ export default function PaymentPage() {
                   const response = await apiClient.post(
                     `/payments/submit?code=${encodeURIComponent(payment.code)}&deviceId=${getDeviceId()}`
                   );
-                  setPayment((prev) => ({ ...(prev || payment), ...(response.data?.payment || {}), status: response.data?.payment?.status || "submitted" }));
-                  setMessage("Đợi hệ thống xác minh thanh toán...");
-                  setCanRetryRejected(false);
+                  setPayment((prev) => ({ ...(prev || payment), ...(response.data?.payment || {}), status: response.data?.payment?.status || "pending" }));
+                  setMessage(response.data?.message || "Đang kiểm tra giao dịch từ SePay...");
+                  setCanRetryRejected(response.data?.payment?.status === "rejected");
                 } catch (error: any) {
                   setMessage(error?.response?.data?.message || t("payment.confirmError"));
                 } finally {
@@ -208,10 +207,8 @@ export default function PaymentPage() {
             >
               {isConfirming
                 ? t("payment.confirming")
-                : payment?.status === "submitted"
-                  ? "Đang chờ xác minh"
-                  : payment?.status === "rejected" && canRetryRejected
-                    ? "Gửi lại yêu cầu xác minh"
+                : payment?.status === "rejected" && canRetryRejected
+                    ? "Kiểm tra lại thanh toán"
                     : t("payment.confirm")}
             </button>
           </>
@@ -244,7 +241,7 @@ export default function PaymentPage() {
             <div className="px-5 pb-4 pt-5">
               <h3 className="text-[18px] font-bold">Chưa xác minh được thanh toán</h3>
               <p className="mt-2 text-[15px] leading-[1.5]">
-                {payment?.rejected_reason || "Hệ thống chưa ghi nhận giao dịch này. Vui lòng kiểm tra lại chuyển khoản rồi gửi yêu cầu xác minh lần nữa."}
+                {payment?.rejected_reason || "Hệ thống chưa ghi nhận giao dịch này. Vui lòng kiểm tra lại chuyển khoản rồi bấm kiểm tra lại thanh toán."}
               </p>
             </div>
             <button

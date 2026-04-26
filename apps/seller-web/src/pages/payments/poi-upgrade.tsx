@@ -40,7 +40,7 @@ export default function PoiUpgradePaymentPage() {
       try {
         const response = await apiClient.get('/owner/payments/status', { params: { code } })
         setPayment(response.data)
-        setMessage(response.data?.status === 'rejected' ? response.data?.rejected_reason || 'Thanh toán đã bị từ chối.' : 'Đợi SePay xác nhận giao dịch...')
+        setMessage(response.data?.status === 'rejected' ? response.data?.rejected_reason || 'Chưa ghi nhận giao dịch.' : 'Đang kiểm tra giao dịch từ SePay...')
       } catch (error: any) {
         setMessage(error?.response?.data?.message || 'Không tải được thanh toán nâng cấp.')
       }
@@ -50,7 +50,7 @@ export default function PoiUpgradePaymentPage() {
   }, [code, router, router.isReady])
 
   useEffect(() => {
-    if (!payment || !code || (payment.status !== 'pending' && payment.status !== 'submitted')) {
+    if (!payment || !code || payment.status !== 'pending') {
       return undefined
     }
 
@@ -68,13 +68,12 @@ export default function PoiUpgradePaymentPage() {
         }
 
         if (nextPayment.status === 'rejected') {
-          setMessage(nextPayment.rejected_reason || 'Giao dịch chưa được SePay xác minh.')
-          setCanRetryRejected(false)
-          window.clearInterval(timer)
+          setMessage(nextPayment.rejected_reason || 'Chưa ghi nhận giao dịch. Vui lòng kiểm tra lại nội dung chuyển khoản.')
+          setCanRetryRejected(true)
           return
         }
 
-        setMessage('Đợi SePay xác nhận giao dịch...')
+        setMessage('Đang kiểm tra giao dịch từ SePay...')
       } catch {
         // silent polling
       }
@@ -97,10 +96,10 @@ export default function PoiUpgradePaymentPage() {
         params: { code },
       })
       setPayment((prev) => ({ ...(prev || payment), ...(response.data?.payment || {}) }))
-      setMessage('Đang chờ SePay xác nhận giao dịch...')
-      setCanRetryRejected(false)
+      setMessage(response.data?.message || 'Đang kiểm tra giao dịch từ SePay...')
+      setCanRetryRejected(response.data?.payment?.status === 'rejected')
     } catch (error: any) {
-      setMessage(error?.response?.data?.message || 'Không gửi được yêu cầu xác minh.')
+      setMessage(error?.response?.data?.message || 'Không kiểm tra được trạng thái thanh toán.')
     } finally {
       setLoading(false)
     }
@@ -116,7 +115,7 @@ export default function PoiUpgradePaymentPage() {
               ← Quay lại
             </button>
             <h1 className="text-4xl font-bold text-white">Thanh toán nâng cấp POI</h1>
-            <p className="mt-2 text-gray-400">SePay sẽ tự xác nhận giao dịch khi chuyển khoản đúng số tiền và đúng nội dung.</p>
+            <p className="mt-2 text-gray-400">SePay sẽ tự đối soát giao dịch khi chuyển khoản đúng số tiền và đúng nội dung.</p>
 
             {payment ? (
               <div className="mt-8 grid gap-6 md:grid-cols-[280px,1fr]">
@@ -159,9 +158,7 @@ export default function PoiUpgradePaymentPage() {
                       : payment.status === 'used' || payment.status === 'confirmed'
                         ? 'Thanh toán thành công'
                         : payment.status === 'rejected' && canRetryRejected
-                          ? 'Gửi lại yêu cầu xác minh'
-                          : payment.status === 'submitted'
-                            ? 'Đang chờ SePay xác nhận'
+                          ? 'Kiểm tra lại thanh toán'
                             : 'Tôi đã thanh toán'}
                   </button>
                 </div>
@@ -176,9 +173,9 @@ export default function PoiUpgradePaymentPage() {
       {showRejectedNotice ? (
         <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 px-5">
           <div className="w-full max-w-[380px] rounded-2xl bg-secondary p-6">
-            <h3 className="text-xl font-bold text-white">Thanh toán chưa được xác minh</h3>
+            <h3 className="text-xl font-bold text-white">Chưa ghi nhận giao dịch</h3>
             <p className="mt-3 text-sm leading-6 text-gray-300">
-              {payment?.rejected_reason || 'SePay chưa ghi nhận giao dịch này. Vui lòng kiểm tra lại chuyển khoản rồi gửi yêu cầu xác minh lần nữa.'}
+              {payment?.rejected_reason || 'SePay chưa ghi nhận giao dịch này. Vui lòng kiểm tra lại chuyển khoản rồi bấm kiểm tra lại thanh toán.'}
             </p>
             <button
               onClick={() => {

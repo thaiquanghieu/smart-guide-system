@@ -41,9 +41,9 @@ public class PaymentsController : ControllerBase
     {
         return status switch
         {
-            "submitted" => "Chờ hệ thống xác minh",
-            "confirmed" => "Đã xác nhận",
-            "rejected" => "Đã từ chối",
+            "submitted" => "Đang kiểm tra giao dịch",
+            "confirmed" => "Thanh toán thành công",
+            "rejected" => "Chưa ghi nhận giao dịch",
             "used" => "Thanh toán thành công",
             _ => "Đang chờ"
         };
@@ -459,12 +459,19 @@ public class PaymentsController : ControllerBase
         if (payment.Status is "used" or "confirmed")
             return Ok(new { message = "Thanh toán đã được xác nhận trước đó", payment = ToPaymentStatusResponse(payment) });
 
-        payment.Status = "submitted";
+        payment.Status = "pending";
         payment.SubmittedAt = DateTime.UtcNow;
         payment.RejectedReason = null;
         await _db.SaveChangesAsync();
 
-        return Ok(new { message = "Đã gửi yêu cầu xác minh thanh toán", payment = ToPaymentStatusResponse(payment) });
+        var synced = await TrySyncPaymentFromSepayAsync(payment);
+        return Ok(new
+        {
+            message = synced
+                ? "Đã xác nhận giao dịch thành công."
+                : "Chưa ghi nhận giao dịch. Vui lòng chờ thêm hoặc kiểm tra lại nội dung chuyển khoản.",
+            payment = ToPaymentStatusResponse(payment)
+        });
     }
 
     [HttpGet("status")]
@@ -628,13 +635,20 @@ public class PaymentsController : ControllerBase
         if (payment.Status is "used" or "confirmed")
             return Ok(new { message = "Thanh toán đã được xác nhận trước đó", payment = ToPaymentStatusResponse(payment) });
 
-        payment.Status = "submitted";
+        payment.Status = "pending";
         payment.SubmittedAt = DateTime.UtcNow;
         payment.RejectedReason = null;
         await _db.SaveChangesAsync();
 
+        var synced = await TrySyncPaymentFromSepayAsync(payment);
         var poi = !string.IsNullOrWhiteSpace(payment.PoiId) ? await _db.Pois.FindAsync(payment.PoiId) : null;
-        return Ok(new { message = "Đã gửi lại yêu cầu xác minh", payment = ToPaymentStatusResponse(payment, null, poi?.Name) });
+        return Ok(new
+        {
+            message = synced
+                ? "Đã xác nhận giao dịch thành công."
+                : "Chưa ghi nhận giao dịch. Vui lòng chờ thêm hoặc kiểm tra lại nội dung chuyển khoản.",
+            payment = ToPaymentStatusResponse(payment, null, poi?.Name)
+        });
     }
 
     [HttpGet("/api/admin/payments")]
@@ -702,26 +716,19 @@ public class PaymentsController : ControllerBase
         var forbidden = await EnsureAdminAsync(adminId);
         if (forbidden != null) return forbidden;
 
-        if (request.Status is not ("pending" or "submitted" or "confirmed" or "rejected" or "used"))
-            return BadRequest(new { message = "Trạng thái thanh toán không hợp lệ" });
-
         var payment = await _db.Payments.FindAsync(id);
         if (payment == null)
             return NotFound(new { message = "Không tìm thấy thanh toán" });
 
-        if (request.Status == "confirmed" || request.Status == "used")
-        {
-            await ApplySuccessfulPaymentAsync(payment);
-        }
-        else
-        {
-            payment.Status = request.Status;
-            payment.RejectedReason = request.Status == "rejected" ? request.Reason : null;
-        }
+        await TrySyncPaymentFromSepayAsync(payment);
 
-        await _db.SaveChangesAsync();
-
-        return Ok(new { message = "Đã cập nhật thanh toán", payment = ToPaymentStatusResponse(payment) });
+        return Ok(new
+        {
+            message = payment.Status is "used" or "confirmed"
+                ? "Thanh toán đã được SePay xác nhận tự động."
+                : "Thanh toán này chỉ được xác nhận tự động từ SePay, admin không duyệt tay.",
+            payment = ToPaymentStatusResponse(payment)
+        });
     }
 }
 
