@@ -26,6 +26,7 @@ export default function PoiUpgradePaymentPage() {
   const [message, setMessage] = useState('Đang tải thanh toán...')
   const [showRejectedNotice, setShowRejectedNotice] = useState(false)
   const [canRetryRejected, setCanRetryRejected] = useState(false)
+  const isExpired = payment?.status === 'rejected' && (payment?.rejected_reason || '').includes('hết thời gian chờ')
 
   const code = typeof router.query.code === 'string' ? router.query.code : ''
 
@@ -115,7 +116,7 @@ export default function PoiUpgradePaymentPage() {
               ← Quay lại
             </button>
             <h1 className="text-4xl font-bold text-white">Thanh toán nâng cấp POI</h1>
-            <p className="mt-2 text-gray-400">SePay sẽ tự đối soát giao dịch khi chuyển khoản đúng số tiền và đúng nội dung.</p>
+            <p className="mt-2 text-gray-400">SePay sẽ tự đối soát giao dịch khi chuyển khoản đúng số tiền và đúng nội dung. Nếu để quá lâu, giao dịch sẽ tự hết hạn.</p>
 
             {payment ? (
               <div className="mt-8 grid gap-6 md:grid-cols-[280px,1fr]">
@@ -139,22 +140,30 @@ export default function PoiUpgradePaymentPage() {
                     <p className="text-3xl font-bold text-yellow-300">{payment.amount.toLocaleString('vi-VN')}đ</p>
                   </div>
                   <div className="rounded-xl bg-dark/60 p-4 text-gray-200">
-                    <p>{payment.bank_name || 'Techcombank'}</p>
-                    <p>{payment.account_number || '4001012005'}</p>
+                    <p>{payment.bank_name || 'VietinBank'}</p>
+                    <p>{payment.account_number || '109881770761'}</p>
                     <p>{payment.account_name || 'THAI QUANG HIEU'}</p>
                     <p className="mt-3 text-sm text-gray-400">Nội dung chuyển khoản</p>
                     <p className="font-bold text-primary">{payment.code}</p>
                   </div>
 
-                  {message ? <p className="rounded-xl bg-dark/60 p-3 text-sm text-gray-200">{message}</p> : null}
+                  {message ? (
+                    <p className={`rounded-xl p-3 text-sm ${payment.status === 'rejected' ? 'bg-red-500/10 text-red-200' : 'bg-dark/60 text-gray-200'}`}>
+                      {message}
+                    </p>
+                  ) : null}
 
                   <button
                     onClick={confirmPayment}
-                    disabled={loading || payment.status === 'used' || payment.status === 'confirmed'}
-                    className="w-full rounded-xl bg-yellow-400 py-4 font-bold text-black hover:bg-yellow-300 disabled:opacity-60"
+                    disabled={loading || payment.status === 'used' || payment.status === 'confirmed' || isExpired}
+                    className={`w-full rounded-xl py-4 font-bold disabled:opacity-60 ${
+                      isExpired ? 'bg-gray-600 text-white' : 'bg-yellow-400 text-black hover:bg-yellow-300'
+                    }`}
                   >
                     {loading
                       ? 'Đang gửi...'
+                      : isExpired
+                        ? 'Đã hết hạn thanh toán'
                       : payment.status === 'used' || payment.status === 'confirmed'
                         ? 'Thanh toán thành công'
                         : payment.status === 'rejected' && canRetryRejected

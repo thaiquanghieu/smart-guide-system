@@ -422,7 +422,7 @@ export default function ProfilePage() {
           actionLabel={t("profile.renew")}
           onActionClick={() => {
             setReturnTo("/profile");
-            router.push("/paywall?returnTo=%2Fprofile");
+            router.push("/paywall?returnTo=%2Fprofile&source=renew");
           }}
         />
 

@@ -19,6 +19,8 @@ export default function PaywallPage() {
   const [message, setMessage] = useState("");
   const [isLoading, setIsLoading] = useState(true);
 
+  const fromRenew = router.query.source === "renew";
+
   useEffect(() => {
     const load = async () => {
       try {
@@ -41,7 +43,21 @@ export default function PaywallPage() {
         <meta name="theme-color" content="#041B2D" />
       </Head>
       <div className="mx-auto max-w-[540px] space-y-[14px]">
-        <div className="h-[18px]" />
+        <div className="grid min-h-[28px] grid-cols-[28px,1fr,28px] items-center">
+          <div />
+          <div />
+          {fromRenew ? (
+            <button
+              type="button"
+              className="text-right text-[24px] leading-none text-[#D4E3F7]"
+              onClick={() => router.replace("/profile")}
+            >
+              ×
+            </button>
+          ) : (
+            <div />
+          )}
+        </div>
 
         <img src="/assets/appiconfg.png" alt={t("app.title")} className="mx-auto -my-8 w-[220px]" />
 

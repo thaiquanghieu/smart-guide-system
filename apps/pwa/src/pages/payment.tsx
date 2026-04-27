@@ -43,6 +43,7 @@ export default function PaymentPage() {
   const [showSuccess, setShowSuccess] = useState(false);
   const [showRejectedNotice, setShowRejectedNotice] = useState(false);
   const [canRetryRejected, setCanRetryRejected] = useState(false);
+  const isExpired = payment?.status === "rejected" && (payment?.rejected_reason || "").includes("hết thời gian chờ");
 
   const markProfileForRefresh = () => {
     if (typeof window === "undefined") return;
@@ -133,11 +134,11 @@ export default function PaymentPage() {
       : payment.qr_url || "";
 
   return (
-    <main className="min-h-screen bg-[#041B2D] px-5 pb-8 text-white" style={{ paddingTop: "calc(env(safe-area-inset-top) + 20px)" }}>
+    <main className="min-h-screen bg-[#041B2D] px-5 pb-6 text-white" style={{ paddingTop: "calc(env(safe-area-inset-top) + 16px)" }}>
       <Head>
         <meta name="theme-color" content="#041B2D" />
       </Head>
-      <div className="mx-auto max-w-[540px] space-y-4">
+      <div className="mx-auto max-w-[420px] space-y-3">
         <div className="grid grid-cols-[24px,1fr,24px] items-center">
           <button type="button" className="text-[26px]" onClick={() => router.back()}>
             ←
@@ -158,8 +159,8 @@ export default function PaymentPage() {
               </div>
             </div>
 
-            <div className="rounded-[16px] bg-white p-4">
-              <div className="mx-auto aspect-square w-[288px] max-w-full">
+            <div className="rounded-[16px] bg-white p-3">
+              <div className="mx-auto aspect-square w-[228px] max-w-full">
                 <img src={qrUrl} alt="QR thanh toán" className="h-full w-full object-contain" />
               </div>
             </div>
@@ -167,21 +168,27 @@ export default function PaymentPage() {
             <p className="text-center text-[#CFE3FF]">{t("payment.manualTransfer")}</p>
 
             <div className="rounded-[16px] bg-[#F4F9FF] p-4 text-[#111827]">
-              <div className="space-y-2">
-                <p>{payment.bank_name || "Techcombank"}</p>
-                <p>{payment.account_number || "4001012005"}</p>
-                <p>{payment.account_name || "THAI QUANG HIEU"}</p>
-                <p className="font-bold">{t("payment.transferContent")}</p>
-                <p className="font-bold text-[#0F5BD7]">{payment.code}</p>
+              <div className="grid gap-2 text-[14px] leading-[1.45]">
+                <p><span className="font-semibold">Ngân hàng:</span> {payment.bank_name || "VietinBank"}</p>
+                <p><span className="font-semibold">Số tài khoản:</span> {payment.account_number || "109881770761"}</p>
+                <p><span className="font-semibold">Chủ tài khoản:</span> {payment.account_name || "THAI QUANG HIEU"}</p>
+                <p className="pt-1 font-bold">{t("payment.transferContent")}</p>
+                <p className="break-all font-bold text-[#0F5BD7]">{payment.code}</p>
               </div>
             </div>
 
-            {message ? <p className="text-center text-sm text-[#CFE3FF]">{message}</p> : null}
+            {message ? (
+              <p className={`text-center text-sm ${payment?.status === "rejected" ? "text-[#FFD7D7]" : "text-[#CFE3FF]"}`}>
+                {message}
+              </p>
+            ) : null}
 
             <button
               type="button"
-              disabled={isConfirming}
-              className="h-[50px] w-full rounded-[16px] bg-[#0F5BD7] text-white disabled:opacity-60"
+              disabled={isConfirming || isExpired}
+              className={`h-[50px] w-full rounded-[16px] font-semibold disabled:opacity-60 ${
+                isExpired ? "bg-[#6B7280] text-white" : "bg-[#0F5BD7] text-white"
+              }`}
               onClick={async () => {
                 if (!payment) return;
 
@@ -207,6 +214,8 @@ export default function PaymentPage() {
             >
               {isConfirming
                 ? t("payment.confirming")
+                : isExpired
+                  ? "Đã hết hạn thanh toán"
                 : payment?.status === "rejected" && canRetryRejected
                     ? "Kiểm tra lại thanh toán"
                     : t("payment.confirm")}

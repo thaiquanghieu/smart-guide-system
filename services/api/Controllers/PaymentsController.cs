@@ -14,6 +14,7 @@ public class PaymentsController : ControllerBase
 {
     private static readonly Regex PaymentCodeRegex = new(@"(SGPAY|SGUP|SGQR)_?[A-Za-z0-9]+", RegexOptions.IgnoreCase | RegexOptions.Compiled);
     private static readonly HttpClient SepayHttpClient = new();
+    private static readonly TimeSpan PaymentPendingTimeout = TimeSpan.FromMinutes(15);
 
     private readonly AppDbContext _db;
     private readonly IConfiguration _configuration;
@@ -38,9 +39,16 @@ public class PaymentsController : ControllerBase
         return await _db.Devices.FirstOrDefaultAsync(x => x.Id == deviceId && x.IsActive);
     }
 
-    private static string PaymentStatusLabel(string status)
+    private static string PaymentStatusLabel(Payment payment)
     {
-        return status switch
+        if (payment.Status == "rejected" &&
+            !string.IsNullOrWhiteSpace(payment.RejectedReason) &&
+            payment.RejectedReason.Contains("hết thời gian chờ", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Đã hết hạn";
+        }
+
+        return payment.Status switch
         {
             "submitted" => "Đang kiểm tra giao dịch",
             "confirmed" => "Thanh toán thành công",
@@ -78,7 +86,7 @@ public class PaymentsController : ControllerBase
             payment.Code,
             payment.Amount,
             payment.Status,
-            status_label = PaymentStatusLabel(payment.Status),
+            status_label = PaymentStatusLabel(payment),
             payment_type = payment.PaymentType,
             payer_type = payment.PayerType,
             payment.DeviceId,
@@ -108,7 +116,7 @@ public class PaymentsController : ControllerBase
             payment.Code,
             payment.Amount,
             payment.Status,
-            status_label = PaymentStatusLabel(payment.Status),
+            status_label = PaymentStatusLabel(payment),
             payment_type = payment.PaymentType,
             payer_type = payment.PayerType,
             plan = plan == null
@@ -130,6 +138,21 @@ public class PaymentsController : ControllerBase
             confirmed_at = payment.ConfirmedAt,
             rejected_reason = payment.RejectedReason
         };
+    }
+
+    private async Task<bool> ExpirePaymentIfNeededAsync(Payment payment)
+    {
+        if (payment.IsUsed || payment.Status is not "pending")
+            return false;
+
+        var startedAt = payment.SubmittedAt ?? payment.CreatedAt;
+        if (DateTime.UtcNow - startedAt < PaymentPendingTimeout)
+            return false;
+
+        payment.Status = "rejected";
+        payment.RejectedReason = "Giao dịch đã hết thời gian chờ. Vui lòng tạo giao dịch mới để tiếp tục.";
+        await _db.SaveChangesAsync();
+        return true;
     }
 
     private async Task ActivateUserPlanAsync(Payment payment)
@@ -290,6 +313,8 @@ public class PaymentsController : ControllerBase
 
     private async Task<bool> TrySyncPaymentFromSepayAsync(Payment payment)
     {
+        await ExpirePaymentIfNeededAsync(payment);
+
         if (payment.IsUsed || payment.Status is "used" or "confirmed")
             return false;
 
@@ -466,6 +491,8 @@ public class PaymentsController : ControllerBase
         if (payment == null)
             return NotFound(new { message = "Không tìm thấy yêu cầu thanh toán" });
 
+        await ExpirePaymentIfNeededAsync(payment);
+
         if (payment.Status is "used" or "confirmed")
             return Ok(new { message = "Thanh toán đã được xác nhận trước đó", payment = ToPaymentStatusResponse(payment) });
 
@@ -580,7 +607,7 @@ public class PaymentsController : ControllerBase
                 payment.Code,
                 payment.Amount,
                 payment.Status,
-                status_label = PaymentStatusLabel(payment.Status),
+                status_label = PaymentStatusLabel(payment),
                 payment_type = payment.PaymentType,
                 description = BuildDescription(payment, plan?.Name, null),
                 plan_name = plan?.Name,
@@ -642,6 +669,8 @@ public class PaymentsController : ControllerBase
         if (payment == null)
             return NotFound(new { message = "Không tìm thấy thanh toán" });
 
+        await ExpirePaymentIfNeededAsync(payment);
+
         if (payment.Status is "used" or "confirmed")
             return Ok(new { message = "Thanh toán đã được xác nhận trước đó", payment = ToPaymentStatusResponse(payment) });
 
@@ -696,7 +725,7 @@ public class PaymentsController : ControllerBase
                 payment.Code,
                 payment.Amount,
                 payment.Status,
-                status_label = PaymentStatusLabel(payment.Status),
+                status_label = PaymentStatusLabel(payment),
                 payment_type = payment.PaymentType,
                 payer_type = payment.PayerType,
                 payment.OwnerId,
