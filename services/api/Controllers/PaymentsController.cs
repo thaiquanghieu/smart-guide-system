@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using SmartGuideAPI.Data;
 using SmartGuideAPI.Models;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using System.Globalization;
 
@@ -283,11 +284,15 @@ public class PaymentsController : ControllerBase
         if (!string.IsNullOrWhiteSpace(payload.Code))
             return payload.Code.Trim();
 
+        if (!string.IsNullOrWhiteSpace(payload.PaymentCodeSnake))
+            return payload.PaymentCodeSnake.Trim();
+
         var combined = string.Join(" ", new[]
         {
             payload.Content,
             payload.Description,
-            payload.ReferenceCode
+            payload.ReferenceCode,
+            payload.ReferenceCodeSnake
         }.Where(value => !string.IsNullOrWhiteSpace(value)));
 
         if (string.IsNullOrWhiteSpace(combined))
@@ -309,6 +314,54 @@ public class PaymentsController : ControllerBase
             .ToArray();
 
         return new string(chars);
+    }
+
+    private sealed class SepayTransactionCandidate
+    {
+        public string? Id { get; init; }
+        public string? Code { get; init; }
+        public string? TransactionContent { get; init; }
+        public string? ReferenceNumber { get; init; }
+        public string? TransactionDate { get; init; }
+        public string? AmountIn { get; init; }
+        public string? RawPayload { get; init; }
+    }
+
+    private static IEnumerable<SepayTransactionCandidate> ExtractSepayTransactions(JsonElement root)
+    {
+        if (root.TryGetProperty("transactions", out var v1Transactions) && v1Transactions.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var transaction in v1Transactions.EnumerateArray())
+            {
+                yield return new SepayTransactionCandidate
+                {
+                    Id = transaction.TryGetProperty("id", out var idElement) ? idElement.GetString() : null,
+                    Code = transaction.TryGetProperty("code", out var codeElement) ? codeElement.GetString() : null,
+                    TransactionContent = transaction.TryGetProperty("transaction_content", out var contentElement) ? contentElement.GetString() : null,
+                    ReferenceNumber = transaction.TryGetProperty("reference_number", out var referenceElement) ? referenceElement.GetString() : null,
+                    TransactionDate = transaction.TryGetProperty("transaction_date", out var dateElement) ? dateElement.GetString() : null,
+                    AmountIn = transaction.TryGetProperty("amount_in", out var amountElement) ? amountElement.GetString() : null,
+                    RawPayload = transaction.GetRawText()
+                };
+            }
+        }
+
+        if (root.TryGetProperty("data", out var v2Transactions) && v2Transactions.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var transaction in v2Transactions.EnumerateArray())
+            {
+                yield return new SepayTransactionCandidate
+                {
+                    Id = transaction.TryGetProperty("id", out var idElement) ? idElement.GetString() : null,
+                    Code = transaction.TryGetProperty("code", out var codeElement) ? codeElement.GetString() : null,
+                    TransactionContent = transaction.TryGetProperty("transaction_content", out var contentElement) ? contentElement.GetString() : null,
+                    ReferenceNumber = transaction.TryGetProperty("reference_number", out var referenceElement) ? referenceElement.GetString() : null,
+                    TransactionDate = transaction.TryGetProperty("transaction_date", out var dateElement) ? dateElement.GetString() : null,
+                    AmountIn = transaction.TryGetProperty("amount_in", out var amountElement) ? amountElement.ToString() : null,
+                    RawPayload = transaction.GetRawText()
+                };
+            }
+        }
     }
 
     private async Task<bool> TrySyncPaymentFromSepayAsync(Payment payment)
@@ -338,18 +391,16 @@ public class PaymentsController : ControllerBase
             await using var stream = await response.Content.ReadAsStreamAsync();
             using var document = await JsonDocument.ParseAsync(stream);
 
-            if (!document.RootElement.TryGetProperty("transactions", out var transactions) || transactions.ValueKind != JsonValueKind.Array)
-                continue;
-
-            foreach (var transaction in transactions.EnumerateArray())
+            foreach (var transaction in ExtractSepayTransactions(document.RootElement))
             {
-                var codeFromApi = transaction.TryGetProperty("code", out var codeElement) ? codeElement.GetString() : null;
-                var contentFromApi = transaction.TryGetProperty("transaction_content", out var contentElement) ? contentElement.GetString() : null;
-                var amountIn = transaction.TryGetProperty("amount_in", out var amountElement) ? amountElement.GetString() : null;
+                var codeFromApi = transaction.Code;
+                var contentFromApi = transaction.TransactionContent;
+                var amountIn = transaction.AmountIn;
                 var normalizedCandidates = new[]
                 {
                     NormalizePaymentCode(codeFromApi),
-                    NormalizePaymentCode(contentFromApi)
+                    NormalizePaymentCode(contentFromApi),
+                    NormalizePaymentCode(transaction.ReferenceNumber)
                 };
 
                 var matchesCode = normalizedCandidates.Any(candidate => !string.IsNullOrWhiteSpace(candidate) && candidate.Contains(normalizedCode, StringComparison.OrdinalIgnoreCase));
@@ -362,9 +413,9 @@ public class PaymentsController : ControllerBase
                     continue;
                 }
 
-                var transactionId = transaction.TryGetProperty("id", out var idElement) ? idElement.GetString() : null;
-                var referenceNumber = transaction.TryGetProperty("reference_number", out var referenceElement) ? referenceElement.GetString() : null;
-                var transactionDate = transaction.TryGetProperty("transaction_date", out var dateElement) ? dateElement.GetString() : null;
+                var transactionId = transaction.Id;
+                var referenceNumber = transaction.ReferenceNumber;
+                var transactionDate = transaction.TransactionDate;
 
                 DateTime? paidAt = null;
                 if (!string.IsNullOrWhiteSpace(transactionDate) &&
@@ -379,7 +430,7 @@ public class PaymentsController : ControllerBase
                     providerReferenceCode: referenceNumber,
                     paidAmount: (int?)Math.Round(paidAmountDecimal),
                     paidAt: paidAt,
-                    providerPayload: transaction.GetRawText());
+                    providerPayload: transaction.RawPayload);
 
                 await _db.SaveChangesAsync();
                 return true;
@@ -393,9 +444,18 @@ public class PaymentsController : ControllerBase
     {
         var transactionDateMin = Uri.EscapeDataString(payment.CreatedAt.AddDays(-2).ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture));
         var baseUrl = $"https://my.sepay.vn/userapi/transactions/list?transaction_date_min={transactionDateMin}&amount_in={payment.Amount}&limit=50";
+        var v2DateFrom = Uri.EscapeDataString(payment.CreatedAt.AddDays(-2).ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture));
+        var v2DateTo = Uri.EscapeDataString(DateTime.UtcNow.AddDays(1).ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture));
+        var normalizedCode = Uri.EscapeDataString(NormalizePaymentCode(payment.Code));
+        var rawCode = Uri.EscapeDataString(payment.Code);
+        var bankBrand = Uri.EscapeDataString(SepayBank);
+        var v2BaseUrl = $"https://userapi.sepay.vn/v2/transactions?transfer_type=in&transaction_date_from={v2DateFrom}&transaction_date_to={v2DateTo}&amount_in_min={payment.Amount}&amount_in_max={payment.Amount}&per_page=100";
 
         yield return $"{baseUrl}&account_number={Uri.EscapeDataString(SepayAccountNumber)}";
         yield return baseUrl;
+        yield return $"{v2BaseUrl}&q={normalizedCode}&bank_brand_name={bankBrand}";
+        yield return $"{v2BaseUrl}&q={rawCode}";
+        yield return $"{v2BaseUrl}&transaction_content={normalizedCode}";
     }
 
     private async Task<IActionResult?> EnsureAdminAsync(int adminId)
@@ -548,15 +608,23 @@ public class PaymentsController : ControllerBase
         if (payment.IsUsed || payment.Status == "used")
             return Ok(new { message = "Payment đã được xử lý trước đó", code = paymentCode });
 
-        if (payload.TransferAmount > 0 && payload.TransferAmount < payment.Amount)
-            return Ok(new { message = "Số tiền chuyển chưa đủ để xác nhận", code = paymentCode, expected = payment.Amount, actual = payload.TransferAmount });
+        var webhookAmount = payload.TransferAmount > 0 ? payload.TransferAmount : payload.AmountSnake;
+        if (webhookAmount > 0 && webhookAmount < payment.Amount)
+            return Ok(new { message = "Số tiền chuyển chưa đủ để xác nhận", code = paymentCode, expected = payment.Amount, actual = webhookAmount });
 
-        var paidAt = payload.TransactionDate ?? DateTime.UtcNow;
+        DateTime paidAt = payload.TransactionDate ?? DateTime.UtcNow;
+        if (!payload.TransactionDate.HasValue &&
+            !string.IsNullOrWhiteSpace(payload.TransactionDateSnake) &&
+            DateTime.TryParse(payload.TransactionDateSnake, CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out var parsedWebhookDate))
+        {
+            paidAt = parsedWebhookDate.ToUniversalTime();
+        }
+
         await ApplySuccessfulPaymentAsync(
             payment,
-            providerTransactionId: payload.Id?.ToString(),
-            providerReferenceCode: payload.ReferenceCode,
-            paidAmount: payload.TransferAmount > 0 ? payload.TransferAmount : null,
+            providerTransactionId: payload.Id?.ToString() ?? payload.TransactionIdSnake,
+            providerReferenceCode: payload.ReferenceCode ?? payload.ReferenceCodeSnake,
+            paidAmount: webhookAmount > 0 ? webhookAmount : null,
             paidAt: DateTime.SpecifyKind(paidAt, DateTimeKind.Utc),
             providerPayload: JsonSerializer.Serialize(payload));
 
@@ -795,31 +863,29 @@ public class PaymentsController : ControllerBase
                 try
                 {
                     using var document = JsonDocument.Parse(body);
-                    if (document.RootElement.TryGetProperty("transactions", out var transactions) &&
-                        transactions.ValueKind == JsonValueKind.Array)
+                    foreach (var transaction in ExtractSepayTransactions(document.RootElement))
                     {
-                        foreach (var transaction in transactions.EnumerateArray())
+                        var codeFromApi = transaction.Code;
+                        var contentFromApi = transaction.TransactionContent;
+                        var amountIn = transaction.AmountIn;
+                        var normalizedCandidates = new[]
                         {
-                            var codeFromApi = transaction.TryGetProperty("code", out var codeElement) ? codeElement.GetString() : null;
-                            var contentFromApi = transaction.TryGetProperty("transaction_content", out var contentElement) ? contentElement.GetString() : null;
-                            var amountIn = transaction.TryGetProperty("amount_in", out var amountElement) ? amountElement.GetString() : null;
-                            var normalizedCandidates = new[]
-                            {
-                                NormalizePaymentCode(codeFromApi),
-                                NormalizePaymentCode(contentFromApi)
-                            };
-                            var matchesCode = normalizedCandidates.Any(candidate => !string.IsNullOrWhiteSpace(candidate) && candidate.Contains(normalizedCode, StringComparison.OrdinalIgnoreCase));
+                            NormalizePaymentCode(codeFromApi),
+                            NormalizePaymentCode(contentFromApi),
+                            NormalizePaymentCode(transaction.ReferenceNumber)
+                        };
+                        var matchesCode = normalizedCandidates.Any(candidate => !string.IsNullOrWhiteSpace(candidate) && candidate.Contains(normalizedCode, StringComparison.OrdinalIgnoreCase));
 
-                            matched.Add(new
-                            {
-                                id = transaction.TryGetProperty("id", out var idElement) ? idElement.GetString() : null,
-                                code = codeFromApi,
-                                transaction_content = contentFromApi,
-                                amount_in = amountIn,
-                                transaction_date = transaction.TryGetProperty("transaction_date", out var dateElement) ? dateElement.GetString() : null,
-                                matches_code = matchesCode
-                            });
-                        }
+                        matched.Add(new
+                        {
+                            id = transaction.Id,
+                            code = codeFromApi,
+                            transaction_content = contentFromApi,
+                            reference_number = transaction.ReferenceNumber,
+                            amount_in = amountIn,
+                            transaction_date = transaction.TransactionDate,
+                            matches_code = matchesCode
+                        });
                     }
                 }
                 catch
@@ -877,16 +943,49 @@ public class UpdatePaymentStatusRequest
 
 public class SepayWebhookRequest
 {
+    [JsonPropertyName("id")]
     public long? Id { get; set; }
+    [JsonPropertyName("gateway")]
     public string? Gateway { get; set; }
+    [JsonPropertyName("transactionDate")]
     public DateTime? TransactionDate { get; set; }
+    [JsonPropertyName("accountNumber")]
     public string? AccountNumber { get; set; }
+    [JsonPropertyName("subAccount")]
     public string? SubAccount { get; set; }
+    [JsonPropertyName("content")]
     public string? Content { get; set; }
+    [JsonPropertyName("code")]
     public string? Code { get; set; }
+    [JsonPropertyName("referenceCode")]
     public string? ReferenceCode { get; set; }
+    [JsonPropertyName("description")]
     public string? Description { get; set; }
+    [JsonPropertyName("transferType")]
     public string? TransferType { get; set; }
+    [JsonPropertyName("transferAmount")]
     public int TransferAmount { get; set; }
+    [JsonPropertyName("accumulated")]
     public long? Accumulated { get; set; }
+
+    [JsonPropertyName("transaction_id")]
+    public string? TransactionIdSnake { get; set; }
+
+    [JsonPropertyName("transaction_date")]
+    public string? TransactionDateSnake { get; set; }
+
+    [JsonPropertyName("account_number")]
+    public string? AccountNumberSnake { get; set; }
+
+    [JsonPropertyName("payment_code")]
+    public string? PaymentCodeSnake { get; set; }
+
+    [JsonPropertyName("reference_code")]
+    public string? ReferenceCodeSnake { get; set; }
+
+    [JsonPropertyName("transfer_type")]
+    public string? TransferTypeSnake { get; set; }
+
+    [JsonPropertyName("amount")]
+    public int? AmountSnake { get; set; }
 }
