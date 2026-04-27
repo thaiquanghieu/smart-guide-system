@@ -13,7 +13,7 @@ namespace SmartGuideAPI.Controllers;
 [Route("api/[controller]")]
 public class PaymentsController : ControllerBase
 {
-    private static readonly Regex PaymentCodeRegex = new(@"(SGPAY|SGUP|SGQR)_?[A-Za-z0-9]+", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+    private static readonly Regex PaymentCodeRegex = new(@"(?:SEVQR)?(SGPAY|SGUP|SGQR)_?[A-Za-z0-9]+", RegexOptions.IgnoreCase | RegexOptions.Compiled);
     private static readonly HttpClient SepayHttpClient = new();
     private static readonly TimeSpan PaymentPendingTimeout = TimeSpan.FromMinutes(15);
 
@@ -59,11 +59,19 @@ public class PaymentsController : ControllerBase
         };
     }
 
+    private static string BuildSepayTransferContent(string code)
+    {
+        var trimmedCode = code.Trim();
+        return trimmedCode.StartsWith("SEVQR", StringComparison.OrdinalIgnoreCase)
+            ? trimmedCode
+            : $"SEVQR{trimmedCode}";
+    }
+
     private string BuildSepayQrUrl(int amount, string code)
     {
         var accountNumber = Uri.EscapeDataString(SepayAccountNumber);
         var bank = Uri.EscapeDataString(SepayBank);
-        var description = Uri.EscapeDataString(code);
+        var description = Uri.EscapeDataString(BuildSepayTransferContent(code));
         return $"https://qr.sepay.vn/img?acc={accountNumber}&bank={bank}&amount={amount}&des={description}&template=compact2";
     }
 
@@ -131,6 +139,7 @@ public class PaymentsController : ControllerBase
                 },
             poi_name = resolvedPoiName,
             description = BuildDescription(payment, plan?.Name, resolvedPoiName),
+            transfer_content = BuildSepayTransferContent(payment.Code),
             qr_url = BuildSepayQrUrl(payment.Amount, payment.Code),
             bank_name = SepayBank,
             account_number = SepayAccountNumber,
@@ -312,8 +321,16 @@ public class PaymentsController : ControllerBase
             .Where(char.IsLetterOrDigit)
             .Select(char.ToUpperInvariant)
             .ToArray();
+        var normalized = new string(chars);
 
-        return new string(chars);
+        if (normalized.StartsWith("SEVQRSGPAY", StringComparison.OrdinalIgnoreCase) ||
+            normalized.StartsWith("SEVQRSGUP", StringComparison.OrdinalIgnoreCase) ||
+            normalized.StartsWith("SEVQRSGQR", StringComparison.OrdinalIgnoreCase))
+        {
+            normalized = normalized["SEVQR".Length..];
+        }
+
+        return normalized;
     }
 
     private sealed class SepayTransactionCandidate
@@ -446,16 +463,23 @@ public class PaymentsController : ControllerBase
         var baseUrl = $"https://my.sepay.vn/userapi/transactions/list?transaction_date_min={transactionDateMin}&amount_in={payment.Amount}&limit=50";
         var v2DateFrom = Uri.EscapeDataString(payment.CreatedAt.AddDays(-2).ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture));
         var v2DateTo = Uri.EscapeDataString(DateTime.UtcNow.AddDays(1).ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture));
+        var transferContent = BuildSepayTransferContent(payment.Code);
         var normalizedCode = Uri.EscapeDataString(NormalizePaymentCode(payment.Code));
+        var normalizedTransferContent = Uri.EscapeDataString(NormalizePaymentCode(transferContent));
         var rawCode = Uri.EscapeDataString(payment.Code);
+        var rawTransferContent = Uri.EscapeDataString(transferContent);
         var bankBrand = Uri.EscapeDataString(SepayBank);
         var v2BaseUrl = $"https://userapi.sepay.vn/v2/transactions?transfer_type=in&transaction_date_from={v2DateFrom}&transaction_date_to={v2DateTo}&amount_in_min={payment.Amount}&amount_in_max={payment.Amount}&per_page=100";
 
         yield return $"{baseUrl}&account_number={Uri.EscapeDataString(SepayAccountNumber)}";
         yield return baseUrl;
+        yield return $"{baseUrl}&transaction_content={rawTransferContent}";
         yield return $"{v2BaseUrl}&q={normalizedCode}&bank_brand_name={bankBrand}";
+        yield return $"{v2BaseUrl}&q={normalizedTransferContent}&bank_brand_name={bankBrand}";
         yield return $"{v2BaseUrl}&q={rawCode}";
+        yield return $"{v2BaseUrl}&q={rawTransferContent}";
         yield return $"{v2BaseUrl}&transaction_content={normalizedCode}";
+        yield return $"{v2BaseUrl}&transaction_content={normalizedTransferContent}";
     }
 
     private async Task<IActionResult?> EnsureAdminAsync(int adminId)

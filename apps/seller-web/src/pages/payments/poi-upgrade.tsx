@@ -16,6 +16,7 @@ type PaymentStatus = {
   bank_name?: string
   account_number?: string
   account_name?: string
+  transfer_content?: string
   rejected_reason?: string
 }
 
@@ -144,7 +145,7 @@ export default function PoiUpgradePaymentPage() {
                     <p>{payment.account_number || '109881770761'}</p>
                     <p>{payment.account_name || 'THAI QUANG HIEU'}</p>
                     <p className="mt-3 text-sm text-gray-400">Nội dung chuyển khoản</p>
-                    <p className="font-bold text-primary">{payment.code}</p>
+                    <p className="font-bold text-primary">{payment.transfer_content || payment.code}</p>
                   </div>
 
                   {message ? (

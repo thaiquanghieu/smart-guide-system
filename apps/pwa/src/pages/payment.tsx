@@ -26,6 +26,7 @@ type PaymentPreview = {
   bank_name?: string;
   account_number?: string;
   account_name?: string;
+  transfer_content?: string;
   plan: {
     id: number;
     name: string;
@@ -173,7 +174,7 @@ export default function PaymentPage() {
                 <p><span className="font-semibold">Số tài khoản:</span> {payment.account_number || "109881770761"}</p>
                 <p><span className="font-semibold">Chủ tài khoản:</span> {payment.account_name || "THAI QUANG HIEU"}</p>
                 <p className="pt-1 font-bold">{t("payment.transferContent")}</p>
-                <p className="break-all font-bold text-[#0F5BD7]">{payment.code}</p>
+                <p className="break-all font-bold text-[#0F5BD7]">{payment.transfer_content || payment.code}</p>
               </div>
             </div>
 
