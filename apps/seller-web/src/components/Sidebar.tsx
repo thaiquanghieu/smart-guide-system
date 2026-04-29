@@ -26,18 +26,13 @@ export default function Sidebar() {
 
   return (
     <aside className="w-64 bg-secondary border-r border-gray-700 h-screen sticky top-0 p-6 flex flex-col">
-      {/* Logo */}
       <div className="mb-8">
-        <div className="flex items-center gap-2 mb-2">
-          <div className="text-3xl">📍</div>
-          <div>
-            <div className="font-bold text-white">Smart Guide</div>
-            <div className="text-xs text-accent">Owner</div>
-          </div>
+        <div className="mb-2 flex items-center gap-3">
+          <img src="/assets/appiconfg.png" alt="Smart Guide" className="h-12 w-auto object-contain" />
+          <div className="text-xs text-accent">Owner</div>
         </div>
       </div>
 
-      {/* Menu */}
       <nav className="flex-1 space-y-2">
         {menuItems.map((item) => {
           const Icon = item.icon

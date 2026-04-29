@@ -63,9 +63,9 @@ export default function PoiUpgradePaymentPage() {
         setPayment(nextPayment)
 
         if (nextPayment.status === 'used' || nextPayment.status === 'confirmed') {
-          setMessage('SePay đã xác nhận giao dịch. Đang chuyển về danh sách POI...')
+          setMessage('Thanh toán thành công. Hệ thống sẽ chuyển về danh sách POI...')
           window.clearInterval(timer)
-          setTimeout(() => router.replace('/pois'), 900)
+          setTimeout(() => router.replace('/pois?payment=success'), 1400)
           return
         }
 
@@ -117,13 +117,13 @@ export default function PoiUpgradePaymentPage() {
               ← Quay lại
             </button>
             <h1 className="text-4xl font-bold text-white">Thanh toán nâng cấp POI</h1>
-            <p className="mt-2 text-gray-400">SePay sẽ tự đối soát giao dịch khi chuyển khoản đúng số tiền và đúng nội dung. Nếu để quá lâu, giao dịch sẽ tự hết hạn.</p>
+            <p className="mt-2 text-gray-400">Lưu ý: hãy ghi đúng nội dung chuyển khoản. Giao dịch sẽ tự hết hạn nếu để quá lâu.</p>
 
             {payment ? (
               <div className="mt-8 grid gap-6 md:grid-cols-[280px,1fr]">
                 <div className="rounded-2xl border border-gray-700 bg-secondary p-5">
                   <div className="rounded-2xl bg-white p-4">
-                    <img src={payment.qr_url} alt="QR thanh toán" className="mx-auto h-[300px] w-[300px] max-w-full object-contain" />
+                    <img src={payment.qr_url} alt="QR thanh toán" className="mx-auto h-[240px] w-[240px] max-w-full object-contain" />
                   </div>
                 </div>
 

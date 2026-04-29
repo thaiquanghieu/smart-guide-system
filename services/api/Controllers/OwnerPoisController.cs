@@ -406,10 +406,11 @@ public class OwnerPoisController : ControllerBase
         if (poi.OwnerId != ownerId)
             return Forbid("Bạn không có quyền xóa POI này");
 
-        _db.Pois.Remove(poi);
+        poi.Status = "seller_deleted";
+        poi.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync();
 
-        return Ok(new { message = "POI được xóa thành công" });
+        return Ok(new { message = "POI đã được ẩn khỏi seller và chờ admin xử lý" });
     }
 
     // =========================

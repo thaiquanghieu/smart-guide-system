@@ -59,6 +59,10 @@ public class ProfilesController : ControllerBase
 
         var poiIds = favorites.Select(x => x.PoiId).Distinct().ToList();
         var pois = await _db.Pois.Where(x => poiIds.Contains(x.Id)).ToListAsync();
+        var ownerIds = pois.Where(x => x.OwnerId.HasValue).Select(x => x.OwnerId!.Value).Distinct().ToList();
+        var owners = ownerIds.Count == 0
+            ? new List<User>()
+            : await _db.Users.Where(x => ownerIds.Contains(x.Id)).ToListAsync();
         var images = await _db.PoiImages
             .Where(x => poiIds.Contains(x.PoiId))
             .OrderBy(x => x.SortOrder)
@@ -74,6 +78,8 @@ public class ProfilesController : ControllerBase
             {
                 var poi = pois.FirstOrDefault(x => x.Id == favorite.PoiId);
                 if (poi == null) return null;
+                var owner = poi.OwnerId.HasValue ? owners.FirstOrDefault(x => x.Id == poi.OwnerId.Value) : null;
+                var isLocked = poi.Status != "approved" || (owner != null && (!owner.IsActive || owner.AccountStatus != "active"));
 
                 var translation = translations.FirstOrDefault(x => x.PoiId == poi.Id);
 
@@ -86,7 +92,9 @@ public class ProfilesController : ControllerBase
                     ImageUrl = images.FirstOrDefault(x => x.PoiId == poi.Id)?.ImageUrl ?? "",
                     listened_count = poi.ListenedCount,
                     rating_avg = poi.RatingAvg,
-                    created_at = favorite.CreatedAt
+                    created_at = favorite.CreatedAt,
+                    is_locked = isLocked,
+                    lock_note = isLocked ? "POI này hiện đã bị ẩn khỏi hệ thống." : ""
                 };
             })
             .Where(x => x != null)
@@ -117,6 +125,10 @@ public class ProfilesController : ControllerBase
 
         var poiIds = historyGroups.Select(x => x.PoiId).Distinct().ToList();
         var pois = await _db.Pois.Where(x => poiIds.Contains(x.Id)).ToListAsync();
+        var ownerIds = pois.Where(x => x.OwnerId.HasValue).Select(x => x.OwnerId!.Value).Distinct().ToList();
+        var owners = ownerIds.Count == 0
+            ? new List<User>()
+            : await _db.Users.Where(x => ownerIds.Contains(x.Id)).ToListAsync();
         var images = await _db.PoiImages
             .Where(x => poiIds.Contains(x.PoiId))
             .OrderBy(x => x.SortOrder)
@@ -132,6 +144,8 @@ public class ProfilesController : ControllerBase
             {
                 var poi = pois.FirstOrDefault(x => x.Id == history.PoiId);
                 if (poi == null) return null;
+                var owner = poi.OwnerId.HasValue ? owners.FirstOrDefault(x => x.Id == poi.OwnerId.Value) : null;
+                var isLocked = poi.Status != "approved" || (owner != null && (!owner.IsActive || owner.AccountStatus != "active"));
 
                 var translation = translations.FirstOrDefault(x => x.PoiId == poi.Id);
 
@@ -145,7 +159,9 @@ public class ProfilesController : ControllerBase
                     listened_count = poi.ListenedCount,
                     rating_avg = poi.RatingAvg,
                     listen_count = history.ListenCount,
-                    last_listened_at = history.LastListenedAt
+                    last_listened_at = history.LastListenedAt,
+                    is_locked = isLocked,
+                    lock_note = isLocked ? "POI này hiện đã bị ẩn khỏi hệ thống." : ""
                 };
             })
             .Where(x => x != null)

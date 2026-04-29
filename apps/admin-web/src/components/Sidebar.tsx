@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/router'
 import { useAdminStore } from '@/lib/store'
 import { useState } from 'react'
-import { LogOut, LayoutDashboard, MapPin, Users, BarChart3, QrCode, Smartphone, CreditCard } from 'lucide-react'
+import { LogOut, LayoutDashboard, MapPin, Users, BarChart3, QrCode, Smartphone, CreditCard, Package } from 'lucide-react'
 
 export default function Sidebar() {
   const router = useRouter()
@@ -15,6 +15,7 @@ export default function Sidebar() {
     { href: '/devices', label: 'Quản lý thiết bị', icon: Smartphone },
     { href: '/pois', label: 'Quản lý POI', icon: MapPin },
     { href: '/qr', label: 'Quản lý QR', icon: QrCode },
+    { href: '/plans', label: 'Quản lý gói', icon: Package },
     { href: '/payments', label: 'Thanh toán', icon: CreditCard },
     { href: '/analytics', label: 'Thống kê', icon: BarChart3 },
   ]
@@ -28,12 +29,9 @@ export default function Sidebar() {
   return (
     <aside className="w-64 bg-secondary border-r border-gray-700 h-screen sticky top-0 p-6 flex flex-col">
       <div className="mb-8">
-        <div className="flex items-center gap-2 mb-2">
-          <div className="text-3xl">🔐</div>
-          <div>
-            <div className="font-bold text-white">Smart Guide</div>
-            <div className="text-xs text-danger">Admin</div>
-          </div>
+        <div className="mb-2 flex items-center gap-3">
+          <img src="/assets/appiconfg.png" alt="Smart Guide" className="h-12 w-auto object-contain" />
+          <div className="text-xs text-danger">Admin</div>
         </div>
       </div>
 

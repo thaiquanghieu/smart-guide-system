@@ -32,6 +32,7 @@ CREATE TABLE users (
   avatar_url text,
   role text DEFAULT 'owner' CHECK (role IN ('owner', 'admin')),
   is_active boolean DEFAULT true,
+  account_status text DEFAULT 'active' CHECK (account_status IN ('active', 'paused', 'banned', 'canceled')),
   created_at timestamptz DEFAULT now(),
   updated_at timestamptz DEFAULT now(),
   last_login_at timestamptz
@@ -78,7 +79,7 @@ CREATE TABLE pois (
   price_text text,
   radius integer DEFAULT 100,
   priority integer DEFAULT 0,
-  status text DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
+  status text DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected', 'seller_deleted')),
   approval_note text,
   rejected_reason text,
   phone text,

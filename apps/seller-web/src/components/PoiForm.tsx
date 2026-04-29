@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { useRouter } from 'next/router'
 import apiClient from '@/lib/api'
@@ -26,7 +26,6 @@ type AudioDraft = {
   languageName: string
   voiceName: string
   scriptText: string
-  audioUrl: string
 }
 
 export type PoiFormValue = {
@@ -74,7 +73,6 @@ const emptyAudio = (languageCode: string): AudioDraft => ({
   languageName: LANGUAGES.find((x) => x.code === languageCode)?.label || languageCode,
   voiceName: 'System',
   scriptText: '',
-  audioUrl: '',
 })
 
 const defaultValue: PoiFormValue = {
@@ -95,9 +93,9 @@ const defaultValue: PoiFormValue = {
   radius: '100',
   priority: '0',
   imageText: '',
-  selectedLanguages: ['vi'],
-  translations: { vi: emptyTranslation('vi') },
-  audios: { vi: emptyAudio('vi') },
+  selectedLanguages: LANGUAGES.map((language) => language.code),
+  translations: Object.fromEntries(LANGUAGES.map((language) => [language.code, emptyTranslation(language.code)])),
+  audios: Object.fromEntries(LANGUAGES.map((language) => [language.code, emptyAudio(language.code)])),
 }
 
 const API_MEDIA_ORIGIN = (process.env.NEXT_PUBLIC_API_URL || '').replace(/\/api\/?$/, '')
@@ -223,10 +221,16 @@ function mockTranslate(value: string, languageCode: string) {
   return translated
 }
 
+declare global {
+  interface Window {
+    L: any
+  }
+}
+
 export default function PoiForm({ mode, initialValue, poiId, onDone }: Props) {
   const router = useRouter()
   const [form, setForm] = useState<PoiFormValue>({ ...defaultValue, ...initialValue })
-  const [activeLang, setActiveLang] = useState(form.selectedLanguages[0] || 'vi')
+  const [activeLang, setActiveLang] = useState('vi')
   const [showTranslations, setShowTranslations] = useState(false)
   const [showAudio, setShowAudio] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -234,11 +238,19 @@ export default function PoiForm({ mode, initialValue, poiId, onDone }: Props) {
   const [translating, setTranslating] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
+  const [showMapPicker, setShowMapPicker] = useState(false)
 
   useEffect(() => {
     if (!initialValue) return
-    setForm({ ...defaultValue, ...initialValue })
-    setActiveLang(initialValue.selectedLanguages?.[0] || 'vi')
+    setForm({
+      ...defaultValue,
+      ...initialValue,
+      selectedLanguages: LANGUAGES.map((language) => language.code),
+      translations: { ...defaultValue.translations, ...(initialValue.translations || {}) },
+      audios: { ...defaultValue.audios, ...(initialValue.audios || {}) },
+    })
+    setActiveLang('vi')
   }, [initialValue])
 
   const images = useMemo(
@@ -251,7 +263,18 @@ export default function PoiForm({ mode, initialValue, poiId, onDone }: Props) {
   )
 
   const updateField = (name: keyof PoiFormValue, value: string) => {
+    setFieldErrors((prev) => ({ ...prev, [name]: '' }))
     setForm((prev) => ({ ...prev, [name]: value }))
+  }
+
+  const applyMapCoordinates = (latitude: number, longitude: number) => {
+    setFieldErrors((prev) => ({ ...prev, latitude: '', longitude: '' }))
+    setForm((prev) => ({
+      ...prev,
+      latitude: latitude.toFixed(7),
+      longitude: longitude.toFixed(7),
+    }))
+    setShowMapPicker(false)
   }
 
   const getSelectedCategories = (value = form) => {
@@ -291,30 +314,6 @@ export default function PoiForm({ mode, initialValue, poiId, onDone }: Props) {
         .filter((item) => item && item !== image)
         .join('\n'),
     }))
-  }
-
-  const toggleLanguage = (code: string) => {
-    setForm((prev) => {
-      const enabled = prev.selectedLanguages.includes(code)
-      const nextLanguages = enabled
-        ? prev.selectedLanguages.filter((item) => item !== code)
-        : [...prev.selectedLanguages, code]
-      const safeLanguages = nextLanguages.length ? nextLanguages : ['vi']
-
-      return {
-        ...prev,
-        selectedLanguages: safeLanguages,
-        translations: {
-          ...prev.translations,
-          [code]: prev.translations[code] || emptyTranslation(code),
-        },
-        audios: {
-          ...prev.audios,
-          [code]: prev.audios[code] || emptyAudio(code),
-        },
-      }
-    })
-    setActiveLang(code)
   }
 
   const translateText = async (value: string, languageCode: string) => {
@@ -386,7 +385,7 @@ export default function PoiForm({ mode, initialValue, poiId, onDone }: Props) {
       setForm((prev) => ({ ...prev, translations }))
       setShowTranslations(true)
     } catch {
-      setError('Tự động dịch thất bại, vui lòng thử lại hoặc tự điền bản dịch')
+      setError('Không thể chuẩn bị bản dịch, vui lòng thử lại.')
     } finally {
       setTranslating(false)
     }
@@ -400,7 +399,7 @@ export default function PoiForm({ mode, initialValue, poiId, onDone }: Props) {
       setForm((prev) => ({ ...prev, audios }))
       setShowAudio(true)
     } catch {
-      setError('Tự tạo script thất bại, vui lòng thử lại hoặc tự điền lời thuyết minh')
+      setError('Không thể chuẩn bị lời thuyết minh, vui lòng thử lại.')
     } finally {
       setTranslating(false)
     }
@@ -456,14 +455,24 @@ export default function PoiForm({ mode, initialValue, poiId, onDone }: Props) {
     event.preventDefault()
     setError('')
     setSuccess('')
-
-    if (!form.name.trim()) return setError('Tên POI không được để trống')
-    if (!form.description.trim()) return setError('Mô tả chi tiết không được để trống')
-    if (!form.latitude || !form.longitude) return setError('Vui lòng nhập tọa độ POI')
-    if (!Number.isFinite(Number(form.latitude)) || !Number.isFinite(Number(form.longitude))) return setError('Tọa độ phải là số hợp lệ')
-    if (Number(form.latitude) < -90 || Number(form.latitude) > 90) return setError('Vĩ độ phải nằm trong khoảng -90 đến 90')
-    if (Number(form.longitude) < -180 || Number(form.longitude) > 180) return setError('Kinh độ phải nằm trong khoảng -180 đến 180')
-    if (!getSelectedCategories().length) return setError('Vui lòng chọn ít nhất một danh mục')
+    const nextErrors: Record<string, string> = {}
+    if (!form.name.trim()) nextErrors.name = 'Vui lòng nhập tên POI.'
+    if (!getSelectedCategories().length) nextErrors.category = 'Vui lòng chọn ít nhất một danh mục.'
+    if (!form.description.trim()) nextErrors.description = 'Vui lòng nhập mô tả chi tiết.'
+    if (!form.latitude) nextErrors.latitude = 'Vui lòng nhập vĩ độ.'
+    if (!form.longitude) nextErrors.longitude = 'Vui lòng nhập kinh độ.'
+    if (form.latitude && !Number.isFinite(Number(form.latitude))) nextErrors.latitude = 'Vĩ độ phải là số hợp lệ.'
+    if (form.longitude && !Number.isFinite(Number(form.longitude))) nextErrors.longitude = 'Kinh độ phải là số hợp lệ.'
+    if (Number(form.latitude) < -90 || Number(form.latitude) > 90) nextErrors.latitude = 'Vĩ độ phải nằm trong khoảng -90 đến 90.'
+    if (Number(form.longitude) < -180 || Number(form.longitude) > 180) nextErrors.longitude = 'Kinh độ phải nằm trong khoảng -180 đến 180.'
+    if (Object.keys(nextErrors).length) {
+      setFieldErrors(nextErrors)
+      const firstKey = Object.keys(nextErrors)[0]
+      const target = document.querySelector(`[data-field="${firstKey}"]`)
+      target?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      return
+    }
+    setFieldErrors({})
 
     setLoading(true)
 
@@ -551,10 +560,10 @@ export default function PoiForm({ mode, initialValue, poiId, onDone }: Props) {
           <p className="text-gray-400 text-sm">Những thông tin này sẽ được admin duyệt trước khi hiển thị trong app.</p>
         </div>
         <div className="grid md:grid-cols-2 gap-4">
-          <Input label="Tên POI *" value={form.name} onChange={(value) => updateField('name', value)} placeholder="Bệnh viện Mắt TP.HCM" />
+          <Input dataField="name" error={fieldErrors.name} label="Tên POI *" value={form.name} onChange={(value) => updateField('name', value)} placeholder="Bệnh viện Mắt TP.HCM" />
           <div className="md:col-span-1">
-            <span className="block text-sm font-medium text-gray-300 mb-2">Danh mục</span>
-            <div className="flex flex-wrap gap-2 rounded-xl border border-gray-700 bg-dark/50 p-3">
+            <span className="mb-2 block text-sm font-medium text-gray-300">Danh mục *</span>
+            <div data-field="category" className={`flex flex-wrap gap-2 rounded-xl border bg-dark/50 p-3 ${fieldErrors.category ? 'border-red-500' : 'border-gray-700'}`}>
               {CATEGORY_OPTIONS.map((category) => (
                 <button
                   key={category}
@@ -576,6 +585,7 @@ export default function PoiForm({ mode, initialValue, poiId, onDone }: Props) {
                 className="min-w-[120px] flex-1 rounded-full border border-gray-600 bg-secondary px-3 py-1.5 text-sm text-white focus:border-primary focus:outline-none"
               />
             </div>
+            {fieldErrors.category ? <p className="mt-2 text-sm text-red-300">{fieldErrors.category}</p> : null}
           </div>
           <Input label="Mô tả ngắn" value={form.shortDescription} onChange={(value) => updateField('shortDescription', value)} placeholder="Một câu ngắn dùng trong card" />
           <Input label="Địa chỉ" value={form.address} onChange={(value) => updateField('address', value)} placeholder="280 Điện Biên Phủ..." />
@@ -585,8 +595,17 @@ export default function PoiForm({ mode, initialValue, poiId, onDone }: Props) {
           <Input label="Số điện thoại" value={form.phone} onChange={(value) => updateField('phone', value)} />
           <Input label="Website" value={form.websiteUrl} onChange={(value) => updateField('websiteUrl', value)} placeholder="https://..." />
           <div className="grid grid-cols-2 gap-3">
-            <Input label="Vĩ độ *" value={form.latitude} onChange={(value) => updateField('latitude', value)} placeholder="10.779783" />
-            <Input label="Kinh độ *" value={form.longitude} onChange={(value) => updateField('longitude', value)} placeholder="106.699018" />
+            <Input dataField="latitude" error={fieldErrors.latitude} label="Vĩ độ *" value={form.latitude} onChange={(value) => updateField('latitude', value)} placeholder="10.779783" />
+            <Input dataField="longitude" error={fieldErrors.longitude} label="Kinh độ *" value={form.longitude} onChange={(value) => updateField('longitude', value)} placeholder="106.699018" />
+          </div>
+          <div className="md:col-span-2">
+            <button
+              type="button"
+              onClick={() => setShowMapPicker(true)}
+              className="rounded-xl border border-gray-600 px-4 py-3 text-sm font-semibold text-gray-200 hover:border-primary hover:text-white"
+            >
+              Chọn từ bản đồ
+            </button>
           </div>
           <OptionSelect
             label="Bán kính nhận diện"
@@ -603,12 +622,12 @@ export default function PoiForm({ mode, initialValue, poiId, onDone }: Props) {
             hint="Khi nhiều POI cùng nằm trong vùng của khách, hệ thống ưu tiên POI có bậc cao hơn."
           />
         </div>
-        <TextArea label="Mô tả chi tiết *" value={form.description} onChange={(value) => updateField('description', value)} rows={5} />
+        <TextArea dataField="description" error={fieldErrors.description} label="Mô tả chi tiết *" value={form.description} onChange={(value) => updateField('description', value)} rows={5} />
         <div className="rounded-2xl border border-gray-700 bg-dark/40 p-4 space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <p className="text-sm font-medium text-gray-300">Ảnh POI</p>
-              <p className="text-xs text-gray-500">Chỉ upload ảnh từ thiết bị. Có thể bấm X để hủy ảnh trước khi gửi.</p>
+              <p className="text-xs text-gray-500">Upload ảnh từ thiết bị.</p>
             </div>
             <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl bg-primary px-4 py-2 font-semibold text-white hover:bg-blue-700">
               {uploadingImages ? 'Đang upload...' : 'Upload ảnh'}
@@ -649,26 +668,14 @@ export default function PoiForm({ mode, initialValue, poiId, onDone }: Props) {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="text-xl font-bold text-white">Ngôn ngữ hiển thị</h2>
-            <p className="text-gray-400 text-sm">Seller có thể tự dịch hoặc sửa nội dung sau khi tự động dịch.</p>
+            <p className="text-gray-400 text-sm">Hệ thống sẽ lấy thông tin bên trên, bạn có thể xem chi tiết và chỉnh sửa lại.</p>
           </div>
           <button type="button" onClick={fillTranslations} disabled={translating} className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white font-bold px-5 py-3 rounded-xl shadow-lg shadow-blue-900/30">
-            {translating ? 'Đang dịch...' : 'Tự động dịch'}
+            {translating ? 'Đang chuẩn bị...' : 'Xem chi tiết'}
           </button>
         </div>
-        <div className="flex flex-wrap gap-2">
-          {LANGUAGES.map((lang) => (
-            <button
-              type="button"
-              key={lang.code}
-              onClick={() => toggleLanguage(lang.code)}
-              className={`px-4 py-2 rounded-full border transition ${form.selectedLanguages.includes(lang.code) ? 'bg-primary text-white border-primary' : 'border-gray-600 text-gray-300 hover:border-primary'}`}
-            >
-              {lang.label}
-            </button>
-          ))}
-        </div>
         <button type="button" onClick={() => setShowTranslations((value) => !value)} className="text-primary hover:underline">
-          {showTranslations ? 'Ẩn chi tiết bản dịch' : 'Xem chi tiết / tự điền bản dịch'}
+          {showTranslations ? 'Ẩn chi tiết bản dịch' : 'Mở phần bản dịch'}
         </button>
         {showTranslations && (
           <DetailEditor activeLang={activeLang} setActiveLang={setActiveLang} selectedLanguages={form.selectedLanguages}>
@@ -688,20 +695,19 @@ export default function PoiForm({ mode, initialValue, poiId, onDone }: Props) {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="text-xl font-bold text-white">Lời thuyết minh / Audio</h2>
-            <p className="text-gray-400 text-sm">Audio sẽ ở trạng thái chờ duyệt, admin duyệt xong mới dùng trong app.</p>
+            <p className="text-gray-400 text-sm">Hệ thống sẽ tự chuẩn bị sẵn lời thuyết minh cho 5 ngôn ngữ để bạn kiểm tra và chỉnh sửa.</p>
           </div>
           <button type="button" onClick={fillAudioScripts} disabled={translating} className="bg-accent hover:bg-accent/80 disabled:bg-gray-600 disabled:text-gray-300 text-dark font-bold px-5 py-3 rounded-xl shadow-lg shadow-emerald-900/20">
             {translating ? 'Đang tạo...' : 'Tự tạo script TTS'}
           </button>
         </div>
         <button type="button" onClick={() => setShowAudio((value) => !value)} className="text-primary hover:underline">
-          {showAudio ? 'Ẩn chi tiết audio' : 'Xem chi tiết / tự điền lời thuyết minh'}
+          {showAudio ? 'Ẩn chi tiết audio' : 'Mở phần lời thuyết minh'}
         </button>
         {showAudio && (
           <DetailEditor activeLang={activeLang} setActiveLang={setActiveLang} selectedLanguages={form.selectedLanguages}>
-            <div className="grid md:grid-cols-2 gap-4">
+            <div className="grid md:grid-cols-1 gap-4">
               <Input label="Giọng đọc" value={activeAudio.voiceName} onChange={(value) => updateAudio(activeLang, 'voiceName', value)} placeholder="System, Nam/Nữ..." />
-              <Input label="Audio URL nếu có" value={activeAudio.audioUrl} onChange={(value) => updateAudio(activeLang, 'audioUrl', value)} placeholder="/audio/..." />
             </div>
             <TextArea label="Lời thuyết minh" value={activeAudio.scriptText} onChange={(value) => updateAudio(activeLang, 'scriptText', value)} rows={5} />
           </DetailEditor>
@@ -719,6 +725,15 @@ export default function PoiForm({ mode, initialValue, poiId, onDone }: Props) {
             : 'Tạo POI và gửi duyệt'}
         </button>
       </div>
+
+      {showMapPicker && (
+        <MapPickerModal
+          initialLatitude={Number(form.latitude) || 10.7765}
+          initialLongitude={Number(form.longitude) || 106.7009}
+          onClose={() => setShowMapPicker(false)}
+          onPick={applyMapCoordinates}
+        />
+      )}
     </form>
   )
 }
@@ -743,11 +758,28 @@ function DetailEditor({ activeLang, setActiveLang, selectedLanguages, children }
   )
 }
 
-function Input({ label, value, onChange, placeholder = '', type = 'text' }: { label: string; value: string; onChange: (value: string) => void; placeholder?: string; type?: string }) {
+function Input({
+  label,
+  value,
+  onChange,
+  placeholder = '',
+  type = 'text',
+  error,
+  dataField,
+}: {
+  label: string
+  value: string
+  onChange: (value: string) => void
+  placeholder?: string
+  type?: string
+  error?: string
+  dataField?: string
+}) {
   return (
-    <label className="block">
+    <label className="block" data-field={dataField}>
       <span className="block text-sm font-medium text-gray-300 mb-2">{label}</span>
-      <input type={type} value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} className="w-full px-4 py-3 bg-dark border border-gray-600 rounded-xl text-white focus:border-primary focus:outline-none" />
+      <input type={type} value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} className={`w-full rounded-xl border bg-dark px-4 py-3 text-white focus:outline-none ${error ? 'border-red-500 focus:border-red-500' : 'border-gray-600 focus:border-primary'}`} />
+      {error ? <p className="mt-2 text-sm text-red-300">{error}</p> : null}
     </label>
   )
 }
@@ -786,11 +818,156 @@ function OptionSelect({
   )
 }
 
-function TextArea({ label, value, onChange, placeholder = '', rows = 3 }: { label: string; value: string; onChange: (value: string) => void; placeholder?: string; rows?: number }) {
+function TextArea({
+  label,
+  value,
+  onChange,
+  placeholder = '',
+  rows = 3,
+  error,
+  dataField,
+}: {
+  label: string
+  value: string
+  onChange: (value: string) => void
+  placeholder?: string
+  rows?: number
+  error?: string
+  dataField?: string
+}) {
   return (
-    <label className="block">
+    <label className="block" data-field={dataField}>
       <span className="block text-sm font-medium text-gray-300 mb-2">{label}</span>
-      <textarea value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} rows={rows} className="w-full px-4 py-3 bg-dark border border-gray-600 rounded-xl text-white focus:border-primary focus:outline-none resize-y" />
+      <textarea value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} rows={rows} className={`w-full resize-y rounded-xl border bg-dark px-4 py-3 text-white focus:outline-none ${error ? 'border-red-500 focus:border-red-500' : 'border-gray-600 focus:border-primary'}`} />
+      {error ? <p className="mt-2 text-sm text-red-300">{error}</p> : null}
     </label>
+  )
+}
+
+function MapPickerModal({
+  initialLatitude,
+  initialLongitude,
+  onClose,
+  onPick,
+}: {
+  initialLatitude: number
+  initialLongitude: number
+  onClose: () => void
+  onPick: (latitude: number, longitude: number) => void
+}) {
+  const mapRef = useRef<HTMLDivElement | null>(null)
+  const mapInstanceRef = useRef<any>(null)
+  const markerRef = useRef<any>(null)
+  const [leafletReady, setLeafletReady] = useState(false)
+  const [selectedPoint, setSelectedPoint] = useState({ latitude: initialLatitude, longitude: initialLongitude })
+
+  useEffect(() => {
+    const cssId = 'smartguide-leaflet-css'
+    if (!document.getElementById(cssId)) {
+      const link = document.createElement('link')
+      link.id = cssId
+      link.rel = 'stylesheet'
+      link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'
+      document.head.appendChild(link)
+    }
+
+    const scriptId = 'smartguide-leaflet-script'
+    const ready = () => {
+      if (window.L?.map) setLeafletReady(true)
+    }
+
+    if (window.L?.map) {
+      ready()
+      return undefined
+    }
+
+    let script = document.getElementById(scriptId) as HTMLScriptElement | null
+    if (!script) {
+      script = document.createElement('script')
+      script.id = scriptId
+      script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'
+      script.async = true
+      script.crossOrigin = ''
+      document.body.appendChild(script)
+    }
+
+    script.addEventListener('load', ready)
+    return () => script?.removeEventListener('load', ready)
+  }, [])
+
+  useEffect(() => {
+    if (!leafletReady || !mapRef.current || mapInstanceRef.current) return undefined
+
+    const map = window.L.map(mapRef.current, {
+      zoomControl: true,
+      attributionControl: true,
+    }).setView([initialLatitude, initialLongitude], 15)
+
+    window.L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; OpenStreetMap contributors',
+    }).addTo(map)
+
+    const marker = window.L.marker([initialLatitude, initialLongitude]).addTo(map)
+    markerRef.current = marker
+    mapInstanceRef.current = map
+
+    map.on('click', (event: any) => {
+      const latitude = event.latlng.lat
+      const longitude = event.latlng.lng
+      setSelectedPoint({ latitude, longitude })
+      marker.setLatLng([latitude, longitude])
+    })
+
+    window.setTimeout(() => {
+      map.invalidateSize()
+    }, 80)
+
+    return () => {
+      map.remove()
+      mapInstanceRef.current = null
+      markerRef.current = null
+    }
+  }, [initialLatitude, initialLongitude, leafletReady])
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={onClose}>
+      <div
+        className="w-full max-w-5xl rounded-2xl border border-gray-700 bg-secondary p-5 shadow-2xl"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <div>
+            <h3 className="text-xl font-bold text-white">Chọn vị trí từ bản đồ</h3>
+            <p className="text-sm text-gray-400">Bấm vào bản đồ để đặt vị trí, sau đó xác nhận để điền tọa độ.</p>
+          </div>
+          <button onClick={onClose} className="rounded-lg bg-dark px-4 py-2 text-white">
+            Đóng
+          </button>
+        </div>
+
+        <div className="overflow-hidden rounded-2xl border border-gray-700 bg-dark">
+          <div ref={mapRef} className="h-[420px] w-full" />
+        </div>
+
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+          <div className="text-sm text-gray-300">
+            <span className="font-semibold text-white">Vị trí đã chọn:</span>{' '}
+            {selectedPoint.latitude.toFixed(7)}, {selectedPoint.longitude.toFixed(7)}
+          </div>
+          <div className="flex gap-3">
+            <button onClick={onClose} className="rounded-xl bg-dark px-4 py-3 font-semibold text-white">
+              Hủy
+            </button>
+            <button
+              onClick={() => onPick(selectedPoint.latitude, selectedPoint.longitude)}
+              className="rounded-xl bg-primary px-5 py-3 font-semibold text-white hover:bg-blue-700"
+            >
+              Dùng tọa độ này
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   )
 }

@@ -28,6 +28,9 @@ public class User
     [Column("is_active")]
     public bool IsActive { get; set; } = true;
 
+    [Column("account_status")]
+    public string AccountStatus { get; set; } = "active"; // "active", "paused", "banned", "canceled"
+
     [Column("created_at")]
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 

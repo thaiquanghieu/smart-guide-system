@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Sidebar from '@/components/Sidebar'
 import ProtectedRoute from '@/components/ProtectedRoute'
 import apiClient from '@/lib/api'
-import { Ban, CheckCircle, Search, Smartphone, Trash2 } from 'lucide-react'
+import { Ban, CheckCircle2, Eye, EyeOff, Search, Smartphone, Trash2 } from 'lucide-react'
 
 type Device = {
   id: number
@@ -21,21 +21,42 @@ type Device = {
   subscription_expire_at?: string
 }
 
+type DeviceDetail = {
+  id: number
+  device_uuid?: string
+  name?: string
+  platform?: string
+  model?: string
+  app_version?: string
+  status: string
+  isActive: boolean
+  lastSeen?: string
+  registeredAt: string
+  deletedAt?: string
+  bannedAt?: string
+  banReason?: string
+  favorite_count: number
+  listen_count: number
+  heard_poi_count: number
+  subscription_expire_at?: string
+  latest_history: Array<{ poiId: string; listenedAt: string; durationSeconds: number }>
+}
+
 export default function DevicesPage() {
   const [devices, setDevices] = useState<Device[]>([])
   const [allDevices, setAllDevices] = useState<Device[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('all')
-  const [reason, setReason] = useState('')
   const [query, setQuery] = useState('')
-  const [showDeviceIds, setShowDeviceIds] = useState(false)
+  const [selectedIds, setSelectedIds] = useState<number[]>([])
+  const [revealedIds, setRevealedIds] = useState<number[]>([])
+  const [selectedDevice, setSelectedDevice] = useState<DeviceDetail | null>(null)
 
   useEffect(() => {
-    fetchDevices()
+    void fetchDevices()
     const timer = window.setInterval(() => {
       void fetchDevices(true)
     }, 4000)
-
     return () => window.clearInterval(timer)
   }, [filter])
 
@@ -49,34 +70,79 @@ export default function DevicesPage() {
       setDevices(response.data)
       setAllDevices(allResponse.data)
     } catch (error: any) {
-      console.error('Failed to fetch devices:', error)
       if (!silent) alert(error?.response?.data?.message || 'Không tải được danh sách thiết bị')
     } finally {
       if (!silent) setLoading(false)
     }
   }
 
+  const visibleDevices = useMemo(() => {
+    const keyword = query.trim().toLowerCase()
+    return devices.filter((device) =>
+      [
+        device.id,
+        device.device_uuid,
+        device.name,
+        device.platform,
+        device.model,
+        device.app_version,
+        device.status,
+        device.ban_reason,
+      ]
+        .join(' ')
+        .toLowerCase()
+        .includes(keyword)
+    )
+  }, [devices, query])
+
+  const openDetail = async (deviceId: number) => {
+    const response = await apiClient.get(`/admin/devices/${deviceId}/detail`)
+    setSelectedDevice(response.data)
+  }
+
   const updateStatus = async (deviceId: number, status: string) => {
-    const bodyReason = status === 'banned' ? reason || prompt('Lý do ban thiết bị?') || '' : ''
+    const bodyReason = status === 'banned' ? window.prompt('Lý do chặn thiết bị?', '') || '' : ''
     try {
       await apiClient.put(`/admin/devices/${deviceId}/status`, { status, reason: bodyReason })
-      setReason('')
-      await fetchDevices()
+      await fetchDevices(true)
+      if (selectedDevice?.id === deviceId) {
+        const detail = await apiClient.get(`/admin/devices/${deviceId}/detail`)
+        setSelectedDevice(detail.data)
+      }
     } catch (error: any) {
       alert(error?.response?.data?.message || 'Cập nhật thiết bị thất bại')
     }
   }
 
   const deleteDevice = async (deviceId: number) => {
-    if (!confirm('Xóa hẳn thiết bị này khỏi DB? Hành động này không thể khôi phục.')) return
-
+    if (!confirm('Xóa hẳn thiết bị này khỏi DB?')) return
     try {
       await apiClient.delete(`/admin/devices/${deviceId}`)
-      setDevices((prev) => prev.filter((device) => device.id !== deviceId))
-      setAllDevices((prev) => prev.filter((device) => device.id !== deviceId))
+      setSelectedIds((prev) => prev.filter((id) => id !== deviceId))
+      setSelectedDevice((current) => (current?.id === deviceId ? null : current))
+      await fetchDevices(true)
     } catch (error: any) {
       alert(error?.response?.data?.message || 'Xóa thiết bị thất bại')
     }
+  }
+
+  const bulkUpdateStatus = async (status: 'active' | 'banned') => {
+    if (!selectedIds.length) return
+    const reason = status === 'banned' ? window.prompt('Lý do chặn các thiết bị đã chọn?', '') || '' : ''
+    for (const id of selectedIds) {
+      await apiClient.put(`/admin/devices/${id}/status`, { status, reason })
+    }
+    setSelectedIds([])
+    await fetchDevices(true)
+  }
+
+  const bulkDelete = async () => {
+    if (!selectedIds.length || !confirm(`Xóa hẳn ${selectedIds.length} thiết bị đã chọn?`)) return
+    for (const id of selectedIds) {
+      await apiClient.delete(`/admin/devices/${id}`)
+    }
+    setSelectedIds([])
+    await fetchDevices(true)
   }
 
   const statusClass = (status: string) => {
@@ -86,153 +152,213 @@ export default function DevicesPage() {
     return 'bg-yellow-400/10 text-yellow-300'
   }
 
-  const visibleDevices = devices.filter((device) => {
-    const keyword = [
-      device.id,
-      device.device_uuid,
-      device.name,
-      device.platform,
-      device.model,
-      device.app_version,
-      device.status,
-      device.ban_reason,
-    ].join(' ').toLowerCase()
-    return keyword.includes(query.trim().toLowerCase())
-  })
+  const statusLabel = (status: string) => {
+    if (status === 'active') return 'Hoạt động'
+    if (status === 'banned') return 'Bị chặn'
+    if (status === 'user_deleted') return 'Khách tự xóa'
+    return 'Không hoạt động'
+  }
 
   return (
     <ProtectedRoute>
-      <div className="flex bg-dark min-h-screen">
+      <div className="flex min-h-screen bg-dark">
         <Sidebar />
         <main className="flex-1 p-8">
-          <div className="max-w-7xl">
-            <div className="mb-8">
+          <div className="mx-auto max-w-7xl space-y-6">
+            <div>
               <h1 className="text-4xl font-bold text-white">Quản lý thiết bị</h1>
-              <p className="text-gray-400 mt-2">Theo dõi online/offline, gói đang dùng và xử lý ban khi cần.</p>
+              <p className="mt-2 text-gray-400">Theo dõi thiết bị đang truy cập, chặn hoặc xóa hẳn khi cần.</p>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-3 mb-6">
-              <div className="rounded-2xl border border-gray-700 bg-secondary p-5">
-                <p className="text-sm text-gray-400">Tổng thiết bị trong DB</p>
-                <p className="mt-2 text-3xl font-bold text-white">{allDevices.length}</p>
+            <div className="grid gap-4 md:grid-cols-3">
+              <SummaryCard label="Tổng thiết bị" value={allDevices.length} />
+              <SummaryCard label="Thiết bị đang truy cập" value={allDevices.filter((device) => device.is_online).length} accent="emerald" note="Cập nhật mỗi 4 giây" />
+              <SummaryCard label="Thiết bị bị chặn" value={allDevices.filter((device) => device.status === 'banned').length} accent="red" />
+            </div>
+
+            <div className="grid gap-3 md:grid-cols-[1fr,auto]">
+              <div className="relative">
+                <Search className="absolute left-3 top-3 text-gray-500" size={18} />
+                <input
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  className="w-full rounded-xl border border-gray-700 bg-secondary py-3 pl-10 pr-4 text-white placeholder:text-gray-500"
+                  placeholder="Tìm theo tên máy, nền tảng, trạng thái, lý do chặn..."
+                />
               </div>
-              <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-5">
-                <p className="text-sm text-emerald-200">Đang truy cập web app</p>
-                <p className="mt-2 text-3xl font-bold text-emerald-300">{allDevices.filter((device) => device.is_online).length}</p>
-                <p className="mt-1 text-xs text-emerald-200/70">Cập nhật mỗi 4 giây</p>
-              </div>
-              <div className="rounded-2xl border border-red-500/30 bg-red-500/10 p-5">
-                <p className="text-sm text-red-200">Thiết bị bị khóa</p>
-                <p className="mt-2 text-3xl font-bold text-red-300">{allDevices.filter((device) => device.status === 'banned').length}</p>
-              </div>
+              {selectedIds.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  <button onClick={() => void bulkUpdateStatus('active')} className="rounded-xl bg-green-500/15 px-4 py-3 font-semibold text-green-300 hover:bg-green-500/25">
+                    Mở {selectedIds.length} mục
+                  </button>
+                  <button onClick={() => void bulkUpdateStatus('banned')} className="rounded-xl bg-red-500/15 px-4 py-3 font-semibold text-red-300 hover:bg-red-500/25">
+                    Chặn {selectedIds.length} mục
+                  </button>
+                  <button onClick={() => void bulkDelete()} className="rounded-xl bg-gray-500/15 px-4 py-3 font-semibold text-gray-200 hover:bg-gray-500/25">
+                    Xóa {selectedIds.length} mục
+                  </button>
+                </div>
+              )}
             </div>
 
-            <div className="relative mb-4">
-              <Search className="absolute left-3 top-3 text-gray-500" size={18} />
-              <input
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                className="w-full rounded-xl border border-gray-700 bg-secondary py-3 pl-10 pr-4 text-white placeholder:text-gray-500"
-                placeholder="Tìm theo tên máy, nền tảng, trạng thái, lý do khóa..."
-              />
-            </div>
-
-            <div className="mb-4 flex justify-end">
-              <button
-                onClick={() => setShowDeviceIds((current) => !current)}
-                className="rounded-lg bg-secondary px-4 py-2 text-sm font-semibold text-gray-300 hover:text-white"
-              >
-                {showDeviceIds ? 'Ẩn ID thiết bị' : 'Hiện ID thiết bị'}
-              </button>
-            </div>
-
-            <div className="flex gap-2 flex-wrap mb-6">
+            <div className="flex flex-wrap gap-2">
               {['all', 'active', 'banned', 'user_deleted', 'inactive'].map((item) => (
                 <button
                   key={item}
                   onClick={() => setFilter(item)}
-                  className={`px-4 py-2 rounded-lg font-semibold ${filter === item ? 'bg-danger text-white' : 'bg-secondary text-gray-300 hover:text-white'}`}
+                  className={`rounded-lg px-4 py-2 font-semibold ${filter === item ? 'bg-danger text-white' : 'bg-secondary text-gray-300 hover:text-white'}`}
                 >
-                  {item === 'all' ? 'Tất cả' : item === 'active' ? 'Hoạt động' : item === 'banned' ? 'Bị khóa' : item === 'user_deleted' ? 'Khách tự xóa' : 'Không hoạt động'}
+                  {item === 'all' ? 'Tất cả' : item === 'active' ? 'Hoạt động' : item === 'banned' ? 'Bị chặn' : item === 'user_deleted' ? 'Khách tự xóa' : 'Không hoạt động'}
                 </button>
               ))}
             </div>
 
-            {loading ? (
-              <p className="text-gray-400">Đang tải...</p>
-            ) : visibleDevices.length ? (
-              <div className="bg-secondary border border-gray-700 rounded-2xl overflow-hidden">
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead className="border-b border-gray-700 bg-dark/40">
-                      <tr>
-                        <th className="text-left p-4 text-gray-300">Thiết bị</th>
-                        <th className="text-left p-4 text-gray-300">Online</th>
-                        <th className="text-left p-4 text-gray-300">Trạng thái</th>
-                        <th className="text-left p-4 text-gray-300">Gói</th>
-                        <th className="text-left p-4 text-gray-300">Lượt nghe</th>
-                        <th className="text-left p-4 text-gray-300">Lần cuối</th>
-                        <th className="text-right p-4 text-gray-300">Hành động</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {visibleDevices.map((device) => (
-                        <tr key={device.id} className="border-b border-gray-700 hover:bg-dark/30">
-                          <td className="p-4">
-                            <div className="flex items-center gap-3">
-                              <Smartphone className="text-primary" />
-                              <div>
-                                <p className="text-white font-semibold">{device.name || `Device #${device.id}`}</p>
-                                <p className="text-gray-400 text-xs">{device.platform || '-'} {device.model || ''}</p>
-                                <p className="mt-1 font-mono text-[11px] text-gray-500">
-                                  ID: {showDeviceIds ? (device.device_uuid || `#${device.id}`) : '••••••••••••••••'}
-                                </p>
+            <div className="overflow-hidden rounded-2xl border border-gray-700 bg-secondary">
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="border-b border-gray-700 bg-dark/40">
+                    <tr>
+                      <th className="p-4" />
+                      <th className="p-4 text-left text-sm text-gray-300">Thiết bị</th>
+                      <th className="p-4 text-left text-sm text-gray-300">Truy cập</th>
+                      <th className="p-4 text-left text-sm text-gray-300">Trạng thái</th>
+                      <th className="p-4 text-left text-sm text-gray-300">Gói</th>
+                      <th className="p-4 text-left text-sm text-gray-300">Lượt nghe</th>
+                      <th className="p-4 text-left text-sm text-gray-300">Lần cuối</th>
+                      <th className="p-4 text-right text-sm text-gray-300">Hành động</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {loading ? (
+                      <tr><td colSpan={8} className="p-6 text-gray-400">Đang tải...</td></tr>
+                    ) : visibleDevices.length ? (
+                      visibleDevices.map((device) => {
+                        const showId = revealedIds.includes(device.id)
+                        return (
+                          <tr key={device.id} className="border-b border-gray-700 hover:bg-dark/20">
+                            <td className="p-4 align-top">
+                              <input
+                                type="checkbox"
+                                checked={selectedIds.includes(device.id)}
+                                onChange={(event) => setSelectedIds((prev) => event.target.checked ? [...prev, device.id] : prev.filter((item) => item !== device.id))}
+                                className="mt-1 h-4 w-4 rounded border-gray-600 bg-dark text-danger"
+                              />
+                            </td>
+                            <td className="p-4">
+                              <div className="flex items-start gap-3">
+                                <Smartphone className="mt-0.5 text-primary" size={20} />
+                                <div>
+                                  <p className="font-semibold text-white">{device.name || `Device #${device.id}`}</p>
+                                  <p className="text-xs text-gray-400">{device.platform || '-'} {device.model || ''}</p>
+                                  <div className="mt-1 flex items-center gap-2 text-[11px] text-gray-500">
+                                    <span>ID: {showId ? (device.device_uuid || `#${device.id}`) : '••••••••••••••••'}</span>
+                                    <button
+                                      onClick={() => setRevealedIds((prev) => showId ? prev.filter((id) => id !== device.id) : [...prev, device.id])}
+                                      className="text-gray-400 hover:text-white"
+                                    >
+                                      {showId ? <EyeOff size={14} /> : <Eye size={14} />}
+                                    </button>
+                                  </div>
+                                </div>
                               </div>
-                            </div>
-                          </td>
-                          <td className="p-4">
-                            <span className={`inline-flex w-3 h-3 rounded-full ${device.is_online ? 'bg-green-400' : 'bg-gray-500'}`} />
-                          </td>
-                          <td className="p-4">
-                            <span className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${statusClass(device.status)}`}>{device.status}</span>
-                            {device.ban_reason && <p className="text-red-300 text-xs mt-1">{device.ban_reason}</p>}
-                          </td>
-                          <td className="p-4 text-sm text-gray-300">{device.has_active_subscription ? 'Còn hạn' : 'Không có'}</td>
-                          <td className="p-4 text-gray-300">{device.listen_count}</td>
-                          <td className="p-4 text-gray-400 text-sm">{device.last_seen ? new Date(device.last_seen).toLocaleString('vi-VN') : '-'}</td>
-                          <td className="p-4">
-                            <div className="flex justify-end gap-2">
-                              {device.status !== 'banned' && (
-                                <button onClick={() => updateStatus(device.id, 'banned')} className="px-3 py-2 rounded-lg bg-red-500/15 text-red-300 hover:bg-red-500/25">
-                                  <Ban size={16} />
-                                </button>
-                              )}
-                              {device.status !== 'active' && (
-                                <button onClick={() => updateStatus(device.id, 'active')} className="px-3 py-2 rounded-lg bg-green-500/15 text-green-300 hover:bg-green-500/25">
-                                  <CheckCircle size={16} />
-                                </button>
-                              )}
-                              <button
-                                onClick={() => deleteDevice(device.id)}
-                                title="Xóa hẳn khỏi DB"
-                                className="px-3 py-2 rounded-lg bg-gray-500/15 text-gray-300 hover:bg-gray-500/25"
-                              >
-                                <Trash2 size={16} />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                            </td>
+                            <td className="p-4">
+                              <span className={`inline-flex h-3 w-3 rounded-full ${device.is_online ? 'bg-green-400' : 'bg-gray-500'}`} />
+                            </td>
+                            <td className="p-4">
+                              <span className={`rounded-full px-3 py-1 text-xs font-semibold ${statusClass(device.status)}`}>{statusLabel(device.status)}</span>
+                              {device.ban_reason ? <p className="mt-1 text-xs text-red-300">{device.ban_reason}</p> : null}
+                            </td>
+                            <td className="p-4 text-sm text-gray-300">{device.has_active_subscription ? 'Còn hạn' : 'Không có'}</td>
+                            <td className="p-4 text-sm text-gray-300">{device.listen_count}</td>
+                            <td className="p-4 text-sm text-gray-400">{device.last_seen ? new Date(device.last_seen).toLocaleString('vi-VN') : '-'}</td>
+                            <td className="p-4">
+                              <div className="flex justify-end gap-2">
+                                <button onClick={() => void openDetail(device.id)} className="rounded-lg bg-primary/15 px-3 py-2 text-primary hover:bg-primary/25"><Eye size={16} /></button>
+                                {device.status !== 'active' && <button onClick={() => void updateStatus(device.id, 'active')} className="rounded-lg bg-green-500/15 px-3 py-2 text-green-300 hover:bg-green-500/25"><CheckCircle2 size={16} /></button>}
+                                {device.status !== 'banned' && <button onClick={() => void updateStatus(device.id, 'banned')} className="rounded-lg bg-red-500/15 px-3 py-2 text-red-300 hover:bg-red-500/25"><Ban size={16} /></button>}
+                                <button onClick={() => void deleteDevice(device.id)} className="rounded-lg bg-gray-500/15 px-3 py-2 text-gray-300 hover:bg-gray-500/25"><Trash2 size={16} /></button>
+                              </div>
+                            </td>
+                          </tr>
+                        )
+                      })
+                    ) : (
+                      <tr><td colSpan={8} className="p-10 text-center text-gray-400">Chưa có thiết bị.</td></tr>
+                    )}
+                  </tbody>
+                </table>
               </div>
-            ) : (
-              <div className="bg-secondary border border-gray-700 rounded-2xl p-10 text-center text-gray-400">Chưa có thiết bị.</div>
-            )}
+            </div>
           </div>
         </main>
       </div>
+
+      {selectedDevice && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={() => setSelectedDevice(null)}>
+          <div className="w-full max-w-3xl rounded-2xl border border-gray-700 bg-secondary p-6" onClick={(event) => event.stopPropagation()}>
+            <div className="mb-5 flex items-start justify-between">
+              <div>
+                <h2 className="text-2xl font-bold text-white">{selectedDevice.name || `Device #${selectedDevice.id}`}</h2>
+                <p className="text-gray-400">{selectedDevice.platform || '-'} {selectedDevice.model || ''}</p>
+              </div>
+              <button onClick={() => setSelectedDevice(null)} className="rounded-lg bg-dark px-4 py-2 text-white">Đóng</button>
+            </div>
+            <div className="grid gap-4 md:grid-cols-2">
+              <Info label="ID thiết bị" value={selectedDevice.device_uuid || `#${selectedDevice.id}`} mono />
+              <Info label="Trạng thái" value={statusLabel(selectedDevice.status)} />
+              <Info label="App version" value={selectedDevice.app_version || '-'} />
+              <Info label="Đăng ký lúc" value={new Date(selectedDevice.registeredAt).toLocaleString('vi-VN')} />
+              <Info label="Lần truy cập cuối" value={selectedDevice.lastSeen ? new Date(selectedDevice.lastSeen).toLocaleString('vi-VN') : '-'} />
+              <Info label="Gói đang dùng" value={selectedDevice.subscription_expire_at ? `Tới ${new Date(selectedDevice.subscription_expire_at).toLocaleString('vi-VN')}` : 'Không có'} />
+              <Info label="Tổng lượt nghe" value={String(selectedDevice.listen_count)} />
+              <Info label="Tổng điểm đã nghe" value={String(selectedDevice.heard_poi_count)} />
+              <Info label="Tổng điểm yêu thích" value={String(selectedDevice.favorite_count)} />
+              <Info label="Lý do chặn" value={selectedDevice.banReason || 'Không có'} />
+            </div>
+            <div className="mt-6 rounded-xl border border-gray-700 bg-dark/40 p-4">
+              <h3 className="mb-3 font-bold text-white">Lịch sử nghe gần đây</h3>
+              {selectedDevice.latest_history?.length ? (
+                <div className="space-y-2">
+                  {selectedDevice.latest_history.map((item, index) => (
+                    <div key={`${item.poiId}-${index}`} className="rounded-lg border border-gray-700 bg-dark/50 p-3 text-sm text-gray-300">
+                      <div>POI: <span className="text-white">{item.poiId}</span></div>
+                      <div>Thời gian: <span className="text-white">{new Date(item.listenedAt).toLocaleString('vi-VN')}</span></div>
+                      <div>Thời lượng: <span className="text-white">{item.durationSeconds}s</span></div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-gray-400">Chưa có dữ liệu nghe gần đây.</p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </ProtectedRoute>
+  )
+}
+
+function SummaryCard({ label, value, accent, note }: { label: string; value: number; accent?: 'emerald' | 'red'; note?: string }) {
+  const theme = accent === 'emerald'
+    ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300'
+    : accent === 'red'
+      ? 'border-red-500/30 bg-red-500/10 text-red-300'
+      : 'border-gray-700 bg-secondary text-white'
+  return (
+    <div className={`rounded-2xl border p-5 ${theme}`}>
+      <p className="text-sm opacity-80">{label}</p>
+      <p className="mt-2 text-3xl font-bold">{value}</p>
+      {note ? <p className="mt-1 text-xs opacity-70">{note}</p> : null}
+    </div>
+  )
+}
+
+function Info({ label, value, mono = false }: { label: string; value: string; mono?: boolean }) {
+  return (
+    <div className="rounded-xl border border-gray-700 bg-dark/40 p-4">
+      <p className="text-sm text-gray-400">{label}</p>
+      <p className={`mt-1 text-white ${mono ? 'break-all font-mono text-sm' : ''}`}>{value}</p>
+    </div>
   )
 }

@@ -69,7 +69,7 @@ export default function Dashboard() {
                         <p className="text-4xl font-bold text-white">
                           {stats.devices?.online || 0}
                         </p>
-                        <p className="text-sm text-gray-400 mt-2">{stats.devices?.total || 0} thiết bị tổng</p>
+                        <p className="text-sm text-gray-400 mt-2">{stats.devices?.total || 0} thiết bị</p>
                         <p className="text-sm text-red-400 mt-1">{stats.devices?.banned || 0} bị banned</p>
                       </div>
                       <Smartphone className="text-emerald-400" size={40} />
@@ -103,7 +103,7 @@ export default function Dashboard() {
                     </div>
                   </Link>
 
-                  <Link href="/pois" className="bg-gradient-to-br from-secondary to-secondary/50 border border-yellow-500/30 rounded-xl p-6 hover:border-yellow-500/60 transition shadow-lg hover:shadow-yellow-500/20 block">
+                  <Link href="/pois?openApproval=1" className="bg-gradient-to-br from-secondary to-secondary/50 border border-yellow-500/30 rounded-xl p-6 hover:border-yellow-500/60 transition shadow-lg hover:shadow-yellow-500/20 block">
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-gray-400 text-sm font-medium mb-2">POI chờ duyệt</p>

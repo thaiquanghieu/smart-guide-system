@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { useRouter } from 'next/router'
 import Sidebar from '@/components/Sidebar'
 import ProtectedRoute from '@/components/ProtectedRoute'
 import apiClient from '@/lib/api'
-import { CheckCircle, XCircle, Trash2, Eye, MapPin, Clock, DollarSign, Navigation, ExternalLink, Volume2, Search } from 'lucide-react'
+import { CheckCircle, Clock, DollarSign, ExternalLink, Eye, MapPin, Navigation, Search, Trash2, Volume2, XCircle } from 'lucide-react'
 
 interface POI {
   id: string
@@ -20,6 +21,7 @@ interface POI {
   status: string
   ownerId: number
   owner_name?: string
+  owner_account_status?: string
   listened_count: number
   rating_avg?: number
   rating_count?: number
@@ -45,23 +47,33 @@ function googleMapsUrl(poi: POI) {
 }
 
 export default function POIs() {
+  const router = useRouter()
   const [pois, setPois] = useState<POI[]>([])
   const [loading, setLoading] = useState(true)
-  const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>(
-    'all'
-  )
+  const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected' | 'seller_deleted'>('all')
   const [query, setQuery] = useState('')
   const [selectedPoi, setSelectedPoi] = useState<POI | null>(null)
   const [showApprovalQueue, setShowApprovalQueue] = useState(false)
+  const [selectedIds, setSelectedIds] = useState<string[]>([])
 
   useEffect(() => {
     void fetchPois()
     const timer = window.setInterval(() => {
       void fetchPois(true)
     }, 5000)
-
     return () => window.clearInterval(timer)
   }, [])
+
+  useEffect(() => {
+    if (!router.isReady) return
+    const nextStatus = typeof router.query.status === 'string' ? router.query.status : ''
+    const nextQuery = typeof router.query.q === 'string' ? router.query.q : ''
+    if (nextStatus === 'pending' || nextStatus === 'approved' || nextStatus === 'rejected' || nextStatus === 'seller_deleted') {
+      setFilter(nextStatus)
+    }
+    if (nextQuery) setQuery(nextQuery)
+    if (router.query.openApproval === '1') setShowApprovalQueue(true)
+  }, [router.isReady, router.query])
 
   const normalizePoi = (poi: any): POI => ({
     id: String(poi.id || ''),
@@ -79,6 +91,7 @@ export default function POIs() {
     status: poi.status || 'pending',
     ownerId: Number(poi.ownerId ?? poi.owner_id ?? 0),
     owner_name: poi.owner_name || poi.ownerName || '',
+    owner_account_status: poi.owner_account_status || 'active',
     listened_count: Number(poi.listened_count ?? poi.listenedCount ?? 0),
     rating_avg: Number(poi.rating_avg ?? poi.ratingAvg ?? 0),
     rating_count: Number(poi.rating_count ?? poi.ratingCount ?? 0),
@@ -94,108 +107,101 @@ export default function POIs() {
   const fetchPois = async (silent = false) => {
     if (!silent) setLoading(true)
     try {
-      const response = await apiClient.get('/admin/pois')
+      const params: Record<string, string | number> = {}
+      if (typeof router.query.ownerId === 'string') params.ownerId = Number(router.query.ownerId)
+      const response = await apiClient.get('/admin/pois', { params })
       const nextPois = (response.data || []).map(normalizePoi)
       setPois(nextPois)
       setSelectedPoi((current) => current ? nextPois.find((poi: POI) => poi.id === current.id) || null : null)
-    } catch (error) {
-      console.error('Failed to fetch POIs:', error)
     } finally {
       if (!silent) setLoading(false)
     }
   }
 
   const handleApprove = async (id: string) => {
-    try {
-      await apiClient.put(`/admin/pois/${id}/approve`)
-      setPois((prev) =>
-        prev.map((p) => (p.id === id ? { ...p, status: 'approved' } : p))
-      )
-      await fetchPois(true)
-    } catch (error) {
-      console.error('Failed to approve:', error)
-      alert('Phê duyệt thất bại')
-    }
+    await apiClient.put(`/admin/pois/${id}/approve`)
+    await fetchPois(true)
   }
 
   const handleReject = async (id: string) => {
     const reason = prompt('Lý do từ chối POI?') || ''
-    try {
-      await apiClient.put(`/admin/pois/${id}/reject`, { reason })
-      setPois((prev) =>
-        prev.map((p) => (p.id === id ? { ...p, status: 'rejected' } : p))
-      )
-      await fetchPois(true)
-    } catch (error) {
-      console.error('Failed to reject:', error)
-      alert('Từ chối thất bại')
-    }
+    await apiClient.put(`/admin/pois/${id}/reject`, { reason })
+    await fetchPois(true)
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Xóa POI này?')) return
-
-    try {
-      await apiClient.delete(`/admin/pois/${id}`)
-      setPois((prev) => prev.filter((p) => p.id !== id))
-      setSelectedPoi((current) => current?.id === id ? null : current)
-    } catch (error) {
-      console.error('Failed to delete:', error)
-      alert('Xóa POI thất bại')
-    }
+    if (!confirm('Xóa hẳn POI này?')) return
+    await apiClient.delete(`/admin/pois/${id}`)
+    setSelectedPoi((current) => (current?.id === id ? null : current))
+    await fetchPois(true)
   }
 
-  const pendingPois = pois.filter((p) => p.status === 'pending')
-  const filteredPois = (filter === 'all' ? pois : pois.filter((p) => p.status === filter)).filter((poi) => {
-    const keyword = [
-      poi.name,
-      poi.description,
-      poi.shortDescription,
-      poi.address,
-      poi.owner_name,
-      poi.category,
-      ...(poi.categories || []),
-      poi.status,
-    ].join(' ').toLowerCase()
-    return keyword.includes(query.trim().toLowerCase())
-  }).sort((left, right) => {
-    const ownerCompare = (left.owner_name || `Seller #${left.ownerId}`).localeCompare(right.owner_name || `Seller #${right.ownerId}`)
-    if (ownerCompare !== 0) return ownerCompare
-    return new Date(right.created_at).getTime() - new Date(left.created_at).getTime()
-  })
+  const bulkDelete = async () => {
+    if (!selectedIds.length || !confirm(`Xóa hẳn ${selectedIds.length} POI đã chọn?`)) return
+    for (const id of selectedIds) {
+      await apiClient.delete(`/admin/pois/${id}`)
+    }
+    setSelectedIds([])
+    await fetchPois(true)
+  }
+
+  const bulkApprove = async () => {
+    if (!selectedIds.length) return
+    for (const id of selectedIds) {
+      await apiClient.put(`/admin/pois/${id}/approve`)
+    }
+    setSelectedIds([])
+    await fetchPois(true)
+  }
+
+  const pendingPois = useMemo(() => pois.filter((p) => p.status === 'pending'), [pois])
+  const filteredPois = useMemo(() => {
+    const keyword = query.trim().toLowerCase()
+    return (filter === 'all' ? pois : pois.filter((p) => p.status === filter))
+      .filter((poi) =>
+        [
+          poi.name,
+          poi.description,
+          poi.shortDescription,
+          poi.address,
+          poi.owner_name,
+          poi.category,
+          poi.status,
+          ...(poi.categories || []),
+        ]
+          .join(' ')
+          .toLowerCase()
+          .includes(keyword)
+      )
+      .sort((left, right) => {
+        const ownerCompare = (left.owner_name || `Seller #${left.ownerId}`).localeCompare(right.owner_name || `Seller #${right.ownerId}`)
+        if (ownerCompare !== 0) return ownerCompare
+        return new Date(right.created_at).getTime() - new Date(left.created_at).getTime()
+      })
+  }, [filter, pois, query])
 
   const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'approved':
-        return 'text-success bg-success/10'
-      case 'pending':
-        return 'text-warning bg-warning/10'
-      case 'rejected':
-        return 'text-danger bg-danger/10'
-      default:
-        return 'text-gray-400 bg-gray-400/10'
-    }
+    if (status === 'approved') return 'text-success bg-success/10'
+    if (status === 'pending') return 'text-warning bg-warning/10'
+    if (status === 'rejected') return 'text-danger bg-danger/10'
+    if (status === 'seller_deleted') return 'text-gray-300 bg-gray-500/10'
+    return 'text-gray-400 bg-gray-400/10'
   }
 
   const getStatusLabel = (status: string) => {
-    switch (status) {
-      case 'approved':
-        return 'Đã phê duyệt'
-      case 'pending':
-        return 'Chờ phê duyệt'
-      case 'rejected':
-        return 'Bị từ chối'
-      default:
-        return 'Unknown'
-    }
+    if (status === 'approved') return 'Đã phê duyệt'
+    if (status === 'pending') return 'Chờ phê duyệt'
+    if (status === 'rejected') return 'Bị từ chối'
+    if (status === 'seller_deleted') return 'Seller đã xóa'
+    return status
   }
 
   return (
     <ProtectedRoute>
-      <div className="flex bg-dark min-h-screen">
+      <div className="flex min-h-screen bg-dark">
         <Sidebar />
         <main className="flex-1 p-8">
-          <div className="max-w-7xl">
+          <div className="mx-auto max-w-7xl">
             <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
               <div>
                 <h1 className="text-3xl font-bold text-white">Quản lý POI</h1>
@@ -204,9 +210,7 @@ export default function POIs() {
               <button
                 onClick={() => setShowApprovalQueue(true)}
                 className={`inline-flex items-center gap-2 rounded-xl px-4 py-3 font-semibold transition ${
-                  pendingPois.length
-                    ? 'bg-yellow-500 text-dark hover:bg-yellow-400 shadow-lg shadow-yellow-500/20'
-                    : 'bg-secondary text-gray-300 hover:text-white'
+                  pendingPois.length ? 'bg-yellow-500 text-dark hover:bg-yellow-400 shadow-lg shadow-yellow-500/20' : 'bg-secondary text-gray-300 hover:text-white'
                 }`}
               >
                 <CheckCircle size={18} />
@@ -224,108 +228,68 @@ export default function POIs() {
               />
             </div>
 
-            {/* Filter */}
-            <div className="flex gap-2 mb-6 flex-wrap">
-              {(['all', 'pending', 'approved', 'rejected'] as const).map((f) => (
+            {selectedIds.length > 0 && (
+              <div className="mb-4 flex flex-wrap gap-2">
+                <button onClick={() => void bulkApprove()} className="rounded-lg bg-green-500/15 px-4 py-2 font-semibold text-green-300 hover:bg-green-500/25">
+                  Duyệt {selectedIds.length} mục
+                </button>
+                <button onClick={() => void bulkDelete()} className="rounded-lg bg-red-500/15 px-4 py-2 font-semibold text-red-300 hover:bg-red-500/25">
+                  Xóa {selectedIds.length} mục
+                </button>
+              </div>
+            )}
+
+            <div className="mb-6 flex flex-wrap gap-2">
+              {(['all', 'pending', 'approved', 'rejected', 'seller_deleted'] as const).map((item) => (
                 <button
-                  key={f}
-                  onClick={() => setFilter(f)}
-                  className={`px-4 py-2 rounded-lg font-semibold transition ${
-                    filter === f
-                      ? 'bg-primary text-white'
-                      : 'bg-secondary text-gray-300 hover:text-white'
-                  }`}
+                  key={item}
+                  onClick={() => setFilter(item)}
+                  className={`rounded-lg px-4 py-2 font-semibold ${filter === item ? 'bg-primary text-white' : 'bg-secondary text-gray-300 hover:text-white'}`}
                 >
-                  {f === 'all'
-                    ? 'Tất cả'
-                    : f === 'pending'
-                    ? 'Chờ phê duyệt'
-                    : f === 'approved'
-                    ? 'Đã phê duyệt'
-                    : 'Bị từ chối'}
+                  {item === 'all' ? 'Tất cả' : item === 'pending' ? 'Chờ phê duyệt' : item === 'approved' ? 'Đã phê duyệt' : item === 'seller_deleted' ? 'Seller đã xóa' : 'Bị từ chối'}
                 </button>
               ))}
             </div>
 
             {loading ? (
-              <div className="text-center py-12">
-                <div className="inline-block animate-spin">⏳</div>
-              </div>
+              <div className="py-12 text-center text-gray-400">Đang tải...</div>
             ) : (
-              <div className="grid grid-cols-1 gap-4">
-                {filteredPois.length > 0 ? (
-                  filteredPois.map((poi) => (
-                    <div
-                      key={poi.id}
-                      className="bg-secondary border border-gray-700 rounded-lg p-6 hover:border-primary/50 transition"
-                    >
-                      <div className="flex justify-between items-start mb-4">
+              <div className="grid gap-4">
+                {filteredPois.length ? filteredPois.map((poi) => (
+                  <div key={poi.id} className="rounded-lg border border-gray-700 bg-secondary p-6 hover:border-primary/50 transition">
+                    <div className="mb-4 flex justify-between gap-4">
+                      <div className="flex flex-1 gap-4">
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.includes(poi.id)}
+                          onChange={(event) => setSelectedIds((prev) => event.target.checked ? [...prev, poi.id] : prev.filter((item) => item !== poi.id))}
+                          className="mt-1 h-4 w-4 rounded border-gray-600 bg-dark text-danger"
+                        />
                         <div className="flex-1">
-                          <h3 className="text-xl font-bold text-white mb-2">
-                            {poi.name}
-                          </h3>
-                          <p className="text-gray-400 text-sm mb-3 line-clamp-2">
-                            {poi.description}
-                          </p>
-                          <div className="flex gap-3 flex-wrap text-sm">
-                            <span
-                              className={`px-3 py-1 rounded-full font-semibold ${getStatusColor(
-                                poi.status
-                              )}`}
-                            >
-                              {getStatusLabel(poi.status)}
-                            </span>
-                            <span className="text-gray-400">
-                              Seller: {poi.owner_name || `#${poi.ownerId}`}
-                            </span>
-                            <span className="text-gray-400">
-                              📊 {poi.listened_count} lượt
-                            </span>
+                          <h3 className="mb-2 text-xl font-bold text-white">{poi.name}</h3>
+                          <p className="mb-3 line-clamp-2 text-sm text-gray-400">{poi.description}</p>
+                          <div className="flex flex-wrap gap-3 text-sm">
+                            <span className={`rounded-full px-3 py-1 font-semibold ${getStatusColor(poi.status)}`}>{getStatusLabel(poi.status)}</span>
+                            <span className="text-gray-400">Seller: {poi.owner_name || `#${poi.ownerId}`}</span>
+                            <span className="text-gray-400">📊 {poi.listened_count} lượt</span>
                           </div>
                         </div>
                       </div>
-
-                      {/* Actions */}
-                      <div className="flex gap-2 justify-end">
-                        <button
-                          onClick={() => setSelectedPoi(poi)}
-                          className="flex items-center gap-2 px-3 py-1 bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 rounded transition text-sm"
-                        >
-                          <Eye size={16} />
-                          Xem
-                        </button>
-                        {poi.status === 'pending' && (
-                          <>
-                            <button
-                              onClick={() => handleApprove(poi.id)}
-                              className="flex items-center gap-2 px-3 py-1 bg-success/20 text-success hover:bg-success/30 rounded transition text-sm"
-                            >
-                              <CheckCircle size={16} />
-                              Duyệt
-                            </button>
-                            <button
-                              onClick={() => handleReject(poi.id)}
-                              className="flex items-center gap-2 px-3 py-1 bg-danger/20 text-danger hover:bg-danger/30 rounded transition text-sm"
-                            >
-                              <XCircle size={16} />
-                              Từ chối
-                            </button>
-                          </>
-                        )}
-                        <button
-                          onClick={() => handleDelete(poi.id)}
-                          className="flex items-center gap-2 px-3 py-1 bg-danger/20 text-danger hover:bg-danger/30 rounded transition text-sm"
-                        >
-                          <Trash2 size={16} />
-                          Xóa
-                        </button>
-                      </div>
                     </div>
-                  ))
-                ) : (
-                  <div className="text-center py-12 bg-secondary border border-gray-700 rounded-lg">
-                    <p className="text-gray-400">Không có POI nào</p>
+
+                    <div className="flex justify-end gap-2">
+                      <button onClick={() => setSelectedPoi(poi)} className="flex items-center gap-2 rounded bg-blue-500/20 px-3 py-1 text-sm text-blue-400 hover:bg-blue-500/30"><Eye size={16} />Xem</button>
+                      {poi.status === 'pending' && (
+                        <>
+                          <button onClick={() => void handleApprove(poi.id)} className="flex items-center gap-2 rounded bg-success/20 px-3 py-1 text-sm text-success hover:bg-success/30"><CheckCircle size={16} />Duyệt</button>
+                          <button onClick={() => void handleReject(poi.id)} className="flex items-center gap-2 rounded bg-danger/20 px-3 py-1 text-sm text-danger hover:bg-danger/30"><XCircle size={16} />Từ chối</button>
+                        </>
+                      )}
+                      <button onClick={() => void handleDelete(poi.id)} className="flex items-center gap-2 rounded bg-danger/20 px-3 py-1 text-sm text-danger hover:bg-danger/30"><Trash2 size={16} />Xóa</button>
+                    </div>
                   </div>
+                )) : (
+                  <div className="rounded-lg border border-gray-700 bg-secondary py-12 text-center text-gray-400">Không có POI nào</div>
                 )}
               </div>
             )}
@@ -340,7 +304,6 @@ export default function POIs() {
                     </div>
                     <button onClick={() => setShowApprovalQueue(false)} className="rounded-lg bg-dark px-4 py-2 text-white">Đóng</button>
                   </div>
-
                   <div className="max-h-[70vh] space-y-3 overflow-auto pr-1">
                     {pendingPois.length ? pendingPois.map((poi) => (
                       <div key={poi.id} className="rounded-xl border border-gray-700 bg-dark/60 p-4">
@@ -351,9 +314,9 @@ export default function POIs() {
                             <p className="mt-2 line-clamp-2 text-sm text-gray-300">{poi.description}</p>
                           </div>
                           <div className="flex gap-2">
-                            <button onClick={() => setSelectedPoi(poi)} className="rounded-lg bg-primary/20 px-3 py-2 text-primary hover:bg-primary/30">Xem</button>
-                            <button onClick={() => handleApprove(poi.id)} className="rounded-lg bg-success/20 px-3 py-2 text-success hover:bg-success/30">Duyệt</button>
-                            <button onClick={() => handleReject(poi.id)} className="rounded-lg bg-danger/20 px-3 py-2 text-danger hover:bg-danger/30">Từ chối</button>
+                            <button onClick={() => { setSelectedPoi(poi); setShowApprovalQueue(false) }} className="rounded-lg bg-primary/20 px-3 py-2 text-primary hover:bg-primary/30">Xem</button>
+                            <button onClick={() => void handleApprove(poi.id)} className="rounded-lg bg-success/20 px-3 py-2 text-success hover:bg-success/30">Duyệt</button>
+                            <button onClick={() => void handleReject(poi.id)} className="rounded-lg bg-danger/20 px-3 py-2 text-danger hover:bg-danger/30">Từ chối</button>
                           </div>
                         </div>
                       </div>
@@ -366,8 +329,8 @@ export default function POIs() {
             )}
 
             {selectedPoi && (
-              <div className="fixed inset-0 z-50 bg-black/70 p-6 overflow-y-auto" onClick={() => setSelectedPoi(null)}>
-                <div className="max-w-5xl mx-auto bg-secondary border border-gray-700 rounded-3xl overflow-hidden shadow-2xl" onClick={(event) => event.stopPropagation()}>
+              <div className="fixed inset-0 z-50 overflow-y-auto bg-black/70 p-6" onClick={() => setSelectedPoi(null)}>
+                <div className="mx-auto max-w-5xl overflow-hidden rounded-3xl border border-gray-700 bg-secondary shadow-2xl" onClick={(event) => event.stopPropagation()}>
                   <div className="relative min-h-[320px] bg-dark">
                     {selectedPoi.images?.[0] ? (
                       <img src={assetUrl(selectedPoi.images[0])} alt={selectedPoi.name} className="absolute inset-0 h-full w-full object-cover" />
@@ -411,27 +374,18 @@ export default function POIs() {
                     <div className="rounded-2xl border border-gray-700 bg-dark/50 p-5">
                       <h3 className="mb-3 flex items-center gap-2 text-xl font-bold text-white"><MapPin className="text-primary" /> Thông tin POI</h3>
                       <div className="grid gap-4 md:grid-cols-2">
-                        <div>
-                          <p className="text-sm text-gray-400">Địa chỉ</p>
-                          <p className="text-white">{selectedPoi.address || 'Chưa cập nhật'}</p>
-                        </div>
-                        <div>
-                          <p className="text-sm text-gray-400">Tọa độ</p>
-                          <p className="text-white">{selectedPoi.latitude}, {selectedPoi.longitude}</p>
-                        </div>
-                        <div>
-                          <p className="text-sm text-gray-400">Số điện thoại</p>
-                          <p className="text-white">{selectedPoi.phone || 'Chưa cập nhật'}</p>
-                        </div>
-                        <div>
+                        <Info label="Địa chỉ" value={selectedPoi.address || 'Chưa cập nhật'} />
+                        <Info label="Tọa độ" value={`${selectedPoi.latitude}, ${selectedPoi.longitude}`} />
+                        <Info label="Số điện thoại" value={selectedPoi.phone || 'Chưa cập nhật'} />
+                        <div className="rounded-xl border border-gray-700 bg-dark/40 p-4">
                           <p className="text-sm text-gray-400">Website</p>
                           {selectedPoi.websiteUrl ? (
-                            <a href={selectedPoi.websiteUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-primary hover:underline">
+                            <a href={selectedPoi.websiteUrl} target="_blank" rel="noreferrer" className="mt-1 inline-flex items-center gap-1 text-primary hover:underline">
                               {selectedPoi.websiteUrl}
                               <ExternalLink size={14} />
                             </a>
                           ) : (
-                            <p className="text-white">Chưa cập nhật</p>
+                            <p className="mt-1 text-white">Chưa cập nhật</p>
                           )}
                         </div>
                       </div>
@@ -456,18 +410,17 @@ export default function POIs() {
                       <h3 className="mb-3 flex items-center gap-2 text-xl font-bold text-white"><Volume2 className="text-primary" /> Audio/TTS</h3>
                       <div className="space-y-3">
                         {(selectedPoi.audios || []).map((audio) => (
-                          <div key={audio.id} className="bg-dark/60 border border-gray-700 rounded-xl p-4">
-                            <div className="flex flex-wrap justify-between gap-3 mb-2">
+                          <div key={audio.id} className="rounded-xl border border-gray-700 bg-dark/60 p-4">
+                            <div className="mb-2 flex flex-wrap justify-between gap-3">
                               <div>
-                                <p className="text-white font-bold">{audio.languageName || audio.languageCode}</p>
-                                <p className="text-gray-400 text-sm">Trạng thái: {audio.approvalStatus}</p>
-                                {audio.audioUrl && <p className="text-primary text-xs">{audio.audioUrl}</p>}
+                                <p className="font-bold text-white">{audio.languageName || audio.languageCode}</p>
+                                <p className="text-sm text-gray-400">Trạng thái: {audio.approvalStatus}</p>
                               </div>
                             </div>
-                            <p className="text-gray-300 text-sm whitespace-pre-line">{audio.scriptText}</p>
+                            <p className="text-sm text-gray-300 whitespace-pre-line">{audio.scriptText}</p>
                           </div>
                         ))}
-                        {!selectedPoi.audios?.length && <p className="text-gray-400">Chưa có audio.</p>}
+                        {!selectedPoi.audios?.length ? <p className="text-gray-400">Chưa có audio.</p> : null}
                       </div>
                     </div>
                   </div>
@@ -478,5 +431,14 @@ export default function POIs() {
         </main>
       </div>
     </ProtectedRoute>
+  )
+}
+
+function Info({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-xl border border-gray-700 bg-dark/40 p-4">
+      <p className="text-sm text-gray-400">{label}</p>
+      <p className="mt-1 text-white">{value}</p>
+    </div>
   )
 }

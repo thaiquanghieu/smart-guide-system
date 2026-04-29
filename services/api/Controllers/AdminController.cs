@@ -22,7 +22,7 @@ public class AdminController : ControllerBase
     // =========================
 
     [HttpGet("users")]
-    public async Task<IActionResult> GetUsers([FromQuery] int adminId, [FromQuery] string? role = null)
+    public async Task<IActionResult> GetUsers([FromQuery] int adminId, [FromQuery] string? role = null, [FromQuery] string? q = null)
     {
         var admin = await _db.Users.FindAsync(adminId);
         if (admin == null || admin.Role != "admin")
@@ -33,7 +33,41 @@ public class AdminController : ControllerBase
         if (!string.IsNullOrWhiteSpace(role))
             query = query.Where(x => x.Role == role);
 
+        if (!string.IsNullOrWhiteSpace(q))
+        {
+            var keyword = q.Trim().ToLower();
+            query = query.Where(x =>
+                x.UserName.ToLower().Contains(keyword) ||
+                x.Email.ToLower().Contains(keyword) ||
+                x.Role.ToLower().Contains(keyword));
+        }
+
         var users = await query.ToListAsync();
+        var ownerIds = users.Where(x => x.Role == "owner").Select(x => x.Id).ToList();
+        var poisByOwner = ownerIds.Count == 0
+            ? new List<OwnerPoiSummary>()
+            : await _db.Pois
+                .Where(x => x.OwnerId.HasValue && ownerIds.Contains(x.OwnerId.Value))
+                .GroupBy(x => x.OwnerId)
+                .Select(g => new OwnerPoiSummary
+                {
+                    OwnerId = g.Key!.Value,
+                    Total = g.Count(),
+                    Pending = g.Count(x => x.Status == "pending")
+                })
+                .ToListAsync();
+        var listensByOwner = ownerIds.Count == 0
+            ? new List<OwnerListenSummary>()
+            : await _db.ListenLogs
+                .Join(_db.Pois, log => log.PoiId, poi => poi.Id, (log, poi) => new { log.DeviceId, poi.OwnerId })
+                .Where(x => x.OwnerId.HasValue && ownerIds.Contains(x.OwnerId.Value))
+                .GroupBy(x => x.OwnerId)
+                .Select(g => new OwnerListenSummary
+                {
+                    OwnerId = g.Key!.Value,
+                    Total = g.Count()
+                })
+                .ToListAsync();
 
         return Ok(users.Select(u => new
         {
@@ -42,8 +76,50 @@ public class AdminController : ControllerBase
             u.Email,
             u.Role,
             u.IsActive,
+            account_status = u.AccountStatus,
             u.CreatedAt
+            ,
+            poi_count = poisByOwner.FirstOrDefault(x => x.OwnerId == u.Id)?.Total ?? 0,
+            pending_poi_count = poisByOwner.FirstOrDefault(x => x.OwnerId == u.Id)?.Pending ?? 0,
+            listen_count = listensByOwner.FirstOrDefault(x => x.OwnerId == u.Id)?.Total ?? 0
         }));
+    }
+
+    [HttpGet("users/{userId}/detail")]
+    public async Task<IActionResult> GetUserDetail(int userId, [FromQuery] int adminId)
+    {
+        var admin = await _db.Users.FindAsync(adminId);
+        if (admin == null || admin.Role != "admin")
+            return Forbid("Chỉ admin mới có quyền truy cập");
+
+        var user = await _db.Users.FindAsync(userId);
+        if (user == null)
+            return NotFound(new { message = "User không tồn tại" });
+
+        var pois = await _db.Pois.Where(x => x.OwnerId == userId).ToListAsync();
+        var poiIds = pois.Select(x => x.Id).ToList();
+        var qrCount = await _db.QrEntries.CountAsync(x => x.OwnerId == userId);
+        var totalListens = poiIds.Count == 0 ? 0 : await _db.ListenLogs.CountAsync(x => poiIds.Contains(x.PoiId));
+        var favoriteCount = poiIds.Count == 0 ? 0 : await _db.Favorites.CountAsync(x => poiIds.Contains(x.PoiId));
+
+        return Ok(new
+        {
+            user.Id,
+            user.UserName,
+            user.Email,
+            user.AvatarUrl,
+            user.Role,
+            user.IsActive,
+            account_status = user.AccountStatus,
+            user.CreatedAt,
+            user.UpdatedAt,
+            user.LastLoginAt,
+            poi_count = pois.Count,
+            pending_poi_count = pois.Count(x => x.Status == "pending"),
+            qr_count = qrCount,
+            total_listens = totalListens,
+            favorite_count = favoriteCount
+        });
     }
 
     [HttpPut("users/{userId}/toggle-active")]
@@ -75,7 +151,11 @@ public class AdminController : ControllerBase
         if (user == null)
             return NotFound(new { message = "User không tồn tại" });
 
-        user.IsActive = request.IsActive;
+        if (request.Status is not ("active" or "paused" or "banned" or "canceled"))
+            return BadRequest(new { message = "Trạng thái tài khoản không hợp lệ" });
+
+        user.AccountStatus = request.Status;
+        user.IsActive = request.Status is not ("banned" or "canceled");
         user.UpdatedAt = DateTime.UtcNow;
         try
         {
@@ -100,10 +180,12 @@ public class AdminController : ControllerBase
         if (user == null)
             return NotFound(new { message = "User không tồn tại" });
 
-        _db.Users.Remove(user);
+        user.AccountStatus = "canceled";
+        user.IsActive = false;
+        user.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync();
 
-        return Ok(new { message = "User được xóa thành công" });
+        return Ok(new { message = "Tài khoản đã được hủy" });
     }
 
     // =========================
@@ -111,7 +193,7 @@ public class AdminController : ControllerBase
     // =========================
 
     [HttpGet("pois")]
-    public async Task<IActionResult> GetAllPois([FromQuery] int adminId, [FromQuery] string? status = null)
+    public async Task<IActionResult> GetAllPois([FromQuery] int adminId, [FromQuery] string? status = null, [FromQuery] string? q = null, [FromQuery] int? ownerId = null)
     {
         var admin = await _db.Users.FindAsync(adminId);
         if (admin == null || admin.Role != "admin")
@@ -122,6 +204,9 @@ public class AdminController : ControllerBase
         if (!string.IsNullOrWhiteSpace(status))
             query = query.Where(x => x.Status == status);
 
+        if (ownerId.HasValue)
+            query = query.Where(x => x.OwnerId == ownerId.Value);
+
         var pois = await query.ToListAsync();
         var poiImages = await _db.PoiImages.OrderBy(x => x.SortOrder).ToListAsync();
         var audioGuides = await _db.AudioGuides.ToListAsync();
@@ -131,6 +216,25 @@ public class AdminController : ControllerBase
             .Distinct()
             .ToList();
         var owners = await _db.Users.Where(x => ownerIds.Contains(x.Id)).ToListAsync();
+        if (!string.IsNullOrWhiteSpace(q))
+        {
+            var keyword = q.Trim().ToLower();
+            pois = pois.Where(p =>
+            {
+                var owner = owners.FirstOrDefault(x => x.Id == p.OwnerId);
+                var haystack = string.Join(' ', new[]
+                {
+                    p.Name,
+                    p.Category,
+                    p.Address,
+                    p.Description,
+                    p.ShortDescription,
+                    owner?.UserName ?? "",
+                    owner?.Email ?? ""
+                }).ToLower();
+                return haystack.Contains(keyword);
+            }).ToList();
+        }
 
         var result = pois.Select(p => new
         {
@@ -156,6 +260,7 @@ public class AdminController : ControllerBase
             owner_name = p.OwnerId.HasValue
                 ? owners.FirstOrDefault(x => x.Id == p.OwnerId.Value)?.UserName ?? $"Seller #{p.OwnerId.Value}"
                 : "Chưa gán seller",
+            owner_account_status = p.OwnerId.HasValue ? owners.FirstOrDefault(x => x.Id == p.OwnerId.Value)?.AccountStatus ?? "active" : "unknown",
             listened_count = p.ListenedCount,
             rating_avg = p.RatingAvg,
             rating_count = p.RatingCount,
@@ -267,7 +372,7 @@ public class AdminController : ControllerBase
     }
 
     [HttpGet("devices")]
-    public async Task<IActionResult> GetDevices([FromQuery] int adminId, [FromQuery] string? status = null)
+    public async Task<IActionResult> GetDevices([FromQuery] int adminId, [FromQuery] string? status = null, [FromQuery] string? q = null)
     {
         var admin = await _db.Users.FindAsync(adminId);
         if (admin == null || admin.Role != "admin")
@@ -282,6 +387,22 @@ public class AdminController : ControllerBase
         var devices = await query
             .OrderByDescending(x => x.LastSeen ?? x.RegisteredAt)
             .ToListAsync();
+
+        if (!string.IsNullOrWhiteSpace(q))
+        {
+            var keyword = q.Trim().ToLower();
+            devices = devices.Where(x => string.Join(' ', new[]
+            {
+                x.Id.ToString(),
+                x.DeviceUuid.ToString(),
+                x.Name ?? "",
+                x.Platform ?? "",
+                x.Model ?? "",
+                x.AppVersion ?? "",
+                x.Status ?? "",
+                x.BanReason ?? ""
+            }).ToLower().Contains(keyword)).ToList();
+        }
 
         var deviceIds = devices.Select(x => x.Id).ToList();
         var subscriptions = await _db.Subscriptions
@@ -324,6 +445,51 @@ public class AdminController : ControllerBase
                 has_active_subscription = sub?.ExpireAt > now
             };
         }));
+    }
+
+    [HttpGet("devices/{deviceId}/detail")]
+    public async Task<IActionResult> GetDeviceDetail(int deviceId, [FromQuery] int adminId)
+    {
+        var admin = await _db.Users.FindAsync(adminId);
+        if (admin == null || admin.Role != "admin")
+            return Forbid("Chỉ admin mới có quyền");
+
+        var device = await _db.Devices.FindAsync(deviceId);
+        if (device == null)
+            return NotFound(new { message = "Thiết bị không tồn tại" });
+
+        var favoriteCount = await _db.Favorites.CountAsync(x => x.DeviceId == deviceId);
+        var listenCount = await _db.ListenLogs.CountAsync(x => x.DeviceId == deviceId);
+        var heardPoiCount = await _db.ListenLogs.Where(x => x.DeviceId == deviceId).Select(x => x.PoiId).Distinct().CountAsync();
+        var subscription = await _db.Subscriptions.Where(x => x.DeviceId == deviceId).OrderByDescending(x => x.ExpireAt).FirstOrDefaultAsync();
+        var latestHistory = await _db.ListenLogs
+            .Where(x => x.DeviceId == deviceId)
+            .OrderByDescending(x => x.ListenedAt)
+            .Take(10)
+            .Select(x => new { x.PoiId, x.ListenedAt, x.DurationSeconds })
+            .ToListAsync();
+
+        return Ok(new
+        {
+            device.Id,
+            device_uuid = device.DeviceUuid,
+            device.Name,
+            device.Platform,
+            device.Model,
+            app_version = device.AppVersion,
+            device.Status,
+            device.IsActive,
+            device.LastSeen,
+            device.RegisteredAt,
+            device.DeletedAt,
+            device.BannedAt,
+            device.BanReason,
+            favorite_count = favoriteCount,
+            listen_count = listenCount,
+            heard_poi_count = heardPoiCount,
+            subscription_expire_at = subscription?.ExpireAt,
+            latest_history = latestHistory
+        });
     }
 
     [HttpPut("devices/{deviceId}/status")]
@@ -420,10 +586,33 @@ public class AdminController : ControllerBase
         if (poi == null)
             return NotFound(new { message = "POI không tồn tại" });
 
-        _db.Pois.Remove(poi);
-        await _db.SaveChangesAsync();
+        await using var transaction = await _db.Database.BeginTransactionAsync();
+        try
+        {
+            await _db.Database.ExecuteSqlInterpolatedAsync($"DELETE FROM device_entry_grants WHERE poi_id = {id}");
+            await _db.Database.ExecuteSqlInterpolatedAsync($"DELETE FROM qr_logs WHERE poi_id = {id}");
+            await _db.Database.ExecuteSqlInterpolatedAsync($"DELETE FROM qr_entries WHERE poi_id = {id}");
+            await _db.Database.ExecuteSqlInterpolatedAsync($"DELETE FROM payments WHERE poi_id = {id}");
+            await _db.Database.ExecuteSqlInterpolatedAsync($"DELETE FROM audio_guides WHERE poi_id = {id}");
+            await _db.Database.ExecuteSqlInterpolatedAsync($"DELETE FROM poi_translations WHERE poi_id = {id}");
+            await _db.Database.ExecuteSqlInterpolatedAsync($"DELETE FROM poi_images WHERE poi_id = {id}");
+            await _db.Database.ExecuteSqlInterpolatedAsync($"DELETE FROM ratings WHERE poi_id = {id}");
+            await _db.Database.ExecuteSqlInterpolatedAsync($"DELETE FROM favorites WHERE poi_id = {id}");
+            await _db.Database.ExecuteSqlInterpolatedAsync($"DELETE FROM listen_logs WHERE poi_id = {id}");
+            await _db.Database.ExecuteSqlInterpolatedAsync($"DELETE FROM pois WHERE id = {id}");
+            await transaction.CommitAsync();
+        }
+        catch (Exception exception)
+        {
+            await transaction.RollbackAsync();
+            return StatusCode(500, new
+            {
+                message = "Xóa POI thất bại do còn dữ liệu liên quan.",
+                detail = exception.InnerException?.Message ?? exception.Message
+            });
+        }
 
-        return Ok(new { message = "POI được xóa thành công" });
+        return Ok(new { message = "Đã xóa hẳn POI khỏi DB" });
     }
 
     // =========================
@@ -524,7 +713,20 @@ public class RejectPoiRequest
 
 public class UpdateUserStatusRequest
 {
-    public bool IsActive { get; set; }
+    public string Status { get; set; } = "active";
+}
+
+public class OwnerPoiSummary
+{
+    public int OwnerId { get; set; }
+    public int Total { get; set; }
+    public int Pending { get; set; }
+}
+
+public class OwnerListenSummary
+{
+    public int OwnerId { get; set; }
+    public int Total { get; set; }
 }
 
 public class UpdateDeviceStatusRequest

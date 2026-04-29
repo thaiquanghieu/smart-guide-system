@@ -13,7 +13,7 @@ namespace SmartGuideAPI.Controllers;
 [Route("api/[controller]")]
 public class PaymentsController : ControllerBase
 {
-    private static readonly Regex PaymentCodeRegex = new(@"(?:SEVQR)?(SGPAY|SGUP|SGQR)_?[A-Za-z0-9]+", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+    private static readonly Regex PaymentCodeRegex = new(@"(?:SEVQR\s*)?(SGPAY|SGUP|SGQR)_?[A-Za-z0-9]+", RegexOptions.IgnoreCase | RegexOptions.Compiled);
     private static readonly HttpClient SepayHttpClient = new();
     private static readonly TimeSpan PaymentPendingTimeout = TimeSpan.FromMinutes(15);
 
@@ -64,7 +64,7 @@ public class PaymentsController : ControllerBase
         var trimmedCode = code.Trim();
         return trimmedCode.StartsWith("SEVQR", StringComparison.OrdinalIgnoreCase)
             ? trimmedCode
-            : $"SEVQR{trimmedCode}";
+            : $"SEVQR {trimmedCode}";
     }
 
     private string BuildSepayQrUrl(int amount, string code)
@@ -322,6 +322,8 @@ public class PaymentsController : ControllerBase
             .Select(char.ToUpperInvariant)
             .ToArray();
         var normalized = new string(chars);
+
+        normalized = normalized.Replace("SEVQR ", "SEVQR", StringComparison.OrdinalIgnoreCase);
 
         if (normalized.StartsWith("SEVQRSGPAY", StringComparison.OrdinalIgnoreCase) ||
             normalized.StartsWith("SEVQRSGUP", StringComparison.OrdinalIgnoreCase) ||

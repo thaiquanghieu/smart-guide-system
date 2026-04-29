@@ -25,7 +25,13 @@ public class PoisController : ControllerBase
     public async Task<IActionResult> GetPois([FromQuery] int deviceId, [FromQuery] string? lang)
     {
         var language = NormalizeLanguage(lang);
-        var pois = await _db.Pois.Where(x => x.Status == "approved").ToListAsync();
+        var activeOwners = await _db.Users
+            .Where(x => x.Role == "owner" && x.IsActive && x.AccountStatus == "active")
+            .Select(x => x.Id)
+            .ToListAsync();
+        var pois = await _db.Pois
+            .Where(x => x.Status == "approved" && (!x.OwnerId.HasValue || activeOwners.Contains(x.OwnerId.Value)))
+            .ToListAsync();
         var poiImages = await _db.PoiImages.OrderBy(x => x.SortOrder).ToListAsync();
         var audioGuides = await _db.AudioGuides.ToListAsync();
         var translations = language == "vi"
@@ -94,6 +100,12 @@ public class PoisController : ControllerBase
         var language = NormalizeLanguage(lang);
         var poi = await _db.Pois.FirstOrDefaultAsync(x => x.Id == id && x.Status == "approved");
         if (poi == null) return NotFound();
+        if (poi.OwnerId.HasValue)
+        {
+            var owner = await _db.Users.FindAsync(poi.OwnerId.Value);
+            if (owner == null || !owner.IsActive || owner.AccountStatus != "active")
+                return NotFound();
+        }
         var translation = language == "vi"
             ? null
             : await _db.PoiTranslations.FirstOrDefaultAsync(x => x.PoiId == id && x.LanguageCode == language);

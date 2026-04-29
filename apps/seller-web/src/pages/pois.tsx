@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/router'
 import Sidebar from '@/components/Sidebar'
 import ProtectedRoute from '@/components/ProtectedRoute'
 import apiClient from '@/lib/api'
@@ -16,6 +17,7 @@ interface POI {
 }
 
 export default function POIs() {
+  const router = useRouter()
   const [pois, setPois] = useState<POI[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>(
@@ -23,6 +25,7 @@ export default function POIs() {
   )
   const [query, setQuery] = useState('')
   const [sort, setSort] = useState<'newest' | 'oldest' | 'listens_desc' | 'rating_desc' | 'name_asc'>('newest')
+  const [selectedIds, setSelectedIds] = useState<string[]>([])
 
   useEffect(() => {
     void fetchPois()
@@ -32,6 +35,14 @@ export default function POIs() {
 
     return () => window.clearInterval(timer)
   }, [])
+
+  useEffect(() => {
+    if (!router.isReady) return
+    const status = router.query.status
+    if (status === 'pending' || status === 'approved' || status === 'rejected' || status === 'all') {
+      setFilter(status)
+    }
+  }, [router.isReady, router.query.status])
 
   const normalizePoi = (poi: any): POI => ({
     id: String(poi.id || ''),
@@ -60,14 +71,26 @@ export default function POIs() {
 
     try {
       await apiClient.delete(`/owner/pois/${id}`)
-      setPois((prev) => prev.filter((p) => p.id !== id))
+      setPois((prev) => prev.map((poi) => (poi.id === id ? { ...poi, status: 'seller_deleted' } : poi)))
+      setSelectedIds((prev) => prev.filter((item) => item !== id))
     } catch (error) {
       console.error('Failed to delete POI:', error)
       alert('Xóa POI thất bại')
     }
   }
 
-  const filteredPois = (filter === 'all' ? pois : pois.filter((p) => p.status === filter))
+  const handleBulkDelete = async () => {
+    if (!selectedIds.length) return
+    if (!confirm(`Ẩn ${selectedIds.length} POI đã chọn?`)) return
+    for (const id of selectedIds) {
+      await apiClient.delete(`/owner/pois/${id}`)
+    }
+    setPois((prev) => prev.map((poi) => (selectedIds.includes(poi.id) ? { ...poi, status: 'seller_deleted' } : poi)))
+    setSelectedIds([])
+  }
+
+  const visibleSource = pois.filter((poi) => poi.status !== 'seller_deleted')
+  const filteredPois = (filter === 'all' ? visibleSource : visibleSource.filter((p) => p.status === filter))
     .filter((poi) => `${poi.name || ''} ${poi.description || ''}`.toLowerCase().includes(query.toLowerCase()))
     .sort((a, b) => {
       if (sort === 'oldest') return new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
@@ -85,6 +108,8 @@ export default function POIs() {
         return 'text-yellow-400 bg-yellow-400/10'
       case 'rejected':
         return 'text-red-400 bg-red-400/10'
+      case 'seller_deleted':
+        return 'text-gray-400 bg-gray-400/10'
       default:
         return 'text-gray-400 bg-gray-400/10'
     }
@@ -98,6 +123,8 @@ export default function POIs() {
         return 'Chờ phê duyệt'
       case 'rejected':
         return 'Bị từ chối'
+      case 'seller_deleted':
+        return 'Đã ẩn'
       default:
         return 'Unknown'
     }
@@ -111,13 +138,23 @@ export default function POIs() {
           <div className="max-w-7xl">
             <div className="flex justify-between items-center mb-8">
               <h1 className="text-4xl font-bold text-white">Quản lý POI</h1>
-              <Link
-                href="/pois/create"
-                className="flex items-center gap-2 bg-primary hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition"
-              >
-                <Plus size={20} />
-                Tạo POI mới
-              </Link>
+              <div className="flex items-center gap-3">
+                {selectedIds.length > 0 && (
+                  <button
+                    onClick={handleBulkDelete}
+                    className="rounded-lg bg-red-500/20 px-4 py-2 font-semibold text-red-300 hover:bg-red-500/30"
+                  >
+                    Ẩn {selectedIds.length} mục
+                  </button>
+                )}
+                <Link
+                  href="/pois/create"
+                  className="flex items-center gap-2 bg-primary hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition"
+                >
+                  <Plus size={20} />
+                  Tạo POI mới
+                </Link>
+              </div>
             </div>
 
             {/* Filter Tabs */}
@@ -176,10 +213,20 @@ export default function POIs() {
               <div className="grid grid-cols-1 gap-4">
                 {filteredPois.map((poi) => (
                   <div
-                    key={poi.id}
-                    className="bg-secondary border border-gray-700 rounded-lg p-6 hover:border-primary/50 transition"
-                  >
-                    <div className="flex justify-between items-start mb-4">
+                      key={poi.id}
+                      className="bg-secondary border border-gray-700 rounded-lg p-6 hover:border-primary/50 transition"
+                    >
+                    <div className="mb-4 flex items-start justify-between gap-4">
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.includes(poi.id)}
+                        onChange={(event) =>
+                          setSelectedIds((prev) =>
+                            event.target.checked ? [...prev, poi.id] : prev.filter((item) => item !== poi.id)
+                          )
+                        }
+                        className="mt-1 h-4 w-4 rounded border-gray-600 bg-dark text-primary"
+                      />
                       <div className="flex-1">
                         <h3 className="text-xl font-bold text-white mb-2">
                           {poi.name}
@@ -236,12 +283,14 @@ export default function POIs() {
               <div className="text-center py-12 bg-secondary border border-gray-700 rounded-lg">
                 <MapPin className="mx-auto text-gray-500 mb-3" size={48} />
                 <p className="text-gray-400">Chưa có POI nào</p>
-                <Link
-                  href="/pois/create"
-                  className="mt-4 inline-block text-primary hover:underline"
-                >
-                  Tạo POI đầu tiên
-                </Link>
+                {filter === 'all' && (
+                  <Link
+                    href="/pois/create"
+                    className="mt-4 inline-block text-primary hover:underline"
+                  >
+                    Tạo POI đầu tiên
+                  </Link>
+                )}
               </div>
             )}
           </div>

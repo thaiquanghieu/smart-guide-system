@@ -48,7 +48,7 @@ public class Poi
     public int Priority { get; set; } = 0;
 
     [Column("status")]
-    public string Status { get; set; } = "pending"; // "pending", "approved", "rejected"
+    public string Status { get; set; } = "pending"; // "pending", "approved", "rejected", "seller_deleted"
 
     [Column("approval_note")]
     public string? ApprovalNote { get; set; }

@@ -166,8 +166,6 @@ export default function PaymentPage() {
               </div>
             </div>
 
-            <p className="text-center text-[#CFE3FF]">{t("payment.manualTransfer")}</p>
-
             <div className="rounded-[16px] bg-[#F4F9FF] p-4 text-[#111827]">
               <div className="grid gap-2 text-[14px] leading-[1.45]">
                 <p><span className="font-semibold">Ngân hàng:</span> {payment.bank_name || "VietinBank"}</p>
@@ -175,6 +173,7 @@ export default function PaymentPage() {
                 <p><span className="font-semibold">Chủ tài khoản:</span> {payment.account_name || "THAI QUANG HIEU"}</p>
                 <p className="pt-1 font-bold">{t("payment.transferContent")}</p>
                 <p className="break-all font-bold text-[#0F5BD7]">{payment.transfer_content || payment.code}</p>
+                <p className="pt-2 text-[13px] text-[#6B7280]">Lưu ý: ghi đúng nội dung chuyển khoản và hoàn tất trước khi giao dịch hết hạn.</p>
               </div>
             </div>
 

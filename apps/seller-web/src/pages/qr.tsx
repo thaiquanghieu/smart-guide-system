@@ -136,6 +136,7 @@ export default function SellerQrPage() {
   const [logFilter, setLogFilter] = useState<'all' | 'granted' | 'free_already_used' | 'quota_exceeded' | 'subscription_active'>('all')
   const [logSort, setLogSort] = useState<'desc' | 'asc'>('desc')
   const [copiedEntryId, setCopiedEntryId] = useState<number | null>(null)
+  const [selectedIds, setSelectedIds] = useState<number[]>([])
   const [form, setForm] = useState({
     poiId: '',
     name: '',
@@ -297,6 +298,28 @@ export default function SellerQrPage() {
     }
   }
 
+  const bulkUpdateStatus = async (status: 'active' | 'inactive') => {
+    const targets = filteredEntries.filter((entry) => selectedIds.includes(entry.id) && entry.status !== 'admin_suspended')
+    if (!targets.length) return
+    for (const entry of targets) {
+      await apiClient.put(`/owner/qr/${entry.id}/status`, { status })
+    }
+    setSelectedIds([])
+    await fetchData({ silent: true })
+  }
+
+  const bulkDelete = async () => {
+    if (!selectedIds.length) return
+    const targets = filteredEntries.filter((entry) => selectedIds.includes(entry.id))
+    if (!targets.length) return
+    if (!window.confirm(`Xóa ${targets.length} QR khỏi trang seller?`)) return
+    for (const entry of targets) {
+      await apiClient.delete(`/owner/qr/${entry.id}`)
+    }
+    setSelectedIds([])
+    await fetchData({ silent: true })
+  }
+
   const copyQrLink = async (entry: QrEntry) => {
     try {
       await navigator.clipboard.writeText(getQrUrl(entry.entryCode))
@@ -444,6 +467,29 @@ export default function SellerQrPage() {
                 </select>
               </div>
 
+              {selectedIds.length > 0 && (
+                <div className="mb-4 flex flex-wrap gap-2">
+                  <button
+                    onClick={() => void bulkUpdateStatus('active')}
+                    className="rounded-lg bg-green-500/15 px-4 py-2 font-semibold text-green-300 hover:bg-green-500/25"
+                  >
+                    Kích hoạt {selectedIds.length} mục
+                  </button>
+                  <button
+                    onClick={() => void bulkUpdateStatus('inactive')}
+                    className="rounded-lg bg-yellow-500/15 px-4 py-2 font-semibold text-yellow-200 hover:bg-yellow-500/25"
+                  >
+                    Tạm ngưng {selectedIds.length} mục
+                  </button>
+                  <button
+                    onClick={() => void bulkDelete()}
+                    className="rounded-lg bg-red-500/15 px-4 py-2 font-semibold text-red-300 hover:bg-red-500/25"
+                  >
+                    Xóa {selectedIds.length} mục
+                  </button>
+                </div>
+              )}
+
               {loading ? (
                 <div className="py-12 text-center text-gray-400">Đang tải...</div>
               ) : filteredEntries.length === 0 ? (
@@ -456,6 +502,20 @@ export default function SellerQrPage() {
                     <div key={entry.id} className="rounded-xl border border-gray-700 bg-dark/50 p-4">
                       <div className="grid gap-4 lg:grid-cols-[170px,1fr]">
                         <div className="flex flex-col items-center gap-3">
+                          <div className="w-full flex justify-start">
+                            <input
+                              type="checkbox"
+                              checked={selectedIds.includes(entry.id)}
+                              onChange={(event) =>
+                                setSelectedIds((prev) =>
+                                  event.target.checked
+                                    ? [...prev, entry.id]
+                                    : prev.filter((id) => id !== entry.id)
+                                )
+                              }
+                              className="h-4 w-4 rounded border-gray-600 bg-dark text-primary"
+                            />
+                          </div>
                           <div className="inline-flex w-fit rounded-2xl bg-white p-3 shadow-sm">
                             <img src={getQrImageUrl(entry.entryCode)} alt={entry.name} className="h-[148px] w-[148px]" />
                           </div>
