@@ -28,9 +28,9 @@ export default function Sidebar() {
 
   return (
     <aside className="w-64 bg-secondary border-r border-gray-700 h-screen sticky top-0 p-6 flex flex-col">
-      <div className="mb-8 flex flex-col items-center text-center">
-        <img src="/assets/appiconfg.png" alt="Smart Guide" className="mb-0 h-48 w-auto object-contain" />
-        <div className="-mt-1 text-xs uppercase leading-none tracking-[0.3em] text-danger">Admin</div>
+      <div className="mb-8 flex flex-col items-center pt-2 text-center">
+        <img src="/assets/appiconfg.png" alt="Smart Guide" className="mb-0 h-28 w-auto object-contain" />
+        <div className="mt-6 text-xs uppercase leading-none tracking-[0.3em] text-danger">Admin</div>
       </div>
 
       <nav className="flex-1 space-y-2">
