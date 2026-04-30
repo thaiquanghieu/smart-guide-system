@@ -720,7 +720,11 @@ export default function PoiForm({ mode, initialValue, poiId, onDone }: Props) {
             <Input dataField="longitude" error={fieldErrors.longitude} label="Kinh độ *" value={form.longitude} onChange={(value) => updateField('longitude', value)} placeholder="106.699018" />
           </div>
           <div className="md:col-span-2 grid gap-3 md:grid-cols-[minmax(0,1fr),220px] items-start">
-            <MiniMapPreview latitude={Number(form.latitude)} longitude={Number(form.longitude)} userPosition={userPosition} />
+            {!showMapPicker ? (
+              <MiniMapPreview latitude={Number(form.latitude)} longitude={Number(form.longitude)} userPosition={userPosition} />
+            ) : (
+              <div className="h-48 rounded-xl border border-gray-700 bg-dark/20" />
+            )}
             <div className="flex items-start">
               <button
                 type="button"
@@ -1021,6 +1025,9 @@ function MiniMapPreview({
   const userMarkerRef = useRef<any>(null)
   const [leafletReady, setLeafletReady] = useState(false)
   const hasValidCoordinates = Number.isFinite(latitude) && Number.isFinite(longitude)
+  const center = hasValidCoordinates
+    ? { latitude, longitude }
+    : userPosition
 
   useEffect(() => {
     const cssId = 'smartguide-leaflet-css'
@@ -1057,7 +1064,7 @@ function MiniMapPreview({
   }, [])
 
   useEffect(() => {
-    if (!hasValidCoordinates || !leafletReady || !containerRef.current || mapRef.current) return undefined
+    if (!center || !leafletReady || !containerRef.current || mapRef.current) return undefined
 
     const map = window.L.map(containerRef.current, {
       zoomControl: true,
@@ -1069,13 +1076,15 @@ function MiniMapPreview({
       keyboard: true,
       tap: true,
       touchZoom: true,
-    }).setView([latitude, longitude], 16)
+    }).setView([center.latitude, center.longitude], hasValidCoordinates ? 16 : 15)
 
     window.L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
     }).addTo(map)
 
-    markerRef.current = window.L.marker([latitude, longitude]).addTo(map)
+    if (hasValidCoordinates) {
+      markerRef.current = window.L.marker([latitude, longitude]).addTo(map)
+    }
     mapRef.current = map
 
     window.setTimeout(() => map.invalidateSize(), 40)
@@ -1086,13 +1095,27 @@ function MiniMapPreview({
       markerRef.current = null
       userMarkerRef.current = null
     }
-  }, [hasValidCoordinates, leafletReady, latitude, longitude])
+  }, [center, hasValidCoordinates, leafletReady, latitude, longitude])
 
   useEffect(() => {
-    if (!hasValidCoordinates || !mapRef.current) return
-    markerRef.current?.setLatLng([latitude, longitude])
-    mapRef.current.setView([latitude, longitude], 16, { animate: false })
-  }, [hasValidCoordinates, latitude, longitude])
+    if (!mapRef.current || !center) return
+
+    if (hasValidCoordinates) {
+      if (!markerRef.current) {
+        markerRef.current = window.L.marker([latitude, longitude]).addTo(mapRef.current)
+      } else {
+        markerRef.current.setLatLng([latitude, longitude])
+      }
+      mapRef.current.setView([latitude, longitude], 16, { animate: false })
+      return
+    }
+
+    if (markerRef.current) {
+      mapRef.current.removeLayer(markerRef.current)
+      markerRef.current = null
+    }
+    mapRef.current.setView([center.latitude, center.longitude], 15, { animate: false })
+  }, [center, hasValidCoordinates, latitude, longitude])
 
   useEffect(() => {
     if (!mapRef.current) return
@@ -1117,8 +1140,8 @@ function MiniMapPreview({
     }
   }, [userPosition])
 
-  if (!hasValidCoordinates) {
-    return <div className="h-48 rounded-xl border border-dashed border-gray-700 bg-dark/30 px-4 py-3 text-sm text-gray-500">Chưa chọn tọa độ</div>
+  if (!center) {
+    return <div className="h-48 rounded-xl border border-dashed border-gray-700 bg-dark/30 px-4 py-3 text-sm text-gray-500">Đang lấy vị trí hiện tại...</div>
   }
 
   return (
@@ -1147,10 +1170,6 @@ function MapPickerModal({
   const userMarkerRef = useRef<any>(null)
   const [leafletReady, setLeafletReady] = useState(false)
   const [selectedPoint, setSelectedPoint] = useState({ latitude: initialLatitude, longitude: initialLongitude })
-  const [search, setSearch] = useState('')
-  const [results, setResults] = useState<any[]>([])
-  const [searching, setSearching] = useState(false)
-
   useEffect(() => {
     const cssId = 'smartguide-leaflet-css'
     if (!document.getElementById(cssId)) {
@@ -1220,12 +1239,6 @@ function MapPickerModal({
     }
   }, [initialLatitude, initialLongitude, leafletReady, userPosition])
 
-  const moveToPoint = (latitude: number, longitude: number) => {
-    setSelectedPoint({ latitude, longitude })
-    markerRef.current?.setLatLng([latitude, longitude])
-    mapInstanceRef.current?.setView([latitude, longitude], 16)
-  }
-
   const locateUser = () => {
     if (userPosition) {
       mapInstanceRef.current?.setView([userPosition.latitude, userPosition.longitude], 16)
@@ -1256,15 +1269,6 @@ function MapPickerModal({
     }
   }, [userPosition, leafletReady])
 
-  const runSearch = async () => {
-    setSearching(true)
-    try {
-      setResults(await searchAddresses(search))
-    } finally {
-      setSearching(false)
-    }
-  }
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={onClose}>
       <div
@@ -1281,31 +1285,8 @@ function MapPickerModal({
           </button>
         </div>
 
-        <div className="mb-4 grid gap-3 md:grid-cols-[1fr,auto]">
-          <div className="relative">
-            <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Tìm địa chỉ hoặc địa danh..." className="w-full rounded-xl border border-gray-700 bg-dark px-4 py-3 text-white" />
-            {results.length > 0 ? (
-              <div className="smartguide-scrollbar absolute left-0 right-0 top-[56px] z-20 max-h-56 overflow-y-auto rounded-xl border border-gray-700 bg-dark shadow-2xl">
-                {results.map((item) => (
-                  <button
-                    key={`${item.place_id}-${item.lat}-${item.lon}`}
-                    type="button"
-                    onClick={() => {
-                      moveToPoint(Number(item.lat), Number(item.lon))
-                      setResults([])
-                    }}
-                    className="block w-full border-b border-gray-800 px-4 py-3 text-left text-sm text-gray-200 hover:bg-primary/10"
-                  >
-                    {item.display_label || item.display_name}
-                  </button>
-                ))}
-              </div>
-            ) : null}
-          </div>
-          <div className="flex gap-2">
-            <button type="button" onClick={() => void runSearch()} className="rounded-xl bg-dark px-4 py-3 text-white">{searching ? 'Đang tìm...' : 'Tìm'}</button>
-            <button type="button" onClick={locateUser} className="rounded-xl bg-primary px-4 py-3 text-white">Locate</button>
-          </div>
+        <div className="mb-4 flex justify-end">
+          <button type="button" onClick={locateUser} className="rounded-xl bg-primary px-4 py-3 text-white">Locate</button>
         </div>
 
         <div className="overflow-hidden rounded-2xl border border-gray-700 bg-dark">
