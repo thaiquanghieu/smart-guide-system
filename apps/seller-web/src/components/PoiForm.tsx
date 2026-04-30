@@ -344,6 +344,15 @@ export default function PoiForm({ mode, initialValue, poiId, onDone }: Props) {
         .filter(Boolean),
     [form.imageText]
   )
+  const parsedLatitude = form.latitude.trim() === '' ? Number.NaN : Number(form.latitude)
+  const parsedLongitude = form.longitude.trim() === '' ? Number.NaN : Number(form.longitude)
+  const hasSelectedCoordinates = Number.isFinite(parsedLatitude) && Number.isFinite(parsedLongitude)
+  const pickerInitialLatitude = hasSelectedCoordinates
+    ? parsedLatitude
+    : userPosition?.latitude ?? 10.7765
+  const pickerInitialLongitude = hasSelectedCoordinates
+    ? parsedLongitude
+    : userPosition?.longitude ?? 106.7009
 
   const updateField = (name: keyof PoiFormValue, value: string) => {
     setFieldErrors((prev) => ({ ...prev, [name]: '' }))
@@ -721,7 +730,11 @@ export default function PoiForm({ mode, initialValue, poiId, onDone }: Props) {
           </div>
           <div className="md:col-span-2 grid gap-3 md:grid-cols-[minmax(0,1fr),220px] items-start">
             {!showMapPicker ? (
-              <MiniMapPreview latitude={Number(form.latitude)} longitude={Number(form.longitude)} userPosition={userPosition} />
+              <MiniMapPreview
+                latitude={parsedLatitude}
+                longitude={parsedLongitude}
+                userPosition={userPosition}
+              />
             ) : (
               <div className="h-48 rounded-xl border border-gray-700 bg-dark/20" />
             )}
@@ -845,8 +858,8 @@ export default function PoiForm({ mode, initialValue, poiId, onDone }: Props) {
 
       {showMapPicker && (
         <MapPickerModal
-          initialLatitude={Number(form.latitude) || 10.7765}
-          initialLongitude={Number(form.longitude) || 106.7009}
+          initialLatitude={pickerInitialLatitude}
+          initialLongitude={pickerInitialLongitude}
           userPosition={userPosition}
           onClose={() => setShowMapPicker(false)}
           onPick={applyMapCoordinates}
