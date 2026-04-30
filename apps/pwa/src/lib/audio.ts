@@ -32,6 +32,109 @@ export function stopSpeech() {
   window.speechSynthesis.cancel();
 }
 
+function waitForVoices(timeoutMs = 2500) {
+  if (typeof window === "undefined" || !window.speechSynthesis) {
+    return Promise.resolve<SpeechSynthesisVoice[]>([]);
+  }
+
+  const existingVoices = window.speechSynthesis.getVoices();
+  if (existingVoices.length) {
+    return Promise.resolve(existingVoices);
+  }
+
+  return new Promise<SpeechSynthesisVoice[]>((resolve) => {
+    let settled = false;
+    const finish = () => {
+      if (settled) return;
+      settled = true;
+      window.clearTimeout(timer);
+      window.speechSynthesis.onvoiceschanged = previousHandler;
+      resolve(window.speechSynthesis.getVoices());
+    };
+
+    const previousHandler = window.speechSynthesis.onvoiceschanged;
+    const timer = window.setTimeout(finish, timeoutMs);
+    window.speechSynthesis.onvoiceschanged = () => {
+      previousHandler?.call(window.speechSynthesis, new Event("voiceschanged"));
+      finish();
+    };
+  });
+}
+
+async function speakScript(scriptText: string, languageCode?: string) {
+  const speechLang = resolveSpeechLanguage(languageCode);
+  const synth = window.speechSynthesis;
+
+  await waitForVoices();
+
+  const runAttempt = async () => {
+    const voices = synth.getVoices();
+    await new Promise<void>((resolve, reject) => {
+      const utterance = new SpeechSynthesisUtterance(scriptText);
+      let started = false;
+      let settled = false;
+      const startGuard = window.setTimeout(() => {
+        if (!started && !settled) {
+          settled = true;
+          synth.cancel();
+          reject(new Error("Audio không khởi động được"));
+        }
+      }, 4500);
+
+      const finish = (handler: () => void) => {
+        if (settled) return;
+        settled = true;
+        window.clearTimeout(startGuard);
+        handler();
+      };
+
+      utterance.lang = speechLang;
+      utterance.rate = 1;
+      utterance.pitch = 1;
+      utterance.volume = 1;
+
+      const matchedVoice =
+        voices.find((voice) => voice.lang === speechLang) ||
+        voices.find((voice) => voice.lang?.startsWith(languageCode || ""));
+
+      if (matchedVoice) {
+        utterance.voice = matchedVoice;
+      }
+
+      utterance.onstart = () => {
+        started = true;
+      };
+      utterance.onend = () => finish(resolve);
+      utterance.onerror = () => {
+        if (stopRequested) {
+          finish(resolve);
+          return;
+        }
+
+        finish(() => reject(new Error("Phát audio thất bại")));
+      };
+
+      if (synth.speaking || synth.pending) {
+        synth.cancel();
+      }
+      synth.resume();
+      synth.speak(utterance);
+    });
+  };
+
+  try {
+    await runAttempt();
+  } catch (error) {
+    if (stopRequested) {
+      return;
+    }
+
+    await new Promise((resolve) => window.setTimeout(resolve, 350));
+    await waitForVoices(1500);
+    await runAttempt();
+  }
+}
+
 export async function playPoiAudio(
   poi: PoiLike,
   options?: { consumeFreeListen?: boolean; onListenedCount?: (count: number) => void }
@@ -51,60 +154,7 @@ export async function playPoiAudio(
   }
 
   stopRequested = false;
-
-  const speechPromise = new Promise<void>((resolve, reject) => {
-    const utterance = new SpeechSynthesisUtterance(audio.scriptText);
-    const speechLang = resolveSpeechLanguage(audio.languageCode);
-    let started = false;
-    let settled = false;
-    const startGuard = window.setTimeout(() => {
-      if (!started && !settled) {
-        settled = true;
-        window.speechSynthesis.cancel();
-        reject(new Error("Audio không khởi động được"));
-      }
-    }, 1500);
-
-    const finish = (handler: () => void) => {
-      if (settled) return;
-      settled = true;
-      window.clearTimeout(startGuard);
-      handler();
-    };
-
-    utterance.lang = speechLang;
-    utterance.rate = 1;
-    utterance.pitch = 1;
-    utterance.volume = 1;
-
-    const voices = window.speechSynthesis.getVoices();
-    const matchedVoice =
-      voices.find((voice) => voice.lang === speechLang) ||
-      voices.find((voice) => voice.lang?.startsWith(audio.languageCode || ""));
-
-    if (matchedVoice) {
-      utterance.voice = matchedVoice;
-    }
-
-    utterance.onstart = () => {
-      started = true;
-    };
-    utterance.onend = () => finish(resolve);
-    utterance.onerror = () => {
-      if (stopRequested) {
-        finish(resolve);
-        return;
-      }
-
-      finish(() => reject(new Error("Phát audio thất bại")));
-    };
-
-    window.speechSynthesis.cancel();
-    window.speechSynthesis.resume();
-    window.speechSynthesis.speak(utterance);
-  });
-
-  await speechPromise;
+  await speakScript(audio.scriptText, audio.languageCode);
 
   if (options?.consumeFreeListen) {
     await apiClient.post("/access/free-listen/consume", {
