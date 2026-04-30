@@ -13,7 +13,10 @@ type Payment = {
   payment_type: string
   payer_type: string
   owner_name?: string
+  owner_email?: string
   device_name?: string
+  device_id?: number
+  device_uuid?: string
   poi_name?: string
   plan_name?: string
   description: string
@@ -163,6 +166,9 @@ export default function AdminPayments() {
               <InfoCard label="Trạng thái" value={selectedPayment.status_label} />
               <InfoCard label="Số tiền" value={`${selectedPayment.amount.toLocaleString('vi-VN')}đ`} accent />
               <InfoCard label="Người trả" value={selectedPayment.owner_name || selectedPayment.device_name || selectedPayment.payer_type} />
+              <InfoCard label="Email seller" value={selectedPayment.owner_email || 'Chưa có'} />
+              <InfoCard label="Thiết bị" value={selectedPayment.device_name || 'Chưa có'} />
+              <InfoCard label="ID thiết bị" value={selectedPayment.device_uuid || (selectedPayment.device_id ? `#${selectedPayment.device_id}` : 'Chưa có')} />
               <InfoCard label="Loại thanh toán" value={selectedPayment.payment_type} />
               <InfoCard label="POI / Gói" value={selectedPayment.poi_name || selectedPayment.plan_name || 'Chưa có'} />
               <InfoCard label="Ngày tạo" value={formatDate(selectedPayment.created_at)} />

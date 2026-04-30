@@ -4,6 +4,7 @@ import Sidebar from '@/components/Sidebar'
 import ProtectedRoute from '@/components/ProtectedRoute'
 import apiClient from '@/lib/api'
 import { MapPin, Volume2, QrCode, Clock } from 'lucide-react'
+import { useAuthStore } from '@/lib/store'
 
 interface Analytics {
   total_pois: number
@@ -16,14 +17,25 @@ interface Analytics {
 }
 
 export default function Dashboard() {
+  const { user, setUser } = useAuthStore()
   const [analytics, setAnalytics] = useState<Analytics | null>(null)
+  const [accountStatus, setAccountStatus] = useState<string>('active')
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const fetchAnalytics = async () => {
       try {
-        const response = await apiClient.get('/owner/pois/analytics/summary')
+        const [response, profileResponse] = await Promise.all([
+          apiClient.get('/owner/pois/analytics/summary'),
+          user ? apiClient.get(`/auth/user/${user.id}`) : Promise.resolve({ data: null }),
+        ])
         setAnalytics(response.data)
+        if (profileResponse.data?.accountStatus) {
+          setAccountStatus(profileResponse.data.accountStatus)
+          if (user) {
+            setUser({ ...user, isActive: profileResponse.data.isActive ?? user.isActive })
+          }
+        }
       } catch (error) {
         console.error('Failed to fetch analytics:', error)
       } finally {
@@ -32,7 +44,13 @@ export default function Dashboard() {
     }
 
     fetchAnalytics()
-  }, [])
+  }, [user, setUser])
+
+  const reopenSeller = async () => {
+    if (!user) return
+    const response = await apiClient.put(`/auth/user/${user.id}/status`, { accountStatus: 'active' })
+    setAccountStatus(response.data?.accountStatus || 'active')
+  }
 
   return (
     <ProtectedRoute>
@@ -49,6 +67,17 @@ export default function Dashboard() {
               </div>
             ) : analytics ? (
               <>
+                {accountStatus === 'paused' ? (
+                  <div className="mb-6 flex items-center justify-between gap-4 rounded-2xl border border-yellow-500/40 bg-yellow-500/10 p-5">
+                    <div>
+                      <p className="font-semibold text-yellow-200">Seller đang ở trạng thái tạm nghỉ.</p>
+                      <p className="mt-1 text-sm text-yellow-100/80">POI của seller đang được ẩn khỏi hệ thống cho tới khi mở lại.</p>
+                    </div>
+                    <button onClick={() => void reopenSeller()} className="rounded-xl bg-yellow-400 px-4 py-3 font-semibold text-black hover:bg-yellow-300">
+                      Mở lại
+                    </button>
+                  </div>
+                ) : null}
                 {/* Stats Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
                   <Link href="/pois" className="bg-secondary border border-gray-700 rounded-lg p-6 hover:border-primary/60 transition block">
@@ -106,9 +135,10 @@ export default function Dashboard() {
                   <div className="space-y-3">
                     {analytics.top_pois.length > 0 ? (
                       analytics.top_pois.map((poi, index) => (
-                        <div
+                        <Link
+                          href={`/pois/${poi.id}`}
                           key={poi.id}
-                          className="flex items-center justify-between bg-dark/50 p-4 rounded-lg"
+                          className="flex items-center justify-between bg-dark/50 p-4 rounded-lg hover:border hover:border-primary/40"
                         >
                           <div className="flex items-center gap-3">
                             <span className="text-lg font-bold text-primary w-8">
@@ -119,7 +149,7 @@ export default function Dashboard() {
                           <span className="text-accent font-semibold">
                             {poi.listened_count} lượt
                           </span>
-                        </div>
+                        </Link>
                       ))
                     ) : (
                       <p className="text-gray-400">Chưa có dữ liệu POI</p>

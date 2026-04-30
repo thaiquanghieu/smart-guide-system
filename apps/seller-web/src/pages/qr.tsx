@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import ProtectedRoute from '@/components/ProtectedRoute'
 import Sidebar from '@/components/Sidebar'
 import apiClient from '@/lib/api'
-import { AlertTriangle, Copy, Eye, History, PauseCircle, PlayCircle, Plus, Printer, QrCode, RefreshCw, Search, Trash2 } from 'lucide-react'
+import { AlertTriangle, CheckSquare2, Copy, Eye, History, PauseCircle, PlayCircle, Plus, Printer, QrCode, RefreshCw, Search, Trash2, X } from 'lucide-react'
 
 type PoiOption = {
   id: string
@@ -137,6 +137,7 @@ export default function SellerQrPage() {
   const [logSort, setLogSort] = useState<'desc' | 'asc'>('desc')
   const [copiedEntryId, setCopiedEntryId] = useState<number | null>(null)
   const [selectedIds, setSelectedIds] = useState<number[]>([])
+  const [selectionMode, setSelectionMode] = useState(false)
   const [form, setForm] = useState({
     poiId: '',
     name: '',
@@ -320,6 +321,10 @@ export default function SellerQrPage() {
     await fetchData({ silent: true })
   }
 
+  const toggleSelected = (entryId: number) => {
+    setSelectedIds((prev) => (prev.includes(entryId) ? prev.filter((id) => id !== entryId) : [...prev, entryId]))
+  }
+
   const copyQrLink = async (entry: QrEntry) => {
     try {
       await navigator.clipboard.writeText(getQrUrl(entry.entryCode))
@@ -465,22 +470,23 @@ export default function SellerQrPage() {
                   <option value="name_asc">Tên A đến Z</option>
                   <option value="name_desc">Tên Z đến A</option>
                 </select>
+                <div className="ml-auto flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectionMode((value) => !value)
+                      setSelectedIds([])
+                    }}
+                    className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 font-semibold ${selectionMode ? 'bg-primary text-white' : 'bg-dark text-gray-200 hover:text-white'}`}
+                  >
+                    {selectionMode ? <X size={16} /> : <CheckSquare2 size={16} />}
+                    {selectionMode ? 'Thoát chọn' : 'Select'}
+                  </button>
+                </div>
               </div>
 
               {selectedIds.length > 0 && (
                 <div className="mb-4 flex flex-wrap gap-2">
-                  <button
-                    onClick={() => void bulkUpdateStatus('active')}
-                    className="rounded-lg bg-green-500/15 px-4 py-2 font-semibold text-green-300 hover:bg-green-500/25"
-                  >
-                    Kích hoạt {selectedIds.length} mục
-                  </button>
-                  <button
-                    onClick={() => void bulkUpdateStatus('inactive')}
-                    className="rounded-lg bg-yellow-500/15 px-4 py-2 font-semibold text-yellow-200 hover:bg-yellow-500/25"
-                  >
-                    Tạm ngưng {selectedIds.length} mục
-                  </button>
                   <button
                     onClick={() => void bulkDelete()}
                     className="rounded-lg bg-red-500/15 px-4 py-2 font-semibold text-red-300 hover:bg-red-500/25"
@@ -499,22 +505,17 @@ export default function SellerQrPage() {
               ) : (
                 <div className="grid gap-4 xl:grid-cols-2">
                   {filteredEntries.map((entry) => (
-                    <div key={entry.id} className="rounded-xl border border-gray-700 bg-dark/50 p-4">
+                    <div
+                      key={entry.id}
+                      className={`rounded-xl border bg-dark/50 p-4 ${selectedIds.includes(entry.id) ? 'border-primary ring-1 ring-primary/50' : 'border-gray-700'} ${selectionMode ? 'cursor-pointer' : ''}`}
+                      onClick={() => {
+                        if (selectionMode) toggleSelected(entry.id)
+                      }}
+                    >
                       <div className="grid gap-4 lg:grid-cols-[170px,1fr]">
                         <div className="flex flex-col items-center gap-3">
                           <div className="w-full flex justify-start">
-                            <input
-                              type="checkbox"
-                              checked={selectedIds.includes(entry.id)}
-                              onChange={(event) =>
-                                setSelectedIds((prev) =>
-                                  event.target.checked
-                                    ? [...prev, entry.id]
-                                    : prev.filter((id) => id !== entry.id)
-                                )
-                              }
-                              className="h-4 w-4 rounded border-gray-600 bg-dark text-primary"
-                            />
+                            {selectionMode ? <span className={`inline-flex h-4 w-4 rounded-full border ${selectedIds.includes(entry.id) ? 'border-primary bg-primary/40' : 'border-gray-600 bg-dark'}`} /> : null}
                           </div>
                           <div className="inline-flex w-fit rounded-2xl bg-white p-3 shadow-sm">
                             <img src={getQrImageUrl(entry.entryCode)} alt={entry.name} className="h-[148px] w-[148px]" />
@@ -583,7 +584,7 @@ export default function SellerQrPage() {
 
 	                          <div className="grid gap-2 sm:grid-cols-6 lg:col-span-2">
 	                            <button
-	                              onClick={() => copyQrLink(entry)}
+	                              onClick={(event) => { event.stopPropagation(); void copyQrLink(entry) }}
 	                              className={`inline-flex min-h-12 items-center justify-center gap-2 rounded-lg px-3 py-2 sm:col-span-2 ${
                                   copiedEntryId === entry.id
                                     ? 'bg-green-500/20 text-green-300'
@@ -594,42 +595,42 @@ export default function SellerQrPage() {
 	                              {copiedEntryId === entry.id ? 'Copied' : 'Copy link'}
                             </button>
 	                            <button
-	                              onClick={() => window.open(getQrUrl(entry.entryCode), '_blank')}
+	                              onClick={(event) => { event.stopPropagation(); window.open(getQrUrl(entry.entryCode), '_blank') }}
 	                              className="inline-flex min-h-12 items-center justify-center gap-2 rounded-lg bg-secondary px-3 py-2 text-white hover:bg-secondary/80 sm:col-span-2"
 	                            >
                               <Eye size={16} />
                               Mở thử
                             </button>
 	                            <button
-	                              onClick={() => printSingleQr(entry)}
+	                              onClick={(event) => { event.stopPropagation(); printSingleQr(entry) }}
 	                              className="inline-flex min-h-12 items-center justify-center gap-2 rounded-lg bg-secondary px-3 py-2 text-white hover:bg-secondary/80 sm:col-span-2"
 	                            >
                               <Printer size={16} />
                               In QR
                             </button>
 	                            <button
-	                              onClick={() => handleTopup(entry)}
+	                              onClick={(event) => { event.stopPropagation(); void handleTopup(entry) }}
 	                              className="inline-flex min-h-12 items-center justify-center gap-2 rounded-lg bg-yellow-500/15 px-3 py-2 text-yellow-400 hover:bg-yellow-500/25 sm:col-span-2"
 	                            >
                               <Plus size={16} />
                               Cộng lượt
                             </button>
 	                            <button
-	                              onClick={() => handleStatusToggle(entry)}
+	                              onClick={(event) => { event.stopPropagation(); void handleStatusToggle(entry) }}
 	                              className="inline-flex min-h-12 items-center justify-center gap-2 rounded-lg bg-secondary px-3 py-2 text-white hover:bg-secondary/80 sm:col-span-2"
 	                            >
                               {entry.status === 'active' ? <PauseCircle size={16} /> : <PlayCircle size={16} />}
                               {entry.status === 'admin_suspended' ? 'Gửi yêu cầu' : entry.status === 'active' ? 'Tạm ngưng' : 'Kích hoạt'}
                             </button>
 	                            <button
-	                              onClick={() => handleDelete(entry)}
+	                              onClick={(event) => { event.stopPropagation(); void handleDelete(entry) }}
 	                              className="inline-flex min-h-12 items-center justify-center gap-2 rounded-lg bg-red-500/15 px-3 py-2 text-red-300 hover:bg-red-500/25 sm:col-span-2"
 	                            >
                               <Trash2 size={16} />
                               Xóa
                             </button>
 	                            <button
-	                              onClick={() => openLogs(entry)}
+	                              onClick={(event) => { event.stopPropagation(); void openLogs(entry) }}
 	                              className="inline-flex min-h-12 items-center justify-center gap-2 rounded-lg bg-secondary px-3 py-2 text-white hover:bg-secondary/80 sm:col-span-6"
 	                            >
                               <QrCode size={16} />

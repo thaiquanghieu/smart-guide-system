@@ -42,8 +42,8 @@ export default function PaywallPage() {
       <Head>
         <meta name="theme-color" content="#041B2D" />
       </Head>
-      <div className="mx-auto max-w-[540px] space-y-[14px]">
-        <div className="grid min-h-[28px] grid-cols-[28px,1fr,28px] items-center">
+      <div className="mx-auto max-w-[540px] space-y-[12px]">
+        <div className="grid min-h-[24px] grid-cols-[28px,1fr,28px] items-center">
           <div />
           <div />
           {fromRenew ? (
@@ -59,7 +59,7 @@ export default function PaywallPage() {
           )}
         </div>
 
-        <img src="/assets/appiconfg.png" alt={t("app.title")} className="mx-auto -my-8 w-[220px]" />
+        <img src="/assets/appiconfg.png" alt={t("app.title")} className="mx-auto -my-4 w-[200px]" />
 
         <p className="-mt-2 text-center text-[13px] text-[#D4E3F7]">{t("paywall.choosePlan")}</p>
 
@@ -108,16 +108,6 @@ export default function PaywallPage() {
           })}
         </section>
 
-        <div className="mt-4 flex flex-col items-center gap-[10px]">
-          <button
-            type="button"
-            className="flex h-[84px] w-[84px] items-center justify-center rounded-full bg-[#0F5BD7] shadow-[0_8px_18px_rgba(15,91,215,0.3)]"
-          >
-            <img src="/assets/qr.png" alt="QR" className="h-[34px] w-[34px]" />
-          </button>
-          <p className="text-[14px] font-bold">{t("paywall.qrOffer")}</p>
-          <p className="text-[13px] text-[#CFE3FF] underline">{t("paywall.viewGuide")}</p>
-        </div>
       </div>
     </main>
   );

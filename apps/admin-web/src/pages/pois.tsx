@@ -3,7 +3,7 @@ import { useRouter } from 'next/router'
 import Sidebar from '@/components/Sidebar'
 import ProtectedRoute from '@/components/ProtectedRoute'
 import apiClient from '@/lib/api'
-import { CheckCircle, Clock, DollarSign, ExternalLink, Eye, MapPin, Navigation, Search, Trash2, Volume2, XCircle } from 'lucide-react'
+import { CheckCircle, CheckSquare2, Clock, DollarSign, ExternalLink, Eye, MapPin, Navigation, Search, Trash2, Volume2, X, XCircle } from 'lucide-react'
 
 interface POI {
   id: string
@@ -55,6 +55,7 @@ export default function POIs() {
   const [selectedPoi, setSelectedPoi] = useState<POI | null>(null)
   const [showApprovalQueue, setShowApprovalQueue] = useState(false)
   const [selectedIds, setSelectedIds] = useState<string[]>([])
+  const [selectionMode, setSelectionMode] = useState(false)
 
   useEffect(() => {
     void fetchPois()
@@ -74,6 +75,14 @@ export default function POIs() {
     if (nextQuery) setQuery(nextQuery)
     if (router.query.openApproval === '1') setShowApprovalQueue(true)
   }, [router.isReady, router.query])
+
+  useEffect(() => {
+    if (!router.isReady || !pois.length) return
+    const focusId = typeof router.query.focusId === 'string' ? router.query.focusId : ''
+    if (!focusId) return
+    const matchedPoi = pois.find((poi) => poi.id === focusId)
+    if (matchedPoi) setSelectedPoi(matchedPoi)
+  }, [router.isReady, router.query.focusId, pois])
 
   const normalizePoi = (poi: any): POI => ({
     id: String(poi.id || ''),
@@ -140,15 +149,6 @@ export default function POIs() {
     if (!selectedIds.length || !confirm(`Xóa hẳn ${selectedIds.length} POI đã chọn?`)) return
     for (const id of selectedIds) {
       await apiClient.delete(`/admin/pois/${id}`)
-    }
-    setSelectedIds([])
-    await fetchPois(true)
-  }
-
-  const bulkApprove = async () => {
-    if (!selectedIds.length) return
-    for (const id of selectedIds) {
-      await apiClient.put(`/admin/pois/${id}/approve`)
     }
     setSelectedIds([])
     await fetchPois(true)
@@ -228,18 +228,7 @@ export default function POIs() {
               />
             </div>
 
-            {selectedIds.length > 0 && (
-              <div className="mb-4 flex flex-wrap gap-2">
-                <button onClick={() => void bulkApprove()} className="rounded-lg bg-green-500/15 px-4 py-2 font-semibold text-green-300 hover:bg-green-500/25">
-                  Duyệt {selectedIds.length} mục
-                </button>
-                <button onClick={() => void bulkDelete()} className="rounded-lg bg-red-500/15 px-4 py-2 font-semibold text-red-300 hover:bg-red-500/25">
-                  Xóa {selectedIds.length} mục
-                </button>
-              </div>
-            )}
-
-            <div className="mb-6 flex flex-wrap gap-2">
+            <div className="mb-6 flex flex-wrap items-center gap-2">
               {(['all', 'pending', 'approved', 'rejected', 'seller_deleted'] as const).map((item) => (
                 <button
                   key={item}
@@ -249,6 +238,24 @@ export default function POIs() {
                   {item === 'all' ? 'Tất cả' : item === 'pending' ? 'Chờ phê duyệt' : item === 'approved' ? 'Đã phê duyệt' : item === 'seller_deleted' ? 'Seller đã xóa' : 'Bị từ chối'}
                 </button>
               ))}
+              <div className="ml-auto flex flex-wrap justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectionMode((value) => !value)
+                    setSelectedIds([])
+                  }}
+                  className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 font-semibold transition ${selectionMode ? 'bg-primary text-white' : 'bg-secondary text-gray-200 hover:text-white'}`}
+                >
+                  {selectionMode ? <X size={16} /> : <CheckSquare2 size={16} />}
+                  {selectionMode ? 'Thoát chọn' : 'Select'}
+                </button>
+                {selectedIds.length > 0 && (
+                  <button onClick={() => void bulkDelete()} className="rounded-lg bg-red-500/15 px-4 py-2 font-semibold text-red-300 hover:bg-red-500/25">
+                    Xóa {selectedIds.length} mục
+                  </button>
+                )}
+              </div>
             </div>
 
             {loading ? (
@@ -256,15 +263,22 @@ export default function POIs() {
             ) : (
               <div className="grid gap-4">
                 {filteredPois.length ? filteredPois.map((poi) => (
-                  <div key={poi.id} className="rounded-lg border border-gray-700 bg-secondary p-6 hover:border-primary/50 transition">
+                  <div
+                    key={poi.id}
+                    onClick={() => {
+                      if (selectionMode) {
+                        setSelectedIds((prev) => prev.includes(poi.id) ? prev.filter((item) => item !== poi.id) : [...prev, poi.id])
+                      }
+                    }}
+                    className={`rounded-lg border bg-secondary p-6 transition ${selectionMode ? 'cursor-pointer' : ''} ${selectedIds.includes(poi.id) ? 'border-primary bg-primary/5 shadow-lg shadow-primary/10' : 'border-gray-700 hover:border-primary/50'}`}
+                  >
                     <div className="mb-4 flex justify-between gap-4">
                       <div className="flex flex-1 gap-4">
-                        <input
-                          type="checkbox"
-                          checked={selectedIds.includes(poi.id)}
-                          onChange={(event) => setSelectedIds((prev) => event.target.checked ? [...prev, poi.id] : prev.filter((item) => item !== poi.id))}
-                          className="mt-1 h-4 w-4 rounded border-gray-600 bg-dark text-danger"
-                        />
+                        {selectionMode ? (
+                          <div className={`mt-1 flex h-6 w-6 items-center justify-center rounded-full border ${selectedIds.includes(poi.id) ? 'border-primary bg-primary text-white' : 'border-gray-600 text-gray-500'}`}>
+                            {selectedIds.includes(poi.id) ? '•' : ''}
+                          </div>
+                        ) : null}
                         <div className="flex-1">
                           <h3 className="mb-2 text-xl font-bold text-white">{poi.name}</h3>
                           <p className="mb-3 line-clamp-2 text-sm text-gray-400">{poi.description}</p>
@@ -278,14 +292,14 @@ export default function POIs() {
                     </div>
 
                     <div className="flex justify-end gap-2">
-                      <button onClick={() => setSelectedPoi(poi)} className="flex items-center gap-2 rounded bg-blue-500/20 px-3 py-1 text-sm text-blue-400 hover:bg-blue-500/30"><Eye size={16} />Xem</button>
+                      <button onClick={(event) => { event.stopPropagation(); setSelectedPoi(poi) }} className="flex items-center gap-2 rounded bg-blue-500/20 px-3 py-1 text-sm text-blue-400 hover:bg-blue-500/30"><Eye size={16} />Xem</button>
                       {poi.status === 'pending' && (
                         <>
-                          <button onClick={() => void handleApprove(poi.id)} className="flex items-center gap-2 rounded bg-success/20 px-3 py-1 text-sm text-success hover:bg-success/30"><CheckCircle size={16} />Duyệt</button>
-                          <button onClick={() => void handleReject(poi.id)} className="flex items-center gap-2 rounded bg-danger/20 px-3 py-1 text-sm text-danger hover:bg-danger/30"><XCircle size={16} />Từ chối</button>
+                          <button onClick={(event) => { event.stopPropagation(); void handleApprove(poi.id) }} className="flex items-center gap-2 rounded bg-success/20 px-3 py-1 text-sm text-success hover:bg-success/30"><CheckCircle size={16} />Duyệt</button>
+                          <button onClick={(event) => { event.stopPropagation(); void handleReject(poi.id) }} className="flex items-center gap-2 rounded bg-danger/20 px-3 py-1 text-sm text-danger hover:bg-danger/30"><XCircle size={16} />Từ chối</button>
                         </>
                       )}
-                      <button onClick={() => void handleDelete(poi.id)} className="flex items-center gap-2 rounded bg-danger/20 px-3 py-1 text-sm text-danger hover:bg-danger/30"><Trash2 size={16} />Xóa</button>
+                      <button onClick={(event) => { event.stopPropagation(); void handleDelete(poi.id) }} className="flex items-center gap-2 rounded bg-danger/20 px-3 py-1 text-sm text-danger hover:bg-danger/30"><Trash2 size={16} />Xóa</button>
                     </div>
                   </div>
                 )) : (

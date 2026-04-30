@@ -221,6 +221,16 @@ function mockTranslate(value: string, languageCode: string) {
   return translated
 }
 
+async function searchAddresses(keyword: string) {
+  if (!keyword.trim()) return []
+  const response = await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&limit=5&q=${encodeURIComponent(keyword)}`, {
+    headers: { Accept: 'application/json' },
+  })
+  if (!response.ok) return []
+  const data = await response.json()
+  return Array.isArray(data) ? data : []
+}
+
 declare global {
   interface Window {
     L: any
@@ -240,6 +250,9 @@ export default function PoiForm({ mode, initialValue, poiId, onDone }: Props) {
   const [success, setSuccess] = useState('')
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [showMapPicker, setShowMapPicker] = useState(false)
+  const [addressSuggestions, setAddressSuggestions] = useState<any[]>([])
+  const [loadingSuggestions, setLoadingSuggestions] = useState(false)
+  const addressTimerRef = useRef<number | null>(null)
 
   useEffect(() => {
     if (!initialValue) return
@@ -265,6 +278,34 @@ export default function PoiForm({ mode, initialValue, poiId, onDone }: Props) {
   const updateField = (name: keyof PoiFormValue, value: string) => {
     setFieldErrors((prev) => ({ ...prev, [name]: '' }))
     setForm((prev) => ({ ...prev, [name]: value }))
+  }
+
+  const updateAddress = (value: string) => {
+    updateField('address', value)
+    if (addressTimerRef.current) window.clearTimeout(addressTimerRef.current)
+    if (!value.trim()) {
+      setAddressSuggestions([])
+      return
+    }
+    addressTimerRef.current = window.setTimeout(async () => {
+      setLoadingSuggestions(true)
+      try {
+        setAddressSuggestions(await searchAddresses(value))
+      } finally {
+        setLoadingSuggestions(false)
+      }
+    }, 250)
+  }
+
+  const applyAddressSuggestion = (item: any) => {
+    setAddressSuggestions([])
+    setForm((prev) => ({
+      ...prev,
+      address: item.display_name || prev.address,
+      latitude: Number(item.lat).toFixed(7),
+      longitude: Number(item.lon).toFixed(7),
+    }))
+    setFieldErrors((prev) => ({ ...prev, address: '', latitude: '', longitude: '' }))
   }
 
   const applyMapCoordinates = (latitude: number, longitude: number) => {
@@ -383,7 +424,7 @@ export default function PoiForm({ mode, initialValue, poiId, onDone }: Props) {
     try {
       const { translations } = await buildTranslatedContent(form)
       setForm((prev) => ({ ...prev, translations }))
-      setShowTranslations(true)
+      setShowTranslations((value) => !value || !showTranslations)
     } catch {
       setError('Không thể chuẩn bị bản dịch, vui lòng thử lại.')
     } finally {
@@ -397,7 +438,7 @@ export default function PoiForm({ mode, initialValue, poiId, onDone }: Props) {
     try {
       const { audios } = await buildTranslatedContent(form)
       setForm((prev) => ({ ...prev, audios }))
-      setShowAudio(true)
+      setShowAudio((value) => !value || !showAudio)
     } catch {
       setError('Không thể chuẩn bị lời thuyết minh, vui lòng thử lại.')
     } finally {
@@ -458,7 +499,9 @@ export default function PoiForm({ mode, initialValue, poiId, onDone }: Props) {
     const nextErrors: Record<string, string> = {}
     if (!form.name.trim()) nextErrors.name = 'Vui lòng nhập tên POI.'
     if (!getSelectedCategories().length) nextErrors.category = 'Vui lòng chọn ít nhất một danh mục.'
+    if (!form.address.trim()) nextErrors.address = 'Vui lòng nhập địa chỉ.'
     if (!form.description.trim()) nextErrors.description = 'Vui lòng nhập mô tả chi tiết.'
+    if (!images.length) nextErrors.images = 'Vui lòng upload ít nhất 1 ảnh.'
     if (!form.latitude) nextErrors.latitude = 'Vui lòng nhập vĩ độ.'
     if (!form.longitude) nextErrors.longitude = 'Vui lòng nhập kinh độ.'
     if (form.latitude && !Number.isFinite(Number(form.latitude))) nextErrors.latitude = 'Vĩ độ phải là số hợp lệ.'
@@ -588,7 +631,15 @@ export default function PoiForm({ mode, initialValue, poiId, onDone }: Props) {
             {fieldErrors.category ? <p className="mt-2 text-sm text-red-300">{fieldErrors.category}</p> : null}
           </div>
           <Input label="Mô tả ngắn" value={form.shortDescription} onChange={(value) => updateField('shortDescription', value)} placeholder="Một câu ngắn dùng trong card" />
-          <Input label="Địa chỉ" value={form.address} onChange={(value) => updateField('address', value)} placeholder="280 Điện Biên Phủ..." />
+          <AddressSuggestInput
+            dataField="address"
+            error={fieldErrors.address}
+            value={form.address}
+            onChange={updateAddress}
+            suggestions={addressSuggestions}
+            loading={loadingSuggestions}
+            onSelect={applyAddressSuggestion}
+          />
           <Input label="Giờ mở cửa" type="time" value={form.openTime} onChange={(value) => updateField('openTime', value)} />
           <Input label="Giờ đóng cửa" type="time" value={form.closeTime} onChange={(value) => updateField('closeTime', value)} />
           <Input label="Giá/chi phí" value={form.priceText} onChange={(value) => updateField('priceText', value)} placeholder="Miễn phí, 50.000đ..." />
@@ -598,14 +649,17 @@ export default function PoiForm({ mode, initialValue, poiId, onDone }: Props) {
             <Input dataField="latitude" error={fieldErrors.latitude} label="Vĩ độ *" value={form.latitude} onChange={(value) => updateField('latitude', value)} placeholder="10.779783" />
             <Input dataField="longitude" error={fieldErrors.longitude} label="Kinh độ *" value={form.longitude} onChange={(value) => updateField('longitude', value)} placeholder="106.699018" />
           </div>
-          <div className="md:col-span-2">
-            <button
-              type="button"
-              onClick={() => setShowMapPicker(true)}
-              className="rounded-xl border border-gray-600 px-4 py-3 text-sm font-semibold text-gray-200 hover:border-primary hover:text-white"
-            >
-              Chọn từ bản đồ
-            </button>
+          <div className="md:col-span-2 grid gap-3 md:grid-cols-[220px,1fr]">
+            <MiniMapPreview latitude={Number(form.latitude)} longitude={Number(form.longitude)} />
+            <div className="flex items-center">
+              <button
+                type="button"
+                onClick={() => setShowMapPicker(true)}
+                className="rounded-xl border border-gray-600 px-4 py-3 text-sm font-semibold text-gray-200 hover:border-primary hover:text-white"
+              >
+                Chọn từ bản đồ
+              </button>
+            </div>
           </div>
           <OptionSelect
             label="Bán kính nhận diện"
@@ -626,8 +680,8 @@ export default function PoiForm({ mode, initialValue, poiId, onDone }: Props) {
         <div className="rounded-2xl border border-gray-700 bg-dark/40 p-4 space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <p className="text-sm font-medium text-gray-300">Ảnh POI</p>
-              <p className="text-xs text-gray-500">Upload ảnh từ thiết bị.</p>
+              <p className="text-sm font-medium text-gray-300">Ảnh POI *</p>
+              <p className="text-xs text-gray-500">Upload ảnh từ thiết bị</p>
             </div>
             <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl bg-primary px-4 py-2 font-semibold text-white hover:bg-blue-700">
               {uploadingImages ? 'Đang upload...' : 'Upload ảnh'}
@@ -661,31 +715,26 @@ export default function PoiForm({ mode, initialValue, poiId, onDone }: Props) {
               ))}
             </div>
           )}
+          {fieldErrors.images ? <p className="text-sm text-red-300">{fieldErrors.images}</p> : null}
         </div>
       </section>
 
       <section className="bg-secondary border border-gray-700 rounded-2xl p-6 space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h2 className="text-xl font-bold text-white">Ngôn ngữ hiển thị</h2>
+            <h2 className="text-xl font-bold text-white">Nội dung hiển thị</h2>
             <p className="text-gray-400 text-sm">Hệ thống sẽ lấy thông tin bên trên, bạn có thể xem chi tiết và chỉnh sửa lại.</p>
           </div>
-          <button type="button" onClick={fillTranslations} disabled={translating} className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white font-bold px-5 py-3 rounded-xl shadow-lg shadow-blue-900/30">
-            {translating ? 'Đang chuẩn bị...' : 'Xem chi tiết'}
+          <button type="button" onClick={showTranslations ? () => setShowTranslations(false) : fillTranslations} disabled={translating} className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white font-bold px-5 py-3 rounded-xl shadow-lg shadow-blue-900/30">
+            {translating ? 'Đang chuẩn bị...' : showTranslations ? 'Ẩn chi tiết' : 'Xem chi tiết'}
           </button>
         </div>
-        <button type="button" onClick={() => setShowTranslations((value) => !value)} className="text-primary hover:underline">
-          {showTranslations ? 'Ẩn chi tiết bản dịch' : 'Mở phần bản dịch'}
-        </button>
         {showTranslations && (
           <DetailEditor activeLang={activeLang} setActiveLang={setActiveLang} selectedLanguages={form.selectedLanguages}>
-            <div className="grid md:grid-cols-2 gap-4">
+            <div className="grid md:grid-cols-1 gap-4">
               <Input label="Tên" value={activeTranslation.name} onChange={(value) => updateTranslation(activeLang, 'name', value)} />
-              <Input label="Danh mục" value={activeTranslation.category} onChange={(value) => updateTranslation(activeLang, 'category', value)} />
               <Input label="Mô tả ngắn" value={activeTranslation.shortDescription} onChange={(value) => updateTranslation(activeLang, 'shortDescription', value)} />
-              <Input label="Giá" value={activeTranslation.priceText} onChange={(value) => updateTranslation(activeLang, 'priceText', value)} />
             </div>
-            <TextArea label="Địa chỉ" value={activeTranslation.address} onChange={(value) => updateTranslation(activeLang, 'address', value)} rows={2} />
             <TextArea label="Mô tả" value={activeTranslation.description} onChange={(value) => updateTranslation(activeLang, 'description', value)} rows={4} />
           </DetailEditor>
         )}
@@ -697,18 +746,12 @@ export default function PoiForm({ mode, initialValue, poiId, onDone }: Props) {
             <h2 className="text-xl font-bold text-white">Lời thuyết minh / Audio</h2>
             <p className="text-gray-400 text-sm">Hệ thống sẽ tự chuẩn bị sẵn lời thuyết minh cho 5 ngôn ngữ để bạn kiểm tra và chỉnh sửa.</p>
           </div>
-          <button type="button" onClick={fillAudioScripts} disabled={translating} className="bg-accent hover:bg-accent/80 disabled:bg-gray-600 disabled:text-gray-300 text-dark font-bold px-5 py-3 rounded-xl shadow-lg shadow-emerald-900/20">
-            {translating ? 'Đang tạo...' : 'Tự tạo script TTS'}
+          <button type="button" onClick={showAudio ? () => setShowAudio(false) : fillAudioScripts} disabled={translating} className="bg-accent hover:bg-accent/80 disabled:bg-gray-600 disabled:text-gray-300 text-dark font-bold px-5 py-3 rounded-xl shadow-lg shadow-emerald-900/20">
+            {translating ? 'Đang tạo...' : showAudio ? 'Ẩn chi tiết' : 'Xem chi tiết'}
           </button>
         </div>
-        <button type="button" onClick={() => setShowAudio((value) => !value)} className="text-primary hover:underline">
-          {showAudio ? 'Ẩn chi tiết audio' : 'Mở phần lời thuyết minh'}
-        </button>
         {showAudio && (
           <DetailEditor activeLang={activeLang} setActiveLang={setActiveLang} selectedLanguages={form.selectedLanguages}>
-            <div className="grid md:grid-cols-1 gap-4">
-              <Input label="Giọng đọc" value={activeAudio.voiceName} onChange={(value) => updateAudio(activeLang, 'voiceName', value)} placeholder="System, Nam/Nữ..." />
-            </div>
             <TextArea label="Lời thuyết minh" value={activeAudio.scriptText} onChange={(value) => updateAudio(activeLang, 'scriptText', value)} rows={5} />
           </DetailEditor>
         )}
@@ -844,6 +887,70 @@ function TextArea({
   )
 }
 
+function AddressSuggestInput({
+  value,
+  onChange,
+  suggestions,
+  loading,
+  onSelect,
+  error,
+  dataField,
+}: {
+  value: string
+  onChange: (value: string) => void
+  suggestions: any[]
+  loading: boolean
+  onSelect: (item: any) => void
+  error?: string
+  dataField?: string
+}) {
+  return (
+    <div className="relative" data-field={dataField}>
+      <label className="block">
+        <span className="mb-2 block text-sm font-medium text-gray-300">Địa chỉ *</span>
+        <input
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          placeholder="280 Điện Biên Phủ..."
+          className={`w-full rounded-xl border bg-dark px-4 py-3 text-white focus:outline-none ${error ? 'border-red-500 focus:border-red-500' : 'border-gray-600 focus:border-primary'}`}
+        />
+      </label>
+      {loading ? <div className="absolute right-3 top-[46px] text-xs text-gray-400">Đang tìm...</div> : null}
+      {suggestions.length > 0 ? (
+        <div className="absolute left-0 right-0 top-[78px] z-20 max-h-64 overflow-y-auto rounded-xl border border-gray-700 bg-dark shadow-2xl">
+          {suggestions.map((item) => (
+            <button
+              key={`${item.place_id}-${item.lat}-${item.lon}`}
+              type="button"
+              onClick={() => onSelect(item)}
+              className="block w-full border-b border-gray-800 px-4 py-3 text-left text-sm text-gray-200 hover:bg-primary/10"
+            >
+              {item.display_name}
+            </button>
+          ))}
+        </div>
+      ) : null}
+      {error ? <p className="mt-2 text-sm text-red-300">{error}</p> : null}
+    </div>
+  )
+}
+
+function MiniMapPreview({ latitude, longitude }: { latitude: number; longitude: number }) {
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+    return <div className="h-28 rounded-xl border border-dashed border-gray-700 bg-dark/30 px-4 py-3 text-sm text-gray-500">Chưa chọn tọa độ</div>
+  }
+  return (
+    <div className="overflow-hidden rounded-xl border border-gray-700 bg-dark/40">
+      <iframe
+        title="mini-map"
+        className="h-28 w-full"
+        loading="lazy"
+        src={`https://www.openstreetmap.org/export/embed.html?bbox=${longitude - 0.001}%2C${latitude - 0.001}%2C${longitude + 0.001}%2C${latitude + 0.001}&layer=mapnik&marker=${latitude}%2C${longitude}`}
+      />
+    </div>
+  )
+}
+
 function MapPickerModal({
   initialLatitude,
   initialLongitude,
@@ -860,6 +967,9 @@ function MapPickerModal({
   const markerRef = useRef<any>(null)
   const [leafletReady, setLeafletReady] = useState(false)
   const [selectedPoint, setSelectedPoint] = useState({ latitude: initialLatitude, longitude: initialLongitude })
+  const [search, setSearch] = useState('')
+  const [results, setResults] = useState<any[]>([])
+  const [searching, setSearching] = useState(false)
 
   useEffect(() => {
     const cssId = 'smartguide-leaflet-css'
@@ -930,6 +1040,32 @@ function MapPickerModal({
     }
   }, [initialLatitude, initialLongitude, leafletReady])
 
+  const moveToPoint = (latitude: number, longitude: number) => {
+    setSelectedPoint({ latitude, longitude })
+    markerRef.current?.setLatLng([latitude, longitude])
+    mapInstanceRef.current?.setView([latitude, longitude], 16)
+  }
+
+  const locateUser = () => {
+    if (!navigator.geolocation) return
+    navigator.geolocation.getCurrentPosition((position) => {
+      moveToPoint(position.coords.latitude, position.coords.longitude)
+    })
+  }
+
+  useEffect(() => {
+    locateUser()
+  }, [])
+
+  const runSearch = async () => {
+    setSearching(true)
+    try {
+      setResults(await searchAddresses(search))
+    } finally {
+      setSearching(false)
+    }
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={onClose}>
       <div
@@ -944,6 +1080,33 @@ function MapPickerModal({
           <button onClick={onClose} className="rounded-lg bg-dark px-4 py-2 text-white">
             Đóng
           </button>
+        </div>
+
+        <div className="mb-4 grid gap-3 md:grid-cols-[1fr,auto]">
+          <div className="relative">
+            <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Tìm địa chỉ hoặc địa danh..." className="w-full rounded-xl border border-gray-700 bg-dark px-4 py-3 text-white" />
+            {results.length > 0 ? (
+              <div className="absolute left-0 right-0 top-[56px] z-20 max-h-56 overflow-y-auto rounded-xl border border-gray-700 bg-dark shadow-2xl">
+                {results.map((item) => (
+                  <button
+                    key={`${item.place_id}-${item.lat}-${item.lon}`}
+                    type="button"
+                    onClick={() => {
+                      moveToPoint(Number(item.lat), Number(item.lon))
+                      setResults([])
+                    }}
+                    className="block w-full border-b border-gray-800 px-4 py-3 text-left text-sm text-gray-200 hover:bg-primary/10"
+                  >
+                    {item.display_name}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+          </div>
+          <div className="flex gap-2">
+            <button type="button" onClick={() => void runSearch()} className="rounded-xl bg-dark px-4 py-3 text-white">{searching ? 'Đang tìm...' : 'Tìm'}</button>
+            <button type="button" onClick={locateUser} className="rounded-xl bg-primary px-4 py-3 text-white">Locate</button>
+          </div>
         </div>
 
         <div className="overflow-hidden rounded-2xl border border-gray-700 bg-dark">

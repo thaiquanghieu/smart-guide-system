@@ -90,7 +90,7 @@ export default function Dashboard() {
                     </div>
                   </Link>
 
-                  <Link href="/users" className="bg-gradient-to-br from-secondary to-secondary/50 border border-cyan-500/30 rounded-xl p-6 hover:border-cyan-500/60 transition shadow-lg hover:shadow-cyan-500/20 block">
+                  <Link href="/users?role=owner" className="bg-gradient-to-br from-secondary to-secondary/50 border border-cyan-500/30 rounded-xl p-6 hover:border-cyan-500/60 transition shadow-lg hover:shadow-cyan-500/20 block">
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-gray-400 text-sm font-medium mb-2">Seller đang quản lý</p>
@@ -127,8 +127,9 @@ export default function Dashboard() {
                   {stats.top_pois.length > 0 ? (
                     <div className="space-y-3">
                       {stats.top_pois.map((poi, index) => (
-                        <div
+                        <Link
                           key={poi.id}
+                          href={`/pois?focusId=${encodeURIComponent(poi.id)}`}
                           className="flex items-center justify-between bg-gradient-to-r from-dark/50 to-dark/30 p-4 rounded-lg border border-gray-700/50 hover:border-primary/50 hover:bg-dark/70 transition group"
                         >
                           <div className="flex items-center gap-4 flex-1">
@@ -146,7 +147,7 @@ export default function Dashboard() {
                             </p>
                             <p className="text-gray-400 text-xs">lượt nghe</p>
                           </div>
-                        </div>
+                        </Link>
                       ))}
                     </div>
                   ) : (

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import Sidebar from '@/components/Sidebar'
 import ProtectedRoute from '@/components/ProtectedRoute'
 import apiClient from '@/lib/api'
-import { Ban, CheckCircle2, Eye, EyeOff, Search, Smartphone, Trash2 } from 'lucide-react'
+import { Ban, CheckCircle2, CheckSquare2, EyeOff, Search, Smartphone, Trash2, X } from 'lucide-react'
 
 type Device = {
   id: number
@@ -51,6 +51,7 @@ export default function DevicesPage() {
   const [selectedIds, setSelectedIds] = useState<number[]>([])
   const [revealedIds, setRevealedIds] = useState<number[]>([])
   const [selectedDevice, setSelectedDevice] = useState<DeviceDetail | null>(null)
+  const [selectionMode, setSelectionMode] = useState(false)
 
   useEffect(() => {
     void fetchDevices()
@@ -145,6 +146,10 @@ export default function DevicesPage() {
     await fetchDevices(true)
   }
 
+  const toggleSelected = (deviceId: number) => {
+    setSelectedIds((prev) => (prev.includes(deviceId) ? prev.filter((id) => id !== deviceId) : [...prev, deviceId]))
+  }
+
   const statusClass = (status: string) => {
     if (status === 'active') return 'bg-green-400/10 text-green-300'
     if (status === 'banned') return 'bg-red-400/10 text-red-300'
@@ -186,6 +191,18 @@ export default function DevicesPage() {
                   placeholder="Tìm theo tên máy, nền tảng, trạng thái, lý do chặn..."
                 />
               </div>
+              <div className="flex flex-wrap justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectionMode((value) => !value)
+                    setSelectedIds([])
+                  }}
+                  className={`inline-flex items-center gap-2 rounded-xl px-4 py-3 font-semibold ${selectionMode ? 'bg-primary text-white' : 'bg-secondary text-gray-200 hover:text-white'}`}
+                >
+                  {selectionMode ? <X size={16} /> : <CheckSquare2 size={16} />}
+                  {selectionMode ? 'Thoát chọn' : 'Select'}
+                </button>
               {selectedIds.length > 0 && (
                 <div className="flex flex-wrap gap-2">
                   <button onClick={() => void bulkUpdateStatus('active')} className="rounded-xl bg-green-500/15 px-4 py-3 font-semibold text-green-300 hover:bg-green-500/25">
@@ -199,6 +216,7 @@ export default function DevicesPage() {
                   </button>
                 </div>
               )}
+              </div>
             </div>
 
             <div className="flex flex-wrap gap-2">
@@ -235,14 +253,19 @@ export default function DevicesPage() {
                       visibleDevices.map((device) => {
                         const showId = revealedIds.includes(device.id)
                         return (
-                          <tr key={device.id} className="border-b border-gray-700 hover:bg-dark/20">
+                          <tr
+                            key={device.id}
+                            className={`border-b border-gray-700 hover:bg-dark/20 ${selectedIds.includes(device.id) ? 'bg-primary/10 ring-1 ring-inset ring-primary/40' : ''} ${selectionMode ? 'cursor-pointer' : ''}`}
+                            onClick={() => {
+                              if (selectionMode) {
+                                toggleSelected(device.id)
+                              } else {
+                                void openDetail(device.id)
+                              }
+                            }}
+                          >
                             <td className="p-4 align-top">
-                              <input
-                                type="checkbox"
-                                checked={selectedIds.includes(device.id)}
-                                onChange={(event) => setSelectedIds((prev) => event.target.checked ? [...prev, device.id] : prev.filter((item) => item !== device.id))}
-                                className="mt-1 h-4 w-4 rounded border-gray-600 bg-dark text-danger"
-                              />
+                              {selectionMode ? <span className={`mt-1 inline-flex h-4 w-4 rounded-full border ${selectedIds.includes(device.id) ? 'border-primary bg-primary/40' : 'border-gray-600 bg-dark'}`} /> : null}
                             </td>
                             <td className="p-4">
                               <div className="flex items-start gap-3">
@@ -253,10 +276,13 @@ export default function DevicesPage() {
                                   <div className="mt-1 flex items-center gap-2 text-[11px] text-gray-500">
                                     <span>ID: {showId ? (device.device_uuid || `#${device.id}`) : '••••••••••••••••'}</span>
                                     <button
-                                      onClick={() => setRevealedIds((prev) => showId ? prev.filter((id) => id !== device.id) : [...prev, device.id])}
+                                      onClick={(event) => {
+                                        event.stopPropagation()
+                                        setRevealedIds((prev) => showId ? prev.filter((id) => id !== device.id) : [...prev, device.id])
+                                      }}
                                       className="text-gray-400 hover:text-white"
                                     >
-                                      {showId ? <EyeOff size={14} /> : <Eye size={14} />}
+                                      {showId ? <EyeOff size={14} /> : <span className="text-[11px] font-semibold uppercase tracking-[0.08em]">ID</span>}
                                     </button>
                                   </div>
                                 </div>
@@ -274,10 +300,9 @@ export default function DevicesPage() {
                             <td className="p-4 text-sm text-gray-400">{device.last_seen ? new Date(device.last_seen).toLocaleString('vi-VN') : '-'}</td>
                             <td className="p-4">
                               <div className="flex justify-end gap-2">
-                                <button onClick={() => void openDetail(device.id)} className="rounded-lg bg-primary/15 px-3 py-2 text-primary hover:bg-primary/25"><Eye size={16} /></button>
-                                {device.status !== 'active' && <button onClick={() => void updateStatus(device.id, 'active')} className="rounded-lg bg-green-500/15 px-3 py-2 text-green-300 hover:bg-green-500/25"><CheckCircle2 size={16} /></button>}
-                                {device.status !== 'banned' && <button onClick={() => void updateStatus(device.id, 'banned')} className="rounded-lg bg-red-500/15 px-3 py-2 text-red-300 hover:bg-red-500/25"><Ban size={16} /></button>}
-                                <button onClick={() => void deleteDevice(device.id)} className="rounded-lg bg-gray-500/15 px-3 py-2 text-gray-300 hover:bg-gray-500/25"><Trash2 size={16} /></button>
+                                {device.status !== 'active' && <button onClick={(event) => { event.stopPropagation(); void updateStatus(device.id, 'active') }} className="rounded-lg bg-green-500/15 px-3 py-2 text-green-300 hover:bg-green-500/25"><CheckCircle2 size={16} /></button>}
+                                {device.status !== 'banned' && <button onClick={(event) => { event.stopPropagation(); void updateStatus(device.id, 'banned') }} className="rounded-lg bg-red-500/15 px-3 py-2 text-red-300 hover:bg-red-500/25"><Ban size={16} /></button>}
+                                <button onClick={(event) => { event.stopPropagation(); void deleteDevice(device.id) }} className="rounded-lg bg-gray-500/15 px-3 py-2 text-gray-300 hover:bg-gray-500/25"><Trash2 size={16} /></button>
                               </div>
                             </td>
                           </tr>
@@ -296,7 +321,7 @@ export default function DevicesPage() {
 
       {selectedDevice && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={() => setSelectedDevice(null)}>
-          <div className="w-full max-w-3xl rounded-2xl border border-gray-700 bg-secondary p-6" onClick={(event) => event.stopPropagation()}>
+          <div className="w-full max-w-3xl max-h-[82vh] overflow-y-auto rounded-2xl border border-gray-700 bg-secondary p-6" onClick={(event) => event.stopPropagation()}>
             <div className="mb-5 flex items-start justify-between">
               <div>
                 <h2 className="text-2xl font-bold text-white">{selectedDevice.name || `Device #${selectedDevice.id}`}</h2>

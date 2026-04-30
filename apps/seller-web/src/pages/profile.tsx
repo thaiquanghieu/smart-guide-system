@@ -28,8 +28,6 @@ export default function Profile() {
   const [editing, setEditing] = useState(false)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
 
-  const isPaused = profile?.accountStatus === 'paused'
-
   useEffect(() => {
     if (!user) return
     const load = async () => {
@@ -43,6 +41,8 @@ export default function Profile() {
         setProfile(nextProfile)
         setForm({ userName: nextProfile.userName || '', email: nextProfile.email || '' })
         setStats(statsResponse.data)
+      } catch (error: any) {
+        console.error('Failed to load seller profile', error)
       } finally {
         setLoading(false)
       }
@@ -140,21 +140,6 @@ export default function Profile() {
         <main className="flex-1 p-8">
           <div className="max-w-5xl">
             <h1 className="mb-8 text-4xl font-bold text-white">Hồ sơ cá nhân</h1>
-
-            {isPaused && (
-              <div className="mb-6 flex items-center justify-between gap-4 rounded-2xl border border-yellow-500/40 bg-yellow-500/10 p-5">
-                <div>
-                  <p className="font-semibold text-yellow-200">Seller đang ở trạng thái tạm nghỉ.</p>
-                  <p className="mt-1 text-sm text-yellow-100/80">POI của seller đang được ẩn khỏi hệ thống cho tới khi mở lại.</p>
-                </div>
-                <button
-                  onClick={() => void updateStatus('active')}
-                  className="rounded-xl bg-yellow-400 px-4 py-3 font-semibold text-black hover:bg-yellow-300"
-                >
-                  Mở lại
-                </button>
-              </div>
-            )}
 
             {loading ? (
               <div className="py-12 text-center">

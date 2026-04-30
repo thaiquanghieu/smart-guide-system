@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import ProtectedRoute from '@/components/ProtectedRoute'
 import Sidebar from '@/components/Sidebar'
 import apiClient from '@/lib/api'
-import { AlertTriangle, CheckCircle, Eye, History, RefreshCw, Search, Trash2, XCircle } from 'lucide-react'
+import { AlertTriangle, CheckCircle, CheckSquare2, Eye, History, RefreshCw, Search, Trash2, X, XCircle } from 'lucide-react'
 
 type QrEntry = {
   id: number
@@ -85,6 +85,8 @@ export default function AdminQrPage() {
   const [showAllLogs, setShowAllLogs] = useState(false)
   const [allLogs, setAllLogs] = useState<QrLog[]>([])
   const [allLogsLoading, setAllLogsLoading] = useState(false)
+  const [selectedIds, setSelectedIds] = useState<number[]>([])
+  const [selectionMode, setSelectionMode] = useState(false)
 
   useEffect(() => {
     void fetchEntries()
@@ -211,6 +213,19 @@ export default function AdminQrPage() {
     }
   }
 
+  const bulkDelete = async () => {
+    if (!selectedIds.length || !window.confirm(`Xóa hẳn ${selectedIds.length} QR đã chọn?`)) return
+    for (const id of selectedIds) {
+      await apiClient.delete(`/admin/qr/${id}/hard`)
+    }
+    setSelectedIds([])
+    await fetchEntries()
+  }
+
+  const toggleSelected = (entryId: number) => {
+    setSelectedIds((prev) => (prev.includes(entryId) ? prev.filter((id) => id !== entryId) : [...prev, entryId]))
+  }
+
   const logsToRender = (showAllLogs ? allLogs : logs).filter((log) => {
     const keyword = [
       log.qr_name,
@@ -289,7 +304,7 @@ export default function AdminQrPage() {
                 </div>
               )}
 
-              <div className="mb-4 grid gap-3 lg:grid-cols-[1fr,auto,auto]">
+              <div className="mb-4 grid gap-3 lg:grid-cols-[1fr,auto,auto,auto]">
                 <div className="relative">
                   <Search className="absolute left-3 top-3 text-gray-500" size={18} />
                   <input
@@ -325,6 +340,24 @@ export default function AdminQrPage() {
                   <option value="owner_asc">Seller A đến Z</option>
                   <option value="owner_desc">Seller Z đến A</option>
                 </select>
+                <div className="flex flex-wrap justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectionMode((value) => !value)
+                      setSelectedIds([])
+                    }}
+                    className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 font-semibold ${selectionMode ? 'bg-primary text-white' : 'bg-dark text-gray-200 hover:text-white'}`}
+                  >
+                    {selectionMode ? <X size={16} /> : <CheckSquare2 size={16} />}
+                    {selectionMode ? 'Thoát chọn' : 'Select'}
+                  </button>
+                  {selectedIds.length > 0 ? (
+                    <button onClick={() => void bulkDelete()} className="rounded-lg bg-red-500/15 px-4 py-2 font-semibold text-red-300 hover:bg-red-500/25">
+                      Xóa {selectedIds.length} mục
+                    </button>
+                  ) : null}
+                </div>
               </div>
 
               {loading ? (
@@ -345,8 +378,15 @@ export default function AdminQrPage() {
                     </thead>
                     <tbody>
                       {filteredEntries.map((entry) => (
-                        <tr key={entry.id} className="border-t border-gray-700 text-gray-100">
+                        <tr
+                          key={entry.id}
+                          className={`border-t border-gray-700 text-gray-100 ${selectedIds.includes(entry.id) ? 'bg-primary/10' : ''} ${selectionMode ? 'cursor-pointer' : ''}`}
+                          onClick={() => {
+                            if (selectionMode) toggleSelected(entry.id)
+                          }}
+                        >
                           <td className="px-4 py-3">
+                            {selectionMode ? <span className={`mb-2 inline-flex h-4 w-4 rounded-full border ${selectedIds.includes(entry.id) ? 'border-primary bg-primary/40' : 'border-gray-600 bg-dark'}`} /> : null}
                             <div className="font-semibold">{entry.name}</div>
                             <div className="text-xs text-gray-400">{entry.entryCode}</div>
                           </td>
@@ -363,20 +403,20 @@ export default function AdminQrPage() {
                           <td className="px-4 py-3">{formatDate(entry.last_scanned_at)}</td>
                           <td className="px-4 py-3">
                             <div className="flex flex-wrap gap-2">
-                              <button onClick={() => openLogs(entry)} className="rounded bg-primary/20 px-3 py-1 text-primary hover:bg-primary/30">
+                              <button onClick={(event) => { event.stopPropagation(); void openLogs(entry) }} className="rounded bg-primary/20 px-3 py-1 text-primary hover:bg-primary/30">
                                 <Eye size={14} className="mr-1 inline" />
                                 Xem log
                               </button>
                               {entry.status === 'active' ? (
-                                <button onClick={() => updateStatus(entry, 'admin_suspended')} className="rounded bg-orange-500/20 px-3 py-1 text-orange-300 hover:bg-orange-500/30">
+                                <button onClick={(event) => { event.stopPropagation(); void updateStatus(entry, 'admin_suspended') }} className="rounded bg-orange-500/20 px-3 py-1 text-orange-300 hover:bg-orange-500/30">
                                   Tạm ngừng
                                 </button>
                               ) : entry.status !== 'seller_deleted' ? (
-                                <button onClick={() => updateStatus(entry, 'active')} className="rounded bg-green-500/20 px-3 py-1 text-green-300 hover:bg-green-500/30">
+                                <button onClick={(event) => { event.stopPropagation(); void updateStatus(entry, 'active') }} className="rounded bg-green-500/20 px-3 py-1 text-green-300 hover:bg-green-500/30">
                                   Kích hoạt
                                 </button>
                               ) : null}
-                              <button onClick={() => hardDeleteQr(entry)} className="rounded bg-red-500/20 px-3 py-1 text-red-300 hover:bg-red-500/30" title="Xóa hẳn QR">
+                              <button onClick={(event) => { event.stopPropagation(); void hardDeleteQr(entry) }} className="rounded bg-red-500/20 px-3 py-1 text-red-300 hover:bg-red-500/30" title="Xóa hẳn QR">
                                 <Trash2 size={14} />
                               </button>
                             </div>

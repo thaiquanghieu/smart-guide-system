@@ -4,7 +4,7 @@ import { useRouter } from 'next/router'
 import Sidebar from '@/components/Sidebar'
 import ProtectedRoute from '@/components/ProtectedRoute'
 import apiClient from '@/lib/api'
-import { Plus, Edit2, Trash2, Eye, Search, MapPin } from 'lucide-react'
+import { Plus, Edit2, Trash2, Eye, Search, MapPin, CheckSquare2, X } from 'lucide-react'
 
 interface POI {
   id: string
@@ -26,6 +26,7 @@ export default function POIs() {
   const [query, setQuery] = useState('')
   const [sort, setSort] = useState<'newest' | 'oldest' | 'listens_desc' | 'rating_desc' | 'name_asc'>('newest')
   const [selectedIds, setSelectedIds] = useState<string[]>([])
+  const [selectionMode, setSelectionMode] = useState(false)
 
   useEffect(() => {
     void fetchPois()
@@ -81,7 +82,7 @@ export default function POIs() {
 
   const handleBulkDelete = async () => {
     if (!selectedIds.length) return
-    if (!confirm(`Ẩn ${selectedIds.length} POI đã chọn?`)) return
+    if (!confirm(`Xóa ${selectedIds.length} POI đã chọn?`)) return
     for (const id of selectedIds) {
       await apiClient.delete(`/owner/pois/${id}`)
     }
@@ -139,12 +140,23 @@ export default function POIs() {
             <div className="flex justify-between items-center mb-8">
               <h1 className="text-4xl font-bold text-white">Quản lý POI</h1>
               <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectionMode((value) => !value)
+                    setSelectedIds([])
+                  }}
+                  className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 font-semibold transition ${selectionMode ? 'bg-primary text-white' : 'bg-secondary text-gray-200 hover:text-white'}`}
+                >
+                  {selectionMode ? <X size={16} /> : <CheckSquare2 size={16} />}
+                  {selectionMode ? 'Thoát chọn' : 'Select'}
+                </button>
                 {selectedIds.length > 0 && (
                   <button
                     onClick={handleBulkDelete}
                     className="rounded-lg bg-red-500/20 px-4 py-2 font-semibold text-red-300 hover:bg-red-500/30"
                   >
-                    Ẩn {selectedIds.length} mục
+                    Xóa {selectedIds.length} mục
                   </button>
                 )}
                 <Link
@@ -213,20 +225,20 @@ export default function POIs() {
               <div className="grid grid-cols-1 gap-4">
                 {filteredPois.map((poi) => (
                   <div
-                      key={poi.id}
-                      className="bg-secondary border border-gray-700 rounded-lg p-6 hover:border-primary/50 transition"
-                    >
+                    key={poi.id}
+                    onClick={() => {
+                      if (selectionMode) {
+                        setSelectedIds((prev) => prev.includes(poi.id) ? prev.filter((item) => item !== poi.id) : [...prev, poi.id])
+                      }
+                    }}
+                    className={`rounded-lg border bg-secondary p-6 transition ${selectionMode ? 'cursor-pointer' : ''} ${selectedIds.includes(poi.id) ? 'border-primary bg-primary/5 shadow-lg shadow-primary/10' : 'border-gray-700 hover:border-primary/50'}`}
+                  >
                     <div className="mb-4 flex items-start justify-between gap-4">
-                      <input
-                        type="checkbox"
-                        checked={selectedIds.includes(poi.id)}
-                        onChange={(event) =>
-                          setSelectedIds((prev) =>
-                            event.target.checked ? [...prev, poi.id] : prev.filter((item) => item !== poi.id)
-                          )
-                        }
-                        className="mt-1 h-4 w-4 rounded border-gray-600 bg-dark text-primary"
-                      />
+                      {selectionMode ? (
+                        <div className={`mt-1 flex h-6 w-6 items-center justify-center rounded-full border ${selectedIds.includes(poi.id) ? 'border-primary bg-primary text-white' : 'border-gray-600 text-gray-500'}`}>
+                          {selectedIds.includes(poi.id) ? '•' : ''}
+                        </div>
+                      ) : null}
                       <div className="flex-1">
                         <h3 className="text-xl font-bold text-white mb-2">
                           {poi.name}
@@ -256,6 +268,7 @@ export default function POIs() {
                     <div className="flex gap-2 justify-end">
                       <Link
                         href={`/pois/${poi.id}`}
+                        onClick={(event) => event.stopPropagation()}
                         className="flex items-center gap-2 px-3 py-1 bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 rounded transition text-sm"
                       >
                         <Eye size={16} />
@@ -263,13 +276,17 @@ export default function POIs() {
                       </Link>
                       <Link
                         href={`/pois/${poi.id}/edit`}
+                        onClick={(event) => event.stopPropagation()}
                         className="flex items-center gap-2 px-3 py-1 bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/30 rounded transition text-sm"
                       >
                         <Edit2 size={16} />
                         Sửa
                       </Link>
                       <button
-                        onClick={() => handleDelete(poi.id)}
+                        onClick={(event) => {
+                          event.stopPropagation()
+                          void handleDelete(poi.id)
+                        }}
                         className="flex items-center gap-2 px-3 py-1 bg-red-500/20 text-red-400 hover:bg-red-500/30 rounded transition text-sm"
                       >
                         <Trash2 size={16} />

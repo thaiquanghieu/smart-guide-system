@@ -20,7 +20,7 @@ internal static class PoiDraftWorkflow
         return null;
     }
 
-    public static async Task<Poi> CreatePoiFromDraftAsync(AppDbContext db, CreatePoiRequest request, int ownerId, DateTime? now = null)
+    public static async Task<Poi> CreatePoiFromDraftAsync(AppDbContext db, CreatePoiRequest request, int ownerId, DateTime? now = null, string? forcedPoiId = null)
     {
         var validationError = Validate(request);
         if (!string.IsNullOrWhiteSpace(validationError))
@@ -29,7 +29,7 @@ internal static class PoiDraftWorkflow
         var timestamp = now ?? DateTime.UtcNow;
         var poi = new Poi
         {
-            Id = Guid.NewGuid().ToString("N")[..20],
+            Id = string.IsNullOrWhiteSpace(forcedPoiId) ? Guid.NewGuid().ToString("N")[..20] : forcedPoiId.Trim(),
             OwnerId = ownerId,
             Name = request.Name,
             ShortDescription = request.ShortDescription,

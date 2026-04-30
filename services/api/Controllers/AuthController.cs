@@ -258,7 +258,17 @@ public class AuthController : ControllerBase
         user.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync();
 
-        return Ok(new { avatarUrl = user.AvatarUrl });
+        return Ok(new
+        {
+            user.Id,
+            user.UserName,
+            user.Email,
+            user.AvatarUrl,
+            user.Role,
+            user.IsActive,
+            user.AccountStatus,
+            user.CreatedAt
+        });
     }
 }
 

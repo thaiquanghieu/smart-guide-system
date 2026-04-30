@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react'
+import Link from 'next/link'
+import { useRouter } from 'next/router'
 import Sidebar from '@/components/Sidebar'
 import ProtectedRoute from '@/components/ProtectedRoute'
 import apiClient from '@/lib/api'
@@ -22,6 +24,7 @@ type QrEntry = {
 }
 
 export default function Analytics() {
+  const router = useRouter()
   const [analytics, setAnalytics] = useState<Analytics | null>(null)
   const [qrEntries, setQrEntries] = useState<QrEntry[]>([])
   const [loading, setLoading] = useState(true)
@@ -72,7 +75,7 @@ export default function Analytics() {
               <>
                 {/* Key Metrics */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                  <div className="bg-gradient-to-br from-secondary to-secondary/50 border border-blue-500/30 rounded-xl p-6 hover:border-blue-500/60 transition shadow-lg hover:shadow-blue-500/20">
+                  <Link href="/users" className="block bg-gradient-to-br from-secondary to-secondary/50 border border-blue-500/30 rounded-xl p-6 hover:border-blue-500/60 transition shadow-lg hover:shadow-blue-500/20">
                     <p className="text-gray-400 text-sm font-medium mb-2">👥 Tổng tài khoản</p>
                     <p className="text-4xl font-bold text-white mb-2">
                       {analytics.users.total}
@@ -83,9 +86,9 @@ export default function Analytics() {
                     <p className="text-sm text-red-400 mt-1">
                       🔐 {analytics.users.admins} admin
                     </p>
-                  </div>
+                  </Link>
 
-                  <div className="bg-gradient-to-br from-secondary to-secondary/50 border border-green-500/30 rounded-xl p-6 hover:border-green-500/60 transition shadow-lg hover:shadow-green-500/20">
+                  <Link href="/pois" className="block bg-gradient-to-br from-secondary to-secondary/50 border border-green-500/30 rounded-xl p-6 hover:border-green-500/60 transition shadow-lg hover:shadow-green-500/20">
                     <p className="text-gray-400 text-sm font-medium mb-2">📍 Tổng POI</p>
                     <p className="text-4xl font-bold text-white mb-2">
                       {analytics.pois.total}
@@ -93,9 +96,9 @@ export default function Analytics() {
                     <p className="text-sm text-green-400">
                       ✅ {analytics.pois.approved} phê duyệt
                     </p>
-                  </div>
+                  </Link>
 
-                  <div className="bg-gradient-to-br from-secondary to-secondary/50 border border-purple-500/30 rounded-xl p-6 hover:border-purple-500/60 transition shadow-lg hover:shadow-purple-500/20">
+                  <Link href="/devices" className="block bg-gradient-to-br from-secondary to-secondary/50 border border-purple-500/30 rounded-xl p-6 hover:border-purple-500/60 transition shadow-lg hover:shadow-purple-500/20">
                     <p className="text-gray-400 text-sm font-medium mb-2">Thiết bị</p>
                     <p className="text-4xl font-bold text-white mb-2">
                       {analytics.devices?.total || 0}
@@ -103,9 +106,9 @@ export default function Analytics() {
                     <p className="text-sm text-purple-400">
                       Online: {analytics.devices?.online || 0} / Banned: {analytics.devices?.banned || 0}
                     </p>
-                  </div>
+                  </Link>
 
-                  <div className="bg-gradient-to-br from-secondary to-secondary/50 border border-yellow-500/30 rounded-xl p-6 hover:border-yellow-500/60 transition shadow-lg hover:shadow-yellow-500/20">
+                  <Link href="/pois?openApproval=1" className="block bg-gradient-to-br from-secondary to-secondary/50 border border-yellow-500/30 rounded-xl p-6 hover:border-yellow-500/60 transition shadow-lg hover:shadow-yellow-500/20">
                     <p className="text-gray-400 text-sm font-medium mb-2">⏳ Chờ Duyệt</p>
                     <p className="text-4xl font-bold text-yellow-400 mb-2">
                       {analytics.pois.pending}
@@ -113,7 +116,7 @@ export default function Analytics() {
                     <p className="text-sm text-yellow-400">
                       ❌ {analytics.pois.rejected} từ chối
                     </p>
-                  </div>
+                  </Link>
                 </div>
 
                 {/* Two Column Layout */}
@@ -150,8 +153,9 @@ export default function Analytics() {
                     <div className="space-y-3">
                       {analytics.top_pois.length > 0 ? (
                         analytics.top_pois.map((poi, idx) => (
-                          <div
+                          <Link
                             key={poi.id}
+                            href={`/pois?focusId=${encodeURIComponent(poi.id)}`}
                             className="flex justify-between items-center bg-gradient-to-r from-dark/50 to-dark/30 p-4 rounded-lg border border-gray-700/50 hover:border-primary/50 hover:bg-dark/70 transition group"
                           >
                             <div className="flex items-center gap-3 flex-1">
@@ -165,7 +169,7 @@ export default function Analytics() {
                             <span className="text-accent font-bold text-lg ml-2">
                               {poi.listened_count}
                             </span>
-                          </div>
+                          </Link>
                         ))
                       ) : (
                         <p className="text-gray-400 text-center py-8">📊 Chưa có dữ liệu</p>
@@ -181,9 +185,11 @@ export default function Analytics() {
                     <div className="space-y-3">
                       {analytics.top_owners.length > 0 ? (
                         analytics.top_owners.map((owner, idx) => (
-                          <div
+                          <button
                             key={owner.owner_id}
-                            className="flex justify-between items-center bg-gradient-to-r from-dark/50 to-dark/30 p-4 rounded-lg border border-gray-700/50 hover:border-primary/50 hover:bg-dark/70 transition group"
+                            type="button"
+                            onClick={() => router.push(`/users?role=owner&q=${encodeURIComponent(String(owner.owner_id))}`)}
+                            className="flex w-full justify-between items-center bg-gradient-to-r from-dark/50 to-dark/30 p-4 rounded-lg border border-gray-700/50 hover:border-primary/50 hover:bg-dark/70 transition group text-left"
                           >
                             <div className="flex items-center gap-3 flex-1">
                               <span className="text-lg font-bold text-primary bg-primary/20 w-10 h-10 rounded-lg flex items-center justify-center group-hover:bg-primary/30 transition">
@@ -204,7 +210,7 @@ export default function Analytics() {
                               </p>
                               <p className="text-xs text-gray-400">lượt nghe</p>
                             </div>
-                          </div>
+                          </button>
                         ))
                       ) : (
                         <p className="text-gray-400 text-center py-8">📊 Chưa có dữ liệu</p>

@@ -3,7 +3,7 @@ import { useRouter } from 'next/router'
 import Sidebar from '@/components/Sidebar'
 import ProtectedRoute from '@/components/ProtectedRoute'
 import apiClient from '@/lib/api'
-import { Ban, Search, Trash2, Eye, Store, QrCode } from 'lucide-react'
+import { Ban, Search, Trash2, Store, QrCode } from 'lucide-react'
 
 interface User {
   id: number
@@ -28,8 +28,13 @@ export default function Users() {
   const [selectedUser, setSelectedUser] = useState<any | null>(null)
 
   useEffect(() => {
+    if (!router.isReady) return
+    const roleQuery = typeof router.query.role === 'string' ? router.query.role : ''
+    const qQuery = typeof router.query.q === 'string' ? router.query.q : ''
+    if (roleQuery === 'admin' || roleQuery === 'owner' || roleQuery === 'all') setFilter(roleQuery)
+    if (qQuery) setQuery(qQuery)
     void fetchUsers()
-  }, [])
+  }, [router.isReady])
 
   const fetchUsers = async () => {
     setLoading(true)
@@ -142,19 +147,18 @@ export default function Users() {
                             className="mt-1 h-4 w-4 rounded border-gray-600 bg-dark text-danger"
                           />
                         </td>
-                        <td className="p-4 text-white">{user.userName}</td>
-                        <td className="p-4 text-sm text-gray-400">{user.email}</td>
-                        <td className="p-4 text-sm text-gray-300">{user.role === 'owner' ? 'Chủ gian hàng' : 'Quản trị viên'}</td>
+                        <td className="p-4 text-white cursor-pointer" onClick={() => void openDetail(user.id)}>{user.userName}</td>
+                        <td className="p-4 text-sm text-gray-400 cursor-pointer" onClick={() => void openDetail(user.id)}>{user.email}</td>
+                        <td className="p-4 text-sm text-gray-300 cursor-pointer" onClick={() => void openDetail(user.id)}>{user.role === 'owner' ? 'Chủ gian hàng' : 'Quản trị viên'}</td>
                         <td className="p-4">
-                          <span className={`rounded-full px-3 py-1 text-xs font-semibold ${badgeClass(user.account_status)}`}>
+                          <span className={`whitespace-nowrap rounded-full px-3 py-1 text-xs font-semibold ${badgeClass(user.account_status)}`}>
                             {statusLabel(user.account_status)}
                           </span>
                         </td>
-                        <td className="p-4 text-sm text-gray-300">{user.poi_count} ({user.pending_poi_count} chờ duyệt)</td>
-                        <td className="p-4 text-sm text-gray-300">{user.listen_count}</td>
+                        <td className="p-4 text-sm text-gray-300 cursor-pointer" onClick={() => void openDetail(user.id)}>{user.poi_count} ({user.pending_poi_count} chờ duyệt)</td>
+                        <td className="p-4 text-sm text-gray-300 cursor-pointer" onClick={() => void openDetail(user.id)}>{user.listen_count}</td>
                         <td className="p-4">
                           <div className="flex justify-end gap-2">
-                            <button onClick={() => void openDetail(user.id)} className="rounded-lg bg-primary/15 px-3 py-2 text-primary hover:bg-primary/25"><Eye size={16} /></button>
                             {user.account_status !== 'active' && <button onClick={() => void updateStatus(user.id, 'active')} className="rounded-lg bg-green-500/15 px-3 py-2 text-green-300 hover:bg-green-500/25">Mở</button>}
                             {user.account_status !== 'paused' && <button onClick={() => void updateStatus(user.id, 'paused')} className="rounded-lg bg-yellow-500/15 px-3 py-2 text-yellow-200 hover:bg-yellow-500/25">Tạm nghỉ</button>}
                             {user.account_status !== 'banned' && <button onClick={() => void updateStatus(user.id, 'banned')} className="rounded-lg bg-red-500/15 px-3 py-2 text-red-300 hover:bg-red-500/25"><Ban size={16} /></button>}

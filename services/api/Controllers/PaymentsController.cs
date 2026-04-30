@@ -215,8 +215,24 @@ public class PaymentsController : ControllerBase
                 throw new InvalidOperationException("Không tìm thấy dữ liệu POI nháp để hoàn tất thanh toán.");
 
             await using var transaction = await _db.Database.BeginTransactionAsync();
+            await _db.Entry(payment).ReloadAsync();
 
-            var poi = await PoiDraftWorkflow.CreatePoiFromDraftAsync(_db, draft, payment.OwnerId.Value, now);
+            if (!string.IsNullOrWhiteSpace(payment.PoiId))
+            {
+                payment.IsUsed = true;
+                payment.UsedAt = now;
+                payment.ConfirmedAt = now;
+                payment.PaidAt ??= now;
+                payment.Status = "used";
+                payment.RejectedReason = null;
+                await _db.SaveChangesAsync();
+                await transaction.CommitAsync();
+                return;
+            }
+
+            var draftPoiId = $"upg{payment.Id:D8}";
+            var existingPoi = await _db.Pois.FirstOrDefaultAsync(x => x.Id == draftPoiId);
+            var poi = existingPoi ?? await PoiDraftWorkflow.CreatePoiFromDraftAsync(_db, draft, payment.OwnerId.Value, now, draftPoiId);
             payment.PoiId = poi.Id;
             payment.IsUsed = true;
             payment.UsedAt = now;
