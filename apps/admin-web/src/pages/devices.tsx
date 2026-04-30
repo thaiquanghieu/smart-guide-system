@@ -269,7 +269,12 @@ export default function DevicesPage() {
                               <div className="flex items-start gap-3">
                                 <Smartphone className="mt-0.5 text-primary" size={20} />
                                 <div>
-                                  <p className="font-semibold text-white">{device.name || `Device #${device.id}`}</p>
+                                  <p
+                                    className="max-w-[360px] truncate font-semibold text-white"
+                                    title={device.name || `Device #${device.id}`}
+                                  >
+                                    {device.name || `Device #${device.id}`}
+                                  </p>
                                   <p className="text-xs text-gray-400">{device.platform || '-'} {device.model || ''}</p>
                                   <div className="mt-1 flex items-center gap-2 text-[11px] text-gray-500">
                                     <span>ID: {showId ? (device.device_uuid || `#${device.id}`) : '••••••••••••••••'}</span>
@@ -290,7 +295,12 @@ export default function DevicesPage() {
                               <span className={`inline-flex h-3 w-3 rounded-full ${device.is_online ? 'bg-green-400' : 'bg-gray-500'}`} />
                             </td>
                             <td className="p-4">
-                              <span className={`rounded-full px-3 py-1 text-xs font-semibold ${statusClass(device.status)}`}>{statusLabel(device.status)}</span>
+                              <span
+                                className={`inline-flex whitespace-nowrap rounded-full px-3 py-1 text-xs font-semibold ${statusClass(device.status)}`}
+                                title={statusLabel(device.status)}
+                              >
+                                {statusLabel(device.status)}
+                              </span>
                               {device.ban_reason ? <p className="mt-1 text-xs text-red-300">{device.ban_reason}</p> : null}
                             </td>
                             <td className="p-4 text-sm text-gray-300">{device.has_active_subscription ? 'Còn hạn' : 'Không có'}</td>
