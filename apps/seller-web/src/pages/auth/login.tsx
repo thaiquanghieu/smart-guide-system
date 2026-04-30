@@ -3,6 +3,8 @@ import { useRouter } from 'next/router'
 import Link from 'next/link'
 import apiClient from '@/lib/api'
 
+const ADMIN_LOGIN_URL = 'https://smart-guide-system-ikt2.vercel.app/auth/login'
+
 export default function Login() {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
@@ -111,7 +113,7 @@ export default function Login() {
         </div>
 
         <div className="mt-8 text-center">
-          <Link href="http://localhost:3001/auth/login" className="text-accent hover:text-primary text-sm">
+          <Link href={ADMIN_LOGIN_URL} className="text-accent hover:text-primary text-sm">
             Đăng nhập admin
           </Link>
         </div>

@@ -1,5 +1,6 @@
 import '@/styles/globals.css'
 import type { AppProps } from 'next/app'
+import Head from 'next/head'
 import { useEffect } from 'react'
 import { useAdminStore } from '@/lib/store'
 import apiClient from '@/lib/api'
@@ -24,5 +25,15 @@ export default function App({ Component, pageProps }: AppProps) {
     }
   }, [setAdmin])
 
-  return <Component {...pageProps} />
+  return (
+    <>
+      <Head>
+        <title>Smart Guide Admin</title>
+        <link rel="icon" href="/icon-192.png" />
+        <link rel="apple-touch-icon" href="/icon-192.png" />
+        <meta name="theme-color" content="#1e2b3f" />
+      </Head>
+      <Component {...pageProps} />
+    </>
+  )
 }

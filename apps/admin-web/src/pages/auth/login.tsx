@@ -4,6 +4,8 @@ import Link from 'next/link'
 import apiClient from '@/lib/api'
 import { useAdminStore } from '@/lib/store'
 
+const SELLER_LOGIN_URL = 'https://smart-guide-system-geip.vercel.app/auth/login'
+
 export default function AdminLogin() {
   const router = useRouter()
   const { setAdmin } = useAdminStore()
@@ -126,7 +128,7 @@ export default function AdminLogin() {
           </div>
           
           <div className="text-center">
-            <Link href="http://localhost:3000" className="text-gray-400 hover:text-primary text-sm transition">
+            <Link href={SELLER_LOGIN_URL} className="text-gray-400 hover:text-primary text-sm transition">
               ← Quay lại trang chính
             </Link>
           </div>
