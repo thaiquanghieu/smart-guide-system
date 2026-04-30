@@ -289,6 +289,10 @@ declare global {
   }
 }
 
+function isValidCoordinatePair(latitude: number, longitude: number) {
+  return Number.isFinite(latitude) && Number.isFinite(longitude)
+}
+
 export default function PoiForm({ mode, initialValue, poiId, onDone }: Props) {
   const router = useRouter()
   const [form, setForm] = useState<PoiFormValue>({ ...defaultValue, ...initialValue })
@@ -1038,7 +1042,7 @@ function MiniMapPreview({
   const markerRef = useRef<any>(null)
   const userMarkerRef = useRef<any>(null)
   const [leafletReady, setLeafletReady] = useState(false)
-  const hasValidCoordinates = Number.isFinite(latitude) && Number.isFinite(longitude)
+  const hasValidCoordinates = isValidCoordinatePair(latitude, longitude)
   const center = hasValidCoordinates
     ? { latitude, longitude }
     : userPosition
@@ -1186,6 +1190,7 @@ function MapPickerModal({
   const userMarkerRef = useRef<any>(null)
   const [leafletReady, setLeafletReady] = useState(false)
   const [selectedPoint, setSelectedPoint] = useState({ latitude: initialLatitude, longitude: initialLongitude })
+  const hasInitialCoordinates = isValidCoordinatePair(initialLatitude, initialLongitude)
   useEffect(() => {
     const cssId = 'smartguide-leaflet-css'
     if (!document.getElementById(cssId)) {
@@ -1223,7 +1228,7 @@ function MapPickerModal({
   useEffect(() => {
     if (!leafletReady || !mapRef.current || mapInstanceRef.current) return undefined
 
-    const initialCenter = preferInitialCoordinates
+    const initialCenter = preferInitialCoordinates && hasInitialCoordinates
       ? [initialLatitude, initialLongitude]
       : [userPosition?.latitude || initialLatitude, userPosition?.longitude || initialLongitude]
 
@@ -1236,7 +1241,13 @@ function MapPickerModal({
       maxZoom: 19,
     }).addTo(map)
 
-    const marker = window.L.marker([initialLatitude, initialLongitude]).addTo(map)
+    const marker = window.L.circleMarker([initialLatitude, initialLongitude], {
+      radius: 10,
+      color: '#ffffff',
+      weight: 3,
+      fillColor: '#2563eb',
+      fillOpacity: 1,
+    }).addTo(map)
     markerRef.current = marker
     mapInstanceRef.current = map
 
@@ -1257,7 +1268,7 @@ function MapPickerModal({
       markerRef.current = null
       userMarkerRef.current = null
     }
-  }, [initialLatitude, initialLongitude, leafletReady, preferInitialCoordinates, userPosition])
+  }, [hasInitialCoordinates, initialLatitude, initialLongitude, leafletReady, preferInitialCoordinates, userPosition])
 
   const locateUser = () => {
     if (userPosition) {
@@ -1271,10 +1282,15 @@ function MapPickerModal({
   }
 
   useEffect(() => {
-    if (!preferInitialCoordinates) {
-      locateUser()
+    if (!mapInstanceRef.current) return
+    if (preferInitialCoordinates && hasInitialCoordinates) {
+      mapInstanceRef.current.setView([initialLatitude, initialLongitude], 16, { animate: false })
+      markerRef.current?.setLatLng([initialLatitude, initialLongitude])
+      setSelectedPoint({ latitude: initialLatitude, longitude: initialLongitude })
+      return
     }
-  }, [preferInitialCoordinates, userPosition])
+    locateUser()
+  }, [hasInitialCoordinates, initialLatitude, initialLongitude, preferInitialCoordinates, userPosition])
 
   useEffect(() => {
     if (!mapInstanceRef.current || !userPosition) return
