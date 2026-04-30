@@ -89,14 +89,22 @@ public class AccessController : ControllerBase
         if (qrEntry.Status == "admin_suspended")
             return BadRequest(new { message = "QR đã bị hệ thống tạm ngưng" });
 
-        if (qrEntry.Status != "active")
+        if (qrEntry.Status is not ("active" or "expired"))
             return BadRequest(new { message = "QR hiện không khả dụng" });
 
         var poiId = !string.IsNullOrWhiteSpace(request.PoiId) ? request.PoiId.Trim() : qrEntry.PoiId;
         var sameFingerprintDeviceIds = await GetSameFingerprintDeviceIdsAsync(device);
 
-        if (qrEntry.UsedScans >= qrEntry.TotalScans)
+        var qrOutOfFreeQuota = qrEntry.Status == "expired" || qrEntry.UsedScans >= qrEntry.TotalScans;
+
+        if (qrOutOfFreeQuota)
         {
+            if (qrEntry.Status != "expired")
+            {
+                qrEntry.Status = "expired";
+                qrEntry.UpdatedAt = now;
+            }
+
             _db.QrLogs.Add(new QrLog
             {
                 QrEntryId = qrEntry.Id,
