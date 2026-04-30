@@ -308,6 +308,18 @@ public class AdminController : ControllerBase
         poi.RejectedReason = null;
         poi.UpdatedAt = DateTime.UtcNow;
         _db.Pois.Update(poi);
+
+        var relatedAudios = await _db.AudioGuides
+            .Where(x => x.PoiId == id)
+            .ToListAsync();
+
+        foreach (var audio in relatedAudios)
+        {
+            audio.ApprovalStatus = "approved";
+            audio.RejectedReason = null;
+            audio.UpdatedAt = DateTime.UtcNow;
+        }
+
         await _db.SaveChangesAsync();
 
         return Ok(new { message = "POI được phê duyệt thành công" });

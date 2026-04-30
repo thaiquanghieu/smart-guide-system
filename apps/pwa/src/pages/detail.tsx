@@ -38,6 +38,41 @@ const detailCache = new Map<
   }
 >();
 
+function normalizePoi(raw: any): Poi {
+  const images = Array.isArray(raw?.images)
+    ? raw.images.filter((item: unknown): item is string => typeof item === "string" && item.trim().length > 0)
+    : [];
+
+  const audios = Array.isArray(raw?.audios)
+    ? raw.audios.map((audio: any) => ({
+        languageCode: typeof audio?.languageCode === "string" ? audio.languageCode : "vi",
+        languageName: typeof audio?.languageName === "string" ? audio.languageName : "Tiếng Việt",
+        voiceName: typeof audio?.voiceName === "string" ? audio.voiceName : "default",
+        scriptText: typeof audio?.scriptText === "string" ? audio.scriptText : "",
+      }))
+    : [];
+
+  return {
+    id: String(raw?.id ?? ""),
+    name: typeof raw?.name === "string" ? raw.name : "",
+    category: typeof raw?.category === "string" ? raw.category : "",
+    short_description: typeof raw?.short_description === "string" ? raw.short_description : "",
+    description: typeof raw?.description === "string" ? raw.description : "",
+    address: typeof raw?.address === "string" ? raw.address : "",
+    priceText: typeof raw?.priceText === "string" ? raw.priceText : "",
+    open_hours: typeof raw?.open_hours === "string" ? raw.open_hours : "",
+    latitude: Number(raw?.latitude ?? 0),
+    longitude: Number(raw?.longitude ?? 0),
+    listened_count: Number(raw?.listened_count ?? 0),
+    rating_avg: Number(raw?.rating_avg ?? 0),
+    rating_count: Number(raw?.rating_count ?? 0),
+    user_rating: raw?.user_rating == null ? undefined : Number(raw.user_rating),
+    is_favorite: Boolean(raw?.is_favorite),
+    images,
+    audios,
+  };
+}
+
 export default function DetailPage() {
   const router = useRouter();
   const { lang, t } = useAppI18n();
@@ -91,8 +126,9 @@ export default function DetailPage() {
           return;
         }
 
-        setPoi(translatePoi<Poi>(poiResponse.data, lang));
-        setRatingValue(Number(poiResponse.data?.user_rating || 0));
+        const normalizedPoi = normalizePoi(poiResponse.data);
+        setPoi(translatePoi<Poi>(normalizedPoi, lang));
+        setRatingValue(Number(normalizedPoi.user_rating || 0));
         setSubscriptionActive(hasActiveSubscription);
         setFreePlaysRemaining(remainingFreePlays);
       } catch (error: any) {

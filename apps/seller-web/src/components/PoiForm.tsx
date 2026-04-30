@@ -1046,6 +1046,7 @@ function MiniMapPreview({
   const center = hasValidCoordinates
     ? { latitude, longitude }
     : userPosition
+  const selectedIconRef = useRef<any>(null)
 
   useEffect(() => {
     const cssId = 'smartguide-leaflet-css'
@@ -1082,6 +1083,18 @@ function MiniMapPreview({
   }, [])
 
   useEffect(() => {
+    if (!leafletReady || selectedIconRef.current || !window.L?.icon) return
+    selectedIconRef.current = window.L.icon({
+      iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+      shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+      iconSize: [25, 41],
+      iconAnchor: [12, 41],
+      popupAnchor: [1, -34],
+      shadowSize: [41, 41],
+    })
+  }, [leafletReady])
+
+  useEffect(() => {
     if (!center || !leafletReady || !containerRef.current || mapRef.current) return undefined
 
     const map = window.L.map(containerRef.current, {
@@ -1100,9 +1113,12 @@ function MiniMapPreview({
       maxZoom: 19,
     }).addTo(map)
 
-    if (hasValidCoordinates) {
-      markerRef.current = window.L.marker([latitude, longitude]).addTo(map)
-    }
+      if (hasValidCoordinates && selectedIconRef.current) {
+        markerRef.current = window.L.marker([latitude, longitude], {
+          icon: selectedIconRef.current,
+          keyboard: false,
+        }).addTo(map)
+      }
     mapRef.current = map
 
     window.setTimeout(() => map.invalidateSize(), 40)
@@ -1119,8 +1135,11 @@ function MiniMapPreview({
     if (!mapRef.current || !center) return
 
     if (hasValidCoordinates) {
-      if (!markerRef.current) {
-        markerRef.current = window.L.marker([latitude, longitude]).addTo(mapRef.current)
+      if (!markerRef.current && selectedIconRef.current) {
+        markerRef.current = window.L.marker([latitude, longitude], {
+          icon: selectedIconRef.current,
+          keyboard: false,
+        }).addTo(mapRef.current)
       } else {
         markerRef.current.setLatLng([latitude, longitude])
       }
@@ -1189,8 +1208,16 @@ function MapPickerModal({
   const markerRef = useRef<any>(null)
   const userMarkerRef = useRef<any>(null)
   const [leafletReady, setLeafletReady] = useState(false)
-  const [selectedPoint, setSelectedPoint] = useState({ latitude: initialLatitude, longitude: initialLongitude })
+  const [selectedPoint, setSelectedPoint] = useState({
+    latitude: preferInitialCoordinates && isValidCoordinatePair(initialLatitude, initialLongitude)
+      ? initialLatitude
+      : userPosition?.latitude ?? initialLatitude,
+    longitude: preferInitialCoordinates && isValidCoordinatePair(initialLatitude, initialLongitude)
+      ? initialLongitude
+      : userPosition?.longitude ?? initialLongitude,
+  })
   const hasInitialCoordinates = isValidCoordinatePair(initialLatitude, initialLongitude)
+  const selectedIconRef = useRef<any>(null)
   useEffect(() => {
     const cssId = 'smartguide-leaflet-css'
     if (!document.getElementById(cssId)) {
@@ -1226,6 +1253,18 @@ function MapPickerModal({
   }, [])
 
   useEffect(() => {
+    if (!leafletReady || selectedIconRef.current || !window.L?.icon) return
+    selectedIconRef.current = window.L.icon({
+      iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+      shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+      iconSize: [25, 41],
+      iconAnchor: [12, 41],
+      popupAnchor: [1, -34],
+      shadowSize: [41, 41],
+    })
+  }, [leafletReady])
+
+  useEffect(() => {
     if (!leafletReady || !mapRef.current || mapInstanceRef.current) return undefined
 
     const initialCenter = preferInitialCoordinates && hasInitialCoordinates
@@ -1241,21 +1280,19 @@ function MapPickerModal({
       maxZoom: 19,
     }).addTo(map)
 
-    const marker = window.L.circleMarker([initialLatitude, initialLongitude], {
-      radius: 10,
-      color: '#ffffff',
-      weight: 3,
-      fillColor: '#2563eb',
-      fillOpacity: 1,
-    }).addTo(map)
-    markerRef.current = marker
+    if (selectedIconRef.current) {
+      markerRef.current = window.L.marker([selectedPoint.latitude, selectedPoint.longitude], {
+        icon: selectedIconRef.current,
+        keyboard: false,
+      }).addTo(map)
+    }
     mapInstanceRef.current = map
 
     map.on('click', (event: any) => {
       const latitude = event.latlng.lat
       const longitude = event.latlng.lng
       setSelectedPoint({ latitude, longitude })
-      marker.setLatLng([latitude, longitude])
+      markerRef.current?.setLatLng([latitude, longitude])
     })
 
     window.setTimeout(() => {
@@ -1268,7 +1305,7 @@ function MapPickerModal({
       markerRef.current = null
       userMarkerRef.current = null
     }
-  }, [hasInitialCoordinates, initialLatitude, initialLongitude, leafletReady, preferInitialCoordinates, userPosition])
+  }, [hasInitialCoordinates, initialLatitude, initialLongitude, leafletReady, preferInitialCoordinates, selectedPoint.latitude, selectedPoint.longitude, userPosition])
 
   const locateUser = () => {
     if (userPosition) {
