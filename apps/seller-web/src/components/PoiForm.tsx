@@ -1330,6 +1330,21 @@ function MapPickerModal({
   }, [hasInitialCoordinates, initialLatitude, initialLongitude, preferInitialCoordinates, userPosition])
 
   useEffect(() => {
+    if (!leafletReady || !mapInstanceRef.current || !selectedIconRef.current) return
+
+    if (!markerRef.current) {
+      markerRef.current = window.L.marker([selectedPoint.latitude, selectedPoint.longitude], {
+        icon: selectedIconRef.current,
+        keyboard: false,
+      }).addTo(mapInstanceRef.current)
+      return
+    }
+
+    markerRef.current.setLatLng([selectedPoint.latitude, selectedPoint.longitude])
+    markerRef.current.setIcon(selectedIconRef.current)
+  }, [leafletReady, selectedPoint.latitude, selectedPoint.longitude])
+
+  useEffect(() => {
     if (!mapInstanceRef.current || !userPosition) return
     if (!userMarkerRef.current) {
       userMarkerRef.current = window.L.circleMarker([userPosition.latitude, userPosition.longitude], {
