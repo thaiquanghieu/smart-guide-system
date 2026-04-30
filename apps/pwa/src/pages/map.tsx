@@ -83,6 +83,7 @@ export default function MapPage() {
   const globalCooldownUntilRef = useRef(0);
   const qrTargetPoiRef = useRef("");
   const qrAutoPlayedPoiRef = useRef("");
+  const qrAutoplayRetryRef = useRef<{ poiId: string; count: number }>({ poiId: "", count: 0 });
 
   useEffect(() => {
     const load = async () => {
@@ -261,7 +262,7 @@ export default function MapPage() {
     if (!subscriptionActive && freePlaysRemaining <= 0) {
       setReturnTo(`/map?poiId=${targetPoi.id}`);
       router.push(`/paywall?returnTo=${encodeURIComponent(`/map?poiId=${targetPoi.id}`)}`);
-      return;
+      return false;
     }
 
     setPendingPoiId(targetPoi.id);
@@ -286,6 +287,7 @@ export default function MapPage() {
         qrTargetPoiRef.current = "";
         clearTrackingTargetPoiId();
       }
+      qrAutoplayRetryRef.current = { poiId: "", count: 0 };
     } finally {
       setPlayingPoiId("");
     }
@@ -298,6 +300,8 @@ export default function MapPage() {
         router.push(`/paywall?returnTo=${encodeURIComponent(`/map?poiId=${targetPoi.id}`)}`);
       }
     }
+
+    return true;
   };
 
   useEffect(() => {
@@ -306,10 +310,28 @@ export default function MapPage() {
     if (!qrTargetPoiRef.current || qrTargetPoiRef.current !== selectedPoi.id) return undefined;
     if (qrAutoPlayedPoiRef.current === selectedPoi.id) return undefined;
 
-    qrAutoPlayedPoiRef.current = selectedPoi.id;
+    const retryState =
+      qrAutoplayRetryRef.current.poiId === selectedPoi.id
+        ? qrAutoplayRetryRef.current
+        : { poiId: selectedPoi.id, count: 0 };
+    qrAutoplayRetryRef.current = retryState;
+
+    const delayMs = retryState.count === 0 ? 700 : Math.min(2400, 1200 + retryState.count * 450);
     const timer = window.setTimeout(() => {
-      void playMapPoi(selectedPoi, { redirectToPaywallAfterFree: true, optimisticCount: false });
-    }, 350);
+      void playMapPoi(selectedPoi, { redirectToPaywallAfterFree: true, optimisticCount: false })
+        .then((success) => {
+          if (success) {
+            qrAutoPlayedPoiRef.current = selectedPoi.id;
+            qrAutoplayRetryRef.current = { poiId: "", count: 0 };
+            return;
+          }
+
+          qrAutoplayRetryRef.current = { poiId: selectedPoi.id, count: retryState.count + 1 };
+        })
+        .catch(() => {
+          qrAutoplayRetryRef.current = { poiId: selectedPoi.id, count: retryState.count + 1 };
+        });
+    }, delayMs);
 
     return () => window.clearTimeout(timer);
   }, [freePlaysRemaining, playingPoiId, selectedPoi, subscriptionActive, trackingEnabled]);
