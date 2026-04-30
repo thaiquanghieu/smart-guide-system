@@ -77,13 +77,13 @@ export default function MapPage() {
   const [hasLoadedMap, setHasLoadedMap] = useState(false);
   const [toast, setToast] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+  const [startingQrPreview, setStartingQrPreview] = useState(false);
   const trackingTimerRef = useRef<number | null>(null);
   const lastPlayedAtRef = useRef<Record<string, number>>({});
   const candidateRef = useRef<{ poiId: string; hits: number }>({ poiId: "", hits: 0 });
   const globalCooldownUntilRef = useRef(0);
   const qrTargetPoiRef = useRef("");
   const qrAutoPlayedPoiRef = useRef("");
-  const qrAutoplayRetryRef = useRef<{ poiId: string; count: number }>({ poiId: "", count: 0 });
 
   useEffect(() => {
     const load = async () => {
@@ -287,9 +287,9 @@ export default function MapPage() {
         qrTargetPoiRef.current = "";
         clearTrackingTargetPoiId();
       }
-      qrAutoplayRetryRef.current = { poiId: "", count: 0 };
     } finally {
       setPlayingPoiId("");
+      setStartingQrPreview(false);
     }
 
     if (!subscriptionActive) {
@@ -303,38 +303,6 @@ export default function MapPage() {
 
     return true;
   };
-
-  useEffect(() => {
-    if (!selectedPoi || playingPoiId || trackingEnabled || subscriptionActive || freePlaysRemaining <= 0) return undefined;
-    if (!getAutoPlay()) return undefined;
-    if (!qrTargetPoiRef.current || qrTargetPoiRef.current !== selectedPoi.id) return undefined;
-    if (qrAutoPlayedPoiRef.current === selectedPoi.id) return undefined;
-
-    const retryState =
-      qrAutoplayRetryRef.current.poiId === selectedPoi.id
-        ? qrAutoplayRetryRef.current
-        : { poiId: selectedPoi.id, count: 0 };
-    qrAutoplayRetryRef.current = retryState;
-
-    const delayMs = retryState.count === 0 ? 700 : Math.min(2400, 1200 + retryState.count * 450);
-    const timer = window.setTimeout(() => {
-      void playMapPoi(selectedPoi, { redirectToPaywallAfterFree: true, optimisticCount: false })
-        .then((success) => {
-          if (success) {
-            qrAutoPlayedPoiRef.current = selectedPoi.id;
-            qrAutoplayRetryRef.current = { poiId: "", count: 0 };
-            return;
-          }
-
-          qrAutoplayRetryRef.current = { poiId: selectedPoi.id, count: retryState.count + 1 };
-        })
-        .catch(() => {
-          qrAutoplayRetryRef.current = { poiId: selectedPoi.id, count: retryState.count + 1 };
-        });
-    }, delayMs);
-
-    return () => window.clearTimeout(timer);
-  }, [freePlaysRemaining, playingPoiId, selectedPoi, subscriptionActive, trackingEnabled]);
 
   useEffect(() => {
     if (!trackingEnabled || !navigator.geolocation || !enrichedPois.length) return undefined;
@@ -421,6 +389,16 @@ export default function MapPage() {
   }, [enrichedPois, playingPoiId, subscriptionActive, trackingEnabled]);
 
   const visibleCenter = mapCenter || userLocation;
+  const shouldShowQrTapPrompt =
+    !!selectedPoi &&
+    !trackingEnabled &&
+    !subscriptionActive &&
+    freePlaysRemaining > 0 &&
+    !playingPoiId &&
+    !startingQrPreview &&
+    !!qrTargetPoiRef.current &&
+    qrTargetPoiRef.current === selectedPoi.id &&
+    qrAutoPlayedPoiRef.current !== selectedPoi.id;
   const trackingBottom = selectedPoi
     ? "calc(env(safe-area-inset-bottom) + 348px)"
     : "calc(env(safe-area-inset-bottom) + 112px)";
@@ -544,6 +522,35 @@ export default function MapPage() {
           />
           <span className="mt-1 text-[10px]">{trackingEnabled ? t("map.trackingOn") : t("map.trackingOff")}</span>
         </button>
+
+        {shouldShowQrTapPrompt ? (
+          <div
+            className="absolute inset-x-4 z-30 rounded-[22px] border border-[#BFDBFE] bg-white/95 p-4 shadow-[0_12px_28px_rgba(15,91,215,0.14)] backdrop-blur-sm"
+            style={{ bottom: "calc(env(safe-area-inset-bottom) + 470px)" }}
+          >
+            <p className="text-center text-[14px] font-semibold text-[#0F172A]">Cham de nghe mien phi POI nay</p>
+            <p className="mt-1 text-center text-[12px] leading-5 text-[#64748B]">
+              Nghe xong he thong se chuyen sang trang goi de tiep tuc su dung.
+            </p>
+            <button
+              type="button"
+              className="mt-3 h-[48px] w-full rounded-[16px] bg-[#0F5BD7] text-[15px] font-semibold text-white"
+              onClick={async () => {
+                if (!selectedPoi) return;
+                setStartingQrPreview(true);
+                const success = await playMapPoi(selectedPoi, {
+                  redirectToPaywallAfterFree: true,
+                  optimisticCount: false,
+                });
+                if (success) {
+                  qrAutoPlayedPoiRef.current = selectedPoi.id;
+                }
+              }}
+            >
+              {startingQrPreview ? "Dang bat audio..." : "Cham de nghe mien phi"}
+            </button>
+          </div>
+        ) : null}
 
         {selectedPoi ? (
           <div
