@@ -860,6 +860,7 @@ export default function PoiForm({ mode, initialValue, poiId, onDone }: Props) {
         <MapPickerModal
           initialLatitude={pickerInitialLatitude}
           initialLongitude={pickerInitialLongitude}
+          preferInitialCoordinates={hasSelectedCoordinates}
           userPosition={userPosition}
           onClose={() => setShowMapPicker(false)}
           onPick={applyMapCoordinates}
@@ -1167,12 +1168,14 @@ function MiniMapPreview({
 function MapPickerModal({
   initialLatitude,
   initialLongitude,
+  preferInitialCoordinates,
   userPosition,
   onClose,
   onPick,
 }: {
   initialLatitude: number
   initialLongitude: number
+  preferInitialCoordinates: boolean
   userPosition: { latitude: number; longitude: number } | null
   onClose: () => void
   onPick: (latitude: number, longitude: number) => void
@@ -1264,8 +1267,10 @@ function MapPickerModal({
   }
 
   useEffect(() => {
-    locateUser()
-  }, [userPosition])
+    if (!preferInitialCoordinates) {
+      locateUser()
+    }
+  }, [preferInitialCoordinates, userPosition])
 
   useEffect(() => {
     if (!mapInstanceRef.current || !userPosition) return
