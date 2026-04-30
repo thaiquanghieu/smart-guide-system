@@ -25,11 +25,13 @@ export default function Sidebar() {
   }
 
   return (
-    <aside className="w-64 bg-secondary border-r border-gray-700 h-screen sticky top-0 p-6 flex flex-col">
-      <div className="mb-8 flex flex-col items-center pt-2 text-center">
-        <img src="/assets/appiconfg.png" alt="Smart Guide" className="mb-0 h-28 w-auto object-contain" />
-        <div className="mt-6 text-xs uppercase leading-none tracking-[0.3em] text-accent">Owner</div>
-      </div>
+    <aside className="w-64 overflow-visible bg-secondary border-r border-gray-700 h-screen sticky top-0 px-6 pb-6 pt-4 flex flex-col">
+      <Link href="/dashboard" className="mb-8 flex flex-col items-center overflow-visible pt-0 text-center">
+        <div className="flex h-44 items-start justify-center overflow-visible">
+          <img src="/assets/appiconfg.png" alt="Smart Guide" className="-mt-4 h-40 w-auto object-contain" />
+        </div>
+        <div className="-mt-2 text-xs uppercase leading-none tracking-[0.3em] text-accent">Owner</div>
+      </Link>
 
       <nav className="flex-1 space-y-2">
         {menuItems.map((item) => {
