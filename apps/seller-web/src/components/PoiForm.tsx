@@ -1223,10 +1223,14 @@ function MapPickerModal({
   useEffect(() => {
     if (!leafletReady || !mapRef.current || mapInstanceRef.current) return undefined
 
+    const initialCenter = preferInitialCoordinates
+      ? [initialLatitude, initialLongitude]
+      : [userPosition?.latitude || initialLatitude, userPosition?.longitude || initialLongitude]
+
     const map = window.L.map(mapRef.current, {
       zoomControl: true,
       attributionControl: false,
-    }).setView([userPosition?.latitude || initialLatitude, userPosition?.longitude || initialLongitude], 15)
+    }).setView(initialCenter, 15)
 
     window.L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
@@ -1253,7 +1257,7 @@ function MapPickerModal({
       markerRef.current = null
       userMarkerRef.current = null
     }
-  }, [initialLatitude, initialLongitude, leafletReady, userPosition])
+  }, [initialLatitude, initialLongitude, leafletReady, preferInitialCoordinates, userPosition])
 
   const locateUser = () => {
     if (userPosition) {
