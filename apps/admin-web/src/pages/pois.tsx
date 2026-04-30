@@ -274,11 +274,6 @@ export default function POIs() {
                   >
                     <div className="mb-4 flex justify-between gap-4">
                       <div className="flex flex-1 gap-4">
-                        {selectionMode ? (
-                          <div className={`mt-1 flex h-6 w-6 items-center justify-center rounded-full border ${selectedIds.includes(poi.id) ? 'border-primary bg-primary text-white' : 'border-gray-600 text-gray-500'}`}>
-                            {selectedIds.includes(poi.id) ? '•' : ''}
-                          </div>
-                        ) : null}
                         <div className="flex-1">
                           <h3 className="mb-2 text-xl font-bold text-white">{poi.name}</h3>
                           <p className="mb-3 line-clamp-2 text-sm text-gray-400">{poi.description}</p>

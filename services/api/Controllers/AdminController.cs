@@ -637,7 +637,6 @@ public class AdminController : ControllerBase
         // ví dụ muốn nhân đôi số hiển thị: online = onlineDevices * 2 ở lớp response/view model.
         var onlineDevices = await _db.Devices.CountAsync(x => x.Status == "active" && x.LastSeen != null && x.LastSeen > onlineCutoff);
         var bannedDevices = await _db.Devices.CountAsync(x => x.Status == "banned");
-        var totalPois = await _db.Pois.CountAsync();
         var approvedPois = await _db.Pois.Where(x => x.Status == "approved").CountAsync();
         var pendingPois = await _db.Pois.Where(x => x.Status == "pending").CountAsync();
         var rejectedPois = await _db.Pois.Where(x => x.Status == "rejected").CountAsync();
@@ -664,6 +663,11 @@ public class AdminController : ControllerBase
             .Take(5)
             .ToList();
 
+        var ownerLookup = await _db.Users
+            .Where(x => x.Role == "owner")
+            .Select(x => new { x.Id, x.UserName, x.Email })
+            .ToDictionaryAsync(x => x.Id);
+
         var topOwners = allPoisForStats
             .GroupBy(x => x.OwnerId)
             .Select(g => new
@@ -674,13 +678,21 @@ public class AdminController : ControllerBase
             })
             .OrderByDescending(x => x.total_listens)
             .Take(5)
+            .Select(x => new
+            {
+                x.owner_id,
+                owner_name = ownerLookup.TryGetValue(x.owner_id ?? 0, out var owner) ? owner.UserName : $"Owner #{x.owner_id}",
+                owner_email = ownerLookup.TryGetValue(x.owner_id ?? 0, out var ownerInfo) ? ownerInfo.Email : null,
+                x.poi_count,
+                x.total_listens
+            })
             .ToList();
 
         return Ok(new
         {
             users = new { total = totalUsers, owners = totalOwners, admins = totalAdmins },
             devices = new { total = totalDevices, online = onlineDevices, banned = bannedDevices },
-            pois = new { total = totalPois, approved = approvedPois, pending = pendingPois, rejected = rejectedPois },
+            pois = new { total = approvedPois, approved = approvedPois, pending = pendingPois, rejected = rejectedPois },
             listens = new { total = totalListens, avg_duration_seconds = (int)avgDuration },
             top_pois = topPoiResult,
             top_owners = topOwners

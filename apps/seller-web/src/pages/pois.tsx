@@ -11,6 +11,7 @@ interface POI {
   name: string
   status: string
   description: string
+  rejectedReason?: string
   listened_count: number
   rating_avg: number
   created_at: string
@@ -39,7 +40,7 @@ export default function POIs() {
 
   useEffect(() => {
     if (!router.isReady) return
-    const status = router.query.status
+    const status = Array.isArray(router.query.status) ? router.query.status[0] : router.query.status
     if (status === 'pending' || status === 'approved' || status === 'rejected' || status === 'all') {
       setFilter(status)
     }
@@ -50,6 +51,7 @@ export default function POIs() {
     name: poi.name || 'Chưa có tên',
     status: poi.status || 'pending',
     description: poi.description || poi.shortDescription || poi.short_description || '',
+    rejectedReason: poi.rejectedReason || poi.rejected_reason || '',
     listened_count: Number(poi.listened_count ?? poi.listenedCount ?? 0),
     rating_avg: Number(poi.rating_avg ?? poi.ratingAvg ?? 0),
     created_at: poi.created_at || poi.createdAt || new Date().toISOString(),
@@ -234,11 +236,6 @@ export default function POIs() {
                     className={`rounded-lg border bg-secondary p-6 transition ${selectionMode ? 'cursor-pointer' : ''} ${selectedIds.includes(poi.id) ? 'border-primary bg-primary/5 shadow-lg shadow-primary/10' : 'border-gray-700 hover:border-primary/50'}`}
                   >
                     <div className="mb-4 flex items-start justify-between gap-4">
-                      {selectionMode ? (
-                        <div className={`mt-1 flex h-6 w-6 items-center justify-center rounded-full border ${selectedIds.includes(poi.id) ? 'border-primary bg-primary text-white' : 'border-gray-600 text-gray-500'}`}>
-                          {selectedIds.includes(poi.id) ? '•' : ''}
-                        </div>
-                      ) : null}
                       <div className="flex-1">
                         <h3 className="text-xl font-bold text-white mb-2">
                           {poi.name}
@@ -254,6 +251,9 @@ export default function POIs() {
                           >
                             {getStatusLabel(poi.status)}
                           </span>
+                          {poi.status === 'rejected' && poi.rejectedReason ? (
+                            <span className="text-red-300 text-sm">Lý do: {poi.rejectedReason}</span>
+                          ) : null}
                           <span className="text-gray-400 text-sm">
                             📊 {poi.listened_count} lượt nghe
                           </span>

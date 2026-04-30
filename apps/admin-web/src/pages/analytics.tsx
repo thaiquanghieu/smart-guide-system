@@ -12,7 +12,7 @@ interface Analytics {
   pois: { total: number; approved: number; pending: number; rejected: number }
   listens: { total: number; avg_duration_seconds: number }
   top_pois: Array<{ id: string; name: string; listened_count: number }>
-  top_owners: Array<{ owner_id: number; poi_count: number; total_listens: number }>
+  top_owners: Array<{ owner_id: number; owner_name: string; owner_email?: string | null; poi_count: number; total_listens: number }>
 }
 
 type QrEntry = {
@@ -89,7 +89,7 @@ export default function Analytics() {
                   </Link>
 
                   <Link href="/pois" className="block bg-gradient-to-br from-secondary to-secondary/50 border border-green-500/30 rounded-xl p-6 hover:border-green-500/60 transition shadow-lg hover:shadow-green-500/20">
-                    <p className="text-gray-400 text-sm font-medium mb-2">📍 Tổng POI</p>
+                    <p className="text-gray-400 text-sm font-medium mb-2">📍 POI đang hoạt động</p>
                     <p className="text-4xl font-bold text-white mb-2">
                       {analytics.pois.total}
                     </p>
@@ -197,9 +197,10 @@ export default function Analytics() {
                               </span>
                               <div>
                                 <p className="text-white font-semibold">
-                                  Owner #{owner.owner_id}
+                                  {owner.owner_name}
                                 </p>
                                 <p className="text-xs text-gray-400">
+                                  {owner.owner_email ? `${owner.owner_email} • ` : ''}
                                   {owner.poi_count} POI
                                 </p>
                               </div>

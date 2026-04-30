@@ -386,7 +386,6 @@ export default function AdminQrPage() {
                           }}
                         >
                           <td className="px-4 py-3">
-                            {selectionMode ? <span className={`mb-2 inline-flex h-4 w-4 rounded-full border ${selectedIds.includes(entry.id) ? 'border-primary bg-primary/40' : 'border-gray-600 bg-dark'}`} /> : null}
                             <div className="font-semibold">{entry.name}</div>
                             <div className="text-xs text-gray-400">{entry.entryCode}</div>
                           </td>

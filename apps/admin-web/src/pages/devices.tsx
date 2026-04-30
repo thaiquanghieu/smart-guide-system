@@ -264,9 +264,7 @@ export default function DevicesPage() {
                               }
                             }}
                           >
-                            <td className="p-4 align-top">
-                              {selectionMode ? <span className={`mt-1 inline-flex h-4 w-4 rounded-full border ${selectedIds.includes(device.id) ? 'border-primary bg-primary/40' : 'border-gray-600 bg-dark'}`} /> : null}
-                            </td>
+                            <td className="p-4 align-top" />
                             <td className="p-4">
                               <div className="flex items-start gap-3">
                                 <Smartphone className="mt-0.5 text-primary" size={20} />

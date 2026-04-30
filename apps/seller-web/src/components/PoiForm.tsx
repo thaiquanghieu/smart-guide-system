@@ -223,12 +223,41 @@ function mockTranslate(value: string, languageCode: string) {
 
 async function searchAddresses(keyword: string) {
   if (!keyword.trim()) return []
-  const response = await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&limit=5&q=${encodeURIComponent(keyword)}`, {
+  const normalizedKeyword = /việt nam|vietnam/i.test(keyword) ? keyword : `${keyword}, Hồ Chí Minh, Việt Nam`
+  const params = new URLSearchParams({
+    format: 'jsonv2',
+    limit: '8',
+    q: normalizedKeyword,
+    addressdetails: '1',
+    namedetails: '1',
+    countrycodes: 'vn',
+    dedupe: '1',
+    'accept-language': 'vi',
+  })
+  const response = await fetch(`https://nominatim.openstreetmap.org/search?${params.toString()}`, {
     headers: { Accept: 'application/json' },
   })
   if (!response.ok) return []
   const data = await response.json()
-  return Array.isArray(data) ? data : []
+  return Array.isArray(data)
+    ? data.map((item: any) => {
+        const address = item.address || {}
+        const primary = [
+          [address.house_number, address.road].filter(Boolean).join(' ').trim(),
+          address.suburb || address.neighbourhood || address.hamlet || address.village,
+          address.city_district || address.county,
+          address.city || address.town || address.state,
+          address.country,
+        ]
+          .filter(Boolean)
+          .join(', ')
+
+        return {
+          ...item,
+          display_label: primary || item.display_name,
+        }
+      })
+    : []
 }
 
 declare global {
@@ -245,13 +274,15 @@ export default function PoiForm({ mode, initialValue, poiId, onDone }: Props) {
   const [showAudio, setShowAudio] = useState(false)
   const [loading, setLoading] = useState(false)
   const [uploadingImages, setUploadingImages] = useState(false)
-  const [translating, setTranslating] = useState(false)
+  const [translatingContent, setTranslatingContent] = useState(false)
+  const [translatingAudio, setTranslatingAudio] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [showMapPicker, setShowMapPicker] = useState(false)
   const [addressSuggestions, setAddressSuggestions] = useState<any[]>([])
   const [loadingSuggestions, setLoadingSuggestions] = useState(false)
+  const [userPosition, setUserPosition] = useState<{ latitude: number; longitude: number } | null>(null)
   const addressTimerRef = useRef<number | null>(null)
 
   useEffect(() => {
@@ -265,6 +296,20 @@ export default function PoiForm({ mode, initialValue, poiId, onDone }: Props) {
     })
     setActiveLang('vi')
   }, [initialValue])
+
+  useEffect(() => {
+    if (!navigator.geolocation) return
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setUserPosition({
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+        })
+      },
+      () => undefined,
+      { enableHighAccuracy: true, timeout: 8000, maximumAge: 30000 }
+    )
+  }, [])
 
   const images = useMemo(
     () =>
@@ -301,7 +346,7 @@ export default function PoiForm({ mode, initialValue, poiId, onDone }: Props) {
     setAddressSuggestions([])
     setForm((prev) => ({
       ...prev,
-      address: item.display_name || prev.address,
+      address: item.display_label || item.display_name || prev.address,
       latitude: Number(item.lat).toFixed(7),
       longitude: Number(item.lon).toFixed(7),
     }))
@@ -419,7 +464,7 @@ export default function PoiForm({ mode, initialValue, poiId, onDone }: Props) {
   }
 
   const fillTranslations = async () => {
-    setTranslating(true)
+    setTranslatingContent(true)
     setError('')
     try {
       const { translations } = await buildTranslatedContent(form)
@@ -428,12 +473,12 @@ export default function PoiForm({ mode, initialValue, poiId, onDone }: Props) {
     } catch {
       setError('Không thể chuẩn bị bản dịch, vui lòng thử lại.')
     } finally {
-      setTranslating(false)
+      setTranslatingContent(false)
     }
   }
 
   const fillAudioScripts = async () => {
-    setTranslating(true)
+    setTranslatingAudio(true)
     setError('')
     try {
       const { audios } = await buildTranslatedContent(form)
@@ -442,7 +487,7 @@ export default function PoiForm({ mode, initialValue, poiId, onDone }: Props) {
     } catch {
       setError('Không thể chuẩn bị lời thuyết minh, vui lòng thử lại.')
     } finally {
-      setTranslating(false)
+      setTranslatingAudio(false)
     }
   }
 
@@ -649,13 +694,13 @@ export default function PoiForm({ mode, initialValue, poiId, onDone }: Props) {
             <Input dataField="latitude" error={fieldErrors.latitude} label="Vĩ độ *" value={form.latitude} onChange={(value) => updateField('latitude', value)} placeholder="10.779783" />
             <Input dataField="longitude" error={fieldErrors.longitude} label="Kinh độ *" value={form.longitude} onChange={(value) => updateField('longitude', value)} placeholder="106.699018" />
           </div>
-          <div className="md:col-span-2 grid gap-3 md:grid-cols-[220px,1fr]">
-            <MiniMapPreview latitude={Number(form.latitude)} longitude={Number(form.longitude)} />
-            <div className="flex items-center">
+          <div className="md:col-span-2 grid gap-3 md:grid-cols-[minmax(0,1fr),220px] items-stretch">
+            <MiniMapPreview latitude={Number(form.latitude)} longitude={Number(form.longitude)} userPosition={userPosition} />
+            <div className="flex items-stretch">
               <button
                 type="button"
                 onClick={() => setShowMapPicker(true)}
-                className="rounded-xl border border-gray-600 px-4 py-3 text-sm font-semibold text-gray-200 hover:border-primary hover:text-white"
+                className="w-full rounded-xl border border-gray-600 px-4 py-3 text-sm font-semibold text-gray-200 hover:border-primary hover:text-white"
               >
                 Chọn từ bản đồ
               </button>
@@ -725,8 +770,8 @@ export default function PoiForm({ mode, initialValue, poiId, onDone }: Props) {
             <h2 className="text-xl font-bold text-white">Nội dung hiển thị</h2>
             <p className="text-gray-400 text-sm">Hệ thống sẽ lấy thông tin bên trên, bạn có thể xem chi tiết và chỉnh sửa lại.</p>
           </div>
-          <button type="button" onClick={showTranslations ? () => setShowTranslations(false) : fillTranslations} disabled={translating} className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white font-bold px-5 py-3 rounded-xl shadow-lg shadow-blue-900/30">
-            {translating ? 'Đang chuẩn bị...' : showTranslations ? 'Ẩn chi tiết' : 'Xem chi tiết'}
+          <button type="button" onClick={showTranslations ? () => setShowTranslations(false) : fillTranslations} disabled={translatingContent} className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white font-bold px-5 py-3 rounded-xl shadow-lg shadow-blue-900/30">
+            {translatingContent ? 'Đang chuẩn bị...' : showTranslations ? 'Ẩn chi tiết' : 'Xem chi tiết'}
           </button>
         </div>
         {showTranslations && (
@@ -746,8 +791,8 @@ export default function PoiForm({ mode, initialValue, poiId, onDone }: Props) {
             <h2 className="text-xl font-bold text-white">Lời thuyết minh / Audio</h2>
             <p className="text-gray-400 text-sm">Hệ thống sẽ tự chuẩn bị sẵn lời thuyết minh cho 5 ngôn ngữ để bạn kiểm tra và chỉnh sửa.</p>
           </div>
-          <button type="button" onClick={showAudio ? () => setShowAudio(false) : fillAudioScripts} disabled={translating} className="bg-accent hover:bg-accent/80 disabled:bg-gray-600 disabled:text-gray-300 text-dark font-bold px-5 py-3 rounded-xl shadow-lg shadow-emerald-900/20">
-            {translating ? 'Đang tạo...' : showAudio ? 'Ẩn chi tiết' : 'Xem chi tiết'}
+          <button type="button" onClick={showAudio ? () => setShowAudio(false) : fillAudioScripts} disabled={translatingAudio} className="bg-accent hover:bg-accent/80 disabled:bg-gray-600 disabled:text-gray-300 text-dark font-bold px-5 py-3 rounded-xl shadow-lg shadow-emerald-900/20">
+            {translatingAudio ? 'Đang tạo...' : showAudio ? 'Ẩn chi tiết' : 'Xem chi tiết'}
           </button>
         </div>
         {showAudio && (
@@ -773,6 +818,7 @@ export default function PoiForm({ mode, initialValue, poiId, onDone }: Props) {
         <MapPickerModal
           initialLatitude={Number(form.latitude) || 10.7765}
           initialLongitude={Number(form.longitude) || 106.7009}
+          userPosition={userPosition}
           onClose={() => setShowMapPicker(false)}
           onPick={applyMapCoordinates}
         />
@@ -925,7 +971,7 @@ function AddressSuggestInput({
               onClick={() => onSelect(item)}
               className="block w-full border-b border-gray-800 px-4 py-3 text-left text-sm text-gray-200 hover:bg-primary/10"
             >
-              {item.display_name}
+              {item.display_label || item.display_name}
             </button>
           ))}
         </div>
@@ -935,18 +981,124 @@ function AddressSuggestInput({
   )
 }
 
-function MiniMapPreview({ latitude, longitude }: { latitude: number; longitude: number }) {
-  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
-    return <div className="h-28 rounded-xl border border-dashed border-gray-700 bg-dark/30 px-4 py-3 text-sm text-gray-500">Chưa chọn tọa độ</div>
+function MiniMapPreview({
+  latitude,
+  longitude,
+  userPosition,
+}: {
+  latitude: number
+  longitude: number
+  userPosition: { latitude: number; longitude: number } | null
+}) {
+  const containerRef = useRef<HTMLDivElement | null>(null)
+  const mapRef = useRef<any>(null)
+  const markerRef = useRef<any>(null)
+  const userMarkerRef = useRef<any>(null)
+  const [leafletReady, setLeafletReady] = useState(false)
+  const hasValidCoordinates = Number.isFinite(latitude) && Number.isFinite(longitude)
+
+  useEffect(() => {
+    const cssId = 'smartguide-leaflet-css'
+    if (!document.getElementById(cssId)) {
+      const link = document.createElement('link')
+      link.id = cssId
+      link.rel = 'stylesheet'
+      link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'
+      document.head.appendChild(link)
+    }
+
+    const scriptId = 'smartguide-leaflet-script'
+    const ready = () => {
+      if (window.L?.map) setLeafletReady(true)
+    }
+
+    if (window.L?.map) {
+      ready()
+      return undefined
+    }
+
+    let script = document.getElementById(scriptId) as HTMLScriptElement | null
+    if (!script) {
+      script = document.createElement('script')
+      script.id = scriptId
+      script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'
+      script.async = true
+      script.crossOrigin = ''
+      document.body.appendChild(script)
+    }
+
+    script.addEventListener('load', ready)
+    return () => script?.removeEventListener('load', ready)
+  }, [])
+
+  useEffect(() => {
+    if (!hasValidCoordinates || !leafletReady || !containerRef.current || mapRef.current) return undefined
+
+    const map = window.L.map(containerRef.current, {
+      zoomControl: false,
+      attributionControl: false,
+      dragging: false,
+      scrollWheelZoom: false,
+      doubleClickZoom: false,
+      boxZoom: false,
+      keyboard: false,
+      tap: false,
+      touchZoom: false,
+    }).setView([latitude, longitude], 16)
+
+    window.L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+    }).addTo(map)
+
+    markerRef.current = window.L.marker([latitude, longitude]).addTo(map)
+    mapRef.current = map
+
+    window.setTimeout(() => map.invalidateSize(), 40)
+
+    return () => {
+      map.remove()
+      mapRef.current = null
+      markerRef.current = null
+      userMarkerRef.current = null
+    }
+  }, [hasValidCoordinates, leafletReady, latitude, longitude])
+
+  useEffect(() => {
+    if (!hasValidCoordinates || !mapRef.current) return
+    markerRef.current?.setLatLng([latitude, longitude])
+    mapRef.current.setView([latitude, longitude], 16, { animate: false })
+  }, [hasValidCoordinates, latitude, longitude])
+
+  useEffect(() => {
+    if (!mapRef.current) return
+    if (!userPosition) {
+      if (userMarkerRef.current) {
+        mapRef.current.removeLayer(userMarkerRef.current)
+        userMarkerRef.current = null
+      }
+      return
+    }
+
+    if (!userMarkerRef.current) {
+      userMarkerRef.current = window.L.circleMarker([userPosition.latitude, userPosition.longitude], {
+        radius: 8,
+        color: '#ffffff',
+        weight: 2,
+        fillColor: '#2563eb',
+        fillOpacity: 1,
+      }).addTo(mapRef.current)
+    } else {
+      userMarkerRef.current.setLatLng([userPosition.latitude, userPosition.longitude])
+    }
+  }, [userPosition])
+
+  if (!hasValidCoordinates) {
+    return <div className="h-48 rounded-xl border border-dashed border-gray-700 bg-dark/30 px-4 py-3 text-sm text-gray-500">Chưa chọn tọa độ</div>
   }
+
   return (
     <div className="overflow-hidden rounded-xl border border-gray-700 bg-dark/40">
-      <iframe
-        title="mini-map"
-        className="h-28 w-full"
-        loading="lazy"
-        src={`https://www.openstreetmap.org/export/embed.html?bbox=${longitude - 0.001}%2C${latitude - 0.001}%2C${longitude + 0.001}%2C${latitude + 0.001}&layer=mapnik&marker=${latitude}%2C${longitude}`}
-      />
+      <div ref={containerRef} className="h-48 w-full" />
     </div>
   )
 }
@@ -954,17 +1106,20 @@ function MiniMapPreview({ latitude, longitude }: { latitude: number; longitude: 
 function MapPickerModal({
   initialLatitude,
   initialLongitude,
+  userPosition,
   onClose,
   onPick,
 }: {
   initialLatitude: number
   initialLongitude: number
+  userPosition: { latitude: number; longitude: number } | null
   onClose: () => void
   onPick: (latitude: number, longitude: number) => void
 }) {
   const mapRef = useRef<HTMLDivElement | null>(null)
   const mapInstanceRef = useRef<any>(null)
   const markerRef = useRef<any>(null)
+  const userMarkerRef = useRef<any>(null)
   const [leafletReady, setLeafletReady] = useState(false)
   const [selectedPoint, setSelectedPoint] = useState({ latitude: initialLatitude, longitude: initialLongitude })
   const [search, setSearch] = useState('')
@@ -1010,12 +1165,11 @@ function MapPickerModal({
 
     const map = window.L.map(mapRef.current, {
       zoomControl: true,
-      attributionControl: true,
-    }).setView([initialLatitude, initialLongitude], 15)
+      attributionControl: false,
+    }).setView([userPosition?.latitude || initialLatitude, userPosition?.longitude || initialLongitude], 15)
 
     window.L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
-      attribution: '&copy; OpenStreetMap contributors',
     }).addTo(map)
 
     const marker = window.L.marker([initialLatitude, initialLongitude]).addTo(map)
@@ -1037,8 +1191,9 @@ function MapPickerModal({
       map.remove()
       mapInstanceRef.current = null
       markerRef.current = null
+      userMarkerRef.current = null
     }
-  }, [initialLatitude, initialLongitude, leafletReady])
+  }, [initialLatitude, initialLongitude, leafletReady, userPosition])
 
   const moveToPoint = (latitude: number, longitude: number) => {
     setSelectedPoint({ latitude, longitude })
@@ -1047,15 +1202,34 @@ function MapPickerModal({
   }
 
   const locateUser = () => {
+    if (userPosition) {
+      mapInstanceRef.current?.setView([userPosition.latitude, userPosition.longitude], 16)
+      return
+    }
     if (!navigator.geolocation) return
     navigator.geolocation.getCurrentPosition((position) => {
-      moveToPoint(position.coords.latitude, position.coords.longitude)
+      mapInstanceRef.current?.setView([position.coords.latitude, position.coords.longitude], 16)
     })
   }
 
   useEffect(() => {
     locateUser()
-  }, [])
+  }, [userPosition])
+
+  useEffect(() => {
+    if (!mapInstanceRef.current || !userPosition) return
+    if (!userMarkerRef.current) {
+      userMarkerRef.current = window.L.circleMarker([userPosition.latitude, userPosition.longitude], {
+        radius: 8,
+        color: '#ffffff',
+        weight: 2,
+        fillColor: '#2563eb',
+        fillOpacity: 1,
+      }).addTo(mapInstanceRef.current)
+    } else {
+      userMarkerRef.current.setLatLng([userPosition.latitude, userPosition.longitude])
+    }
+  }, [userPosition, leafletReady])
 
   const runSearch = async () => {
     setSearching(true)
@@ -1097,7 +1271,7 @@ function MapPickerModal({
                     }}
                     className="block w-full border-b border-gray-800 px-4 py-3 text-left text-sm text-gray-200 hover:bg-primary/10"
                   >
-                    {item.display_name}
+                    {item.display_label || item.display_name}
                   </button>
                 ))}
               </div>

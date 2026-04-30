@@ -514,9 +514,6 @@ export default function SellerQrPage() {
                     >
                       <div className="grid gap-4 lg:grid-cols-[170px,1fr]">
                         <div className="flex flex-col items-center gap-3">
-                          <div className="w-full flex justify-start">
-                            {selectionMode ? <span className={`inline-flex h-4 w-4 rounded-full border ${selectedIds.includes(entry.id) ? 'border-primary bg-primary/40' : 'border-gray-600 bg-dark'}`} /> : null}
-                          </div>
                           <div className="inline-flex w-fit rounded-2xl bg-white p-3 shadow-sm">
                             <img src={getQrImageUrl(entry.entryCode)} alt={entry.name} className="h-[148px] w-[148px]" />
                           </div>
