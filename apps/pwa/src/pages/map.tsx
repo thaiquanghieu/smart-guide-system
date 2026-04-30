@@ -528,9 +528,9 @@ export default function MapPage() {
             className="absolute inset-x-4 z-30 rounded-[22px] border border-[#BFDBFE] bg-white/95 p-4 shadow-[0_12px_28px_rgba(15,91,215,0.14)] backdrop-blur-sm"
             style={{ bottom: "calc(env(safe-area-inset-bottom) + 470px)" }}
           >
-            <p className="text-center text-[14px] font-semibold text-[#0F172A]">Cham de nghe mien phi POI nay</p>
+            <p className="text-center text-[14px] font-semibold text-[#0F172A]">Chạm để nghe miễn phí POI này</p>
             <p className="mt-1 text-center text-[12px] leading-5 text-[#64748B]">
-              Nghe xong he thong se chuyen sang trang goi de tiep tuc su dung.
+              Nghe xong hệ thống sẽ chuyển sang trang gói để tiếp tục sử dụng.
             </p>
             <button
               type="button"
@@ -547,7 +547,7 @@ export default function MapPage() {
                 }
               }}
             >
-              {startingQrPreview ? "Dang bat audio..." : "Cham de nghe mien phi"}
+              {startingQrPreview ? "Đang bật âm thanh..." : "Chạm để nghe miễn phí"}
             </button>
           </div>
         ) : null}
