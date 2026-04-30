@@ -847,7 +847,7 @@ export default function ProfilePage() {
                           <div className="mt-4 grid grid-cols-2 gap-3 text-[13px]">
                             <div className="rounded-[14px] bg-[#F3F7FF] px-3 py-3">
                               <p className="text-[#6B7280]">Số tiền</p>
-                              <p className="mt-1 font-bold text-[#0F5BD7]">{Number(item.amount || 0).toLocaleString("vi-VN")}đ</p>
+                              <p className="mt-1 font-bold text-[#0F5BD7]">{formatSignedPaymentAmount(item.amount, "out")}</p>
                             </div>
                             <div className="rounded-[14px] bg-[#F9FAFB] px-3 py-3">
                               <p className="text-[#6B7280]">Thời điểm</p>
@@ -891,7 +891,7 @@ export default function ProfilePage() {
 
             <div className="mt-5 space-y-3 text-[14px]">
               <PaymentInfoRow label="Trạng thái" value={selectedPayment.status_label || selectedPayment.status} />
-              <PaymentInfoRow label="Số tiền" value={`${Number(selectedPayment.amount || 0).toLocaleString("vi-VN")}đ`} accent />
+              <PaymentInfoRow label="Số tiền" value={formatSignedPaymentAmount(selectedPayment.amount, "out")} accent />
               <PaymentInfoRow label="Loại" value={selectedPayment.payment_type} />
               <PaymentInfoRow label="Tạo lúc" value={formatDateTime(selectedPayment.created_at)} />
               <PaymentInfoRow label="Xác nhận" value={formatDateTime(selectedPayment.confirmed_at || selectedPayment.used_at)} />
@@ -965,4 +965,9 @@ function PaymentInfoRow({ label, value, accent = false }: { label: string; value
       <p className={`mt-1 font-semibold ${accent ? "text-[#0F5BD7]" : "text-[#111827]"}`}>{value || "Chưa có"}</p>
     </div>
   );
+}
+
+function formatSignedPaymentAmount(amount?: number, direction: "in" | "out" = "out") {
+  const prefix = direction === "in" ? "+" : "-";
+  return `${prefix}${Math.abs(Number(amount || 0)).toLocaleString("vi-VN")}đ`;
 }

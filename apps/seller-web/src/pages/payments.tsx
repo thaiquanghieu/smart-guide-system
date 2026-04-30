@@ -18,6 +18,11 @@ type Payment = {
   rejected_reason?: string
 }
 
+function formatSignedAmount(amount: number, direction: 'in' | 'out' = 'out') {
+  const prefix = direction === 'in' ? '+' : '-'
+  return `${prefix}${Math.abs(amount || 0).toLocaleString('vi-VN')}đ`
+}
+
 function formatDate(value?: string) {
   if (!value) return 'Chưa có'
   return new Intl.DateTimeFormat('vi-VN', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(value))
@@ -37,12 +42,27 @@ export default function SellerPayments() {
   const [sort, setSort] = useState('newest')
   const [loading, setLoading] = useState(true)
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null)
+  const [error, setError] = useState('')
 
   const fetchPayments = async (silent = false) => {
     if (!silent) setLoading(true)
     try {
-      const response = await apiClient.get('/owner/payments', { params: { status } })
-      setPayments(response.data || [])
+      const ownerId = typeof window !== 'undefined' ? localStorage.getItem('userId') : null
+      const response = await apiClient.get('/owner/payments', { params: { status, type: 'all', ownerId } })
+      const items = Array.isArray(response.data)
+        ? response.data
+        : Array.isArray(response.data?.payments)
+          ? response.data.payments
+          : Array.isArray(response.data?.items)
+            ? response.data.items
+            : []
+      setPayments(items)
+      setError('')
+    } catch (err: any) {
+      if (!silent) {
+        setPayments([])
+        setError(err?.response?.data?.message || 'Không tải được dữ liệu thanh toán.')
+      }
     } finally {
       if (!silent) setLoading(false)
     }
@@ -96,6 +116,7 @@ export default function SellerPayments() {
 
             <div className="mt-6 overflow-hidden rounded-2xl border border-gray-700 bg-secondary">
               {loading ? <p className="p-6 text-gray-400">Đang tải...</p> : null}
+              {!loading && error ? <p className="p-6 text-red-300">{error}</p> : null}
               {!loading && visiblePayments.length === 0 ? <p className="p-6 text-gray-400">Chưa có thanh toán phù hợp.</p> : null}
               {visiblePayments.length > 0 ? (
                 <div className="hidden border-b border-gray-700 bg-dark/30 px-5 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-gray-400 md:grid md:grid-cols-[1.2fr_1fr_160px_160px_130px]">
@@ -123,7 +144,7 @@ export default function SellerPayments() {
                     <p>Xác nhận: {formatDate(payment.confirmed_at)}</p>
                     {payment.rejected_reason ? <p className="text-red-300">Lý do: {payment.rejected_reason}</p> : null}
                   </div>
-                  <p className="text-xl font-bold text-yellow-300">{payment.amount.toLocaleString('vi-VN')}đ</p>
+                  <p className="text-xl font-bold text-yellow-300">{formatSignedAmount(payment.amount, 'out')}</p>
                   <span className={`h-fit rounded-full px-3 py-1 text-center text-sm font-semibold ${statusClass(payment.status)}`}>{payment.status_label}</span>
                   <div className="flex items-start md:justify-end">
                     <span className="rounded-lg bg-primary/15 px-3 py-2 text-sm font-semibold text-primary">Xem chi tiết</span>
@@ -149,7 +170,7 @@ export default function SellerPayments() {
             <div className="mt-6 grid gap-4 md:grid-cols-2">
               <InfoCard label="Nội dung" value={selectedPayment.description} />
               <InfoCard label="Trạng thái" value={selectedPayment.status_label} />
-              <InfoCard label="Số tiền" value={`${selectedPayment.amount.toLocaleString('vi-VN')}đ`} accent />
+              <InfoCard label="Số tiền" value={formatSignedAmount(selectedPayment.amount, 'out')} accent />
               <InfoCard label="Ngày tạo" value={formatDate(selectedPayment.created_at)} />
               <InfoCard label="Ngày xác nhận" value={formatDate(selectedPayment.confirmed_at)} />
               <InfoCard label="Loại thanh toán" value={selectedPayment.payment_type} />

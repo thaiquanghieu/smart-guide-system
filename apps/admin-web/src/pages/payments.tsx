@@ -25,6 +25,11 @@ type Payment = {
   rejected_reason?: string
 }
 
+function formatSignedAmount(amount: number, direction: 'in' | 'out' = 'in') {
+  const prefix = direction === 'in' ? '+' : '-'
+  return `${prefix}${Math.abs(amount || 0).toLocaleString('vi-VN')}đ`
+}
+
 function formatDate(value?: string) {
   if (!value) return 'Chưa có'
   return new Intl.DateTimeFormat('vi-VN', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(value))
@@ -132,7 +137,7 @@ export default function AdminPayments() {
                     <p>Tạo: {formatDate(payment.created_at)}</p>
                     <p>Xác nhận: {formatDate(payment.confirmed_at)}</p>
                   </div>
-                  <p className="text-xl font-bold text-yellow-300">{payment.amount.toLocaleString('vi-VN')}đ</p>
+                  <p className="text-xl font-bold text-yellow-300">{formatSignedAmount(payment.amount, 'in')}</p>
                   <span className={`h-fit rounded-full px-3 py-1 text-center text-sm font-semibold ${statusClass(payment.status)}`}>{payment.status_label}</span>
                   <div className="flex items-start xl:justify-end">
                     <button
@@ -164,7 +169,7 @@ export default function AdminPayments() {
             <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
               <InfoCard label="Nội dung" value={selectedPayment.description} />
               <InfoCard label="Trạng thái" value={selectedPayment.status_label} />
-              <InfoCard label="Số tiền" value={`${selectedPayment.amount.toLocaleString('vi-VN')}đ`} accent />
+              <InfoCard label="Số tiền" value={formatSignedAmount(selectedPayment.amount, 'in')} accent />
               <InfoCard label="Người trả" value={selectedPayment.owner_name || selectedPayment.device_name || selectedPayment.payer_type} />
               <InfoCard label="Email seller" value={selectedPayment.owner_email || 'Chưa có'} />
               <InfoCard label="Thiết bị" value={selectedPayment.device_name || 'Chưa có'} />
