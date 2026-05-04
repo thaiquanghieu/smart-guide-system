@@ -2,6 +2,7 @@ import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
 import Head from "next/head";
 import apiClient from "@/lib/api";
+import AppLoadingScreen from "@/components/AppLoadingScreen";
 import { getPlanName, useAppI18n } from "@/lib/i18n";
 import {
   clearEntryContext,
@@ -37,8 +38,9 @@ type PaymentPreview = {
 export default function PaymentPage() {
   const router = useRouter();
   const { lang, t } = useAppI18n();
+  const loadingMessage = t("common.loading");
   const [payment, setPayment] = useState<PaymentPreview | null>(null);
-  const [message, setMessage] = useState(t("common.loading"));
+  const [message, setMessage] = useState(loadingMessage);
   const [isConfirming, setIsConfirming] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [showRejectedNotice, setShowRejectedNotice] = useState(false);
@@ -125,6 +127,10 @@ export default function PaymentPage() {
 
     return () => window.clearInterval(timer);
   }, [payment, router, t]);
+
+  if (!payment && message === loadingMessage) {
+    return <AppLoadingScreen message={loadingMessage} detail="Đang chuẩn bị thông tin thanh toán cho bạn." />;
+  }
 
   const qrUrl =
     payment == null

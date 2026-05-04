@@ -476,9 +476,9 @@ export default function MapPage() {
       >
         <div
           className="absolute left-0 right-0 top-0 z-10 bg-[#F4F7FB]"
-          style={{ height: "calc(env(safe-area-inset-top) + 74px)" }}
+          style={{ height: "calc(env(safe-area-inset-top) + 80px)" }}
         >
-          <div className="px-4 pt-[calc(env(safe-area-inset-top)+12px)]">
+          <div className="px-5 pt-[calc(env(safe-area-inset-top)+18px)]">
             <AppHeader
               leftIcon="qr"
               onLeftClick={() => router.push(`/scan?returnTo=${encodeURIComponent(router.asPath || "/map")}`)}
@@ -490,7 +490,7 @@ export default function MapPage() {
           <div
             className="absolute inset-x-0 z-0 overflow-hidden"
             style={{
-              top: "calc(env(safe-area-inset-top) + 74px)",
+              top: "calc(env(safe-area-inset-top) + 80px)",
               bottom: "calc(env(safe-area-inset-bottom) + 74px)",
             }}
           >
@@ -515,7 +515,7 @@ export default function MapPage() {
           </div>
         ) : null}
 
-        <div className="absolute inset-x-4 z-20" style={{ top: "calc(env(safe-area-inset-top) + 86px)" }}>
+        <div className="absolute inset-x-5 z-20" style={{ top: "calc(env(safe-area-inset-top) + 92px)" }}>
           <SearchBar
             value={searchText}
             placeholder={t("home.search")}

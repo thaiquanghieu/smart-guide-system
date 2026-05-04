@@ -1,6 +1,7 @@
 import dynamic from "next/dynamic";
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
+import AppLoadingScreen from "@/components/AppLoadingScreen";
 import apiClient from "@/lib/api";
 import { ensureDeviceReady, getDeviceId, saveEntryContext, setPendingPoiId, setReturnTo, setTrackingEnabled, setTrackingTargetPoiId } from "@/lib/device";
 import { useAppI18n } from "@/lib/i18n";
@@ -64,57 +65,16 @@ function EntryQrPageInner() {
   }, [router, t]);
 
   return (
-    <main
-      className="app-shell flex items-center justify-center"
-      style={{ minHeight: "100vh", background: "#f4f7fb" }}
-    >
-      <div
-        className="w-full rounded-[30px] p-6 text-center"
-        style={{
-          background: "#ffffff",
-          border: "1px solid #dfe6f0",
-          boxShadow: "0 6px 18px rgba(15, 23, 42, 0.04)",
-        }}
-      >
-        <div
-          className="mx-auto flex h-16 w-16 items-center justify-center rounded-full text-3xl"
-          style={{ background: "rgba(14, 91, 215, 0.12)", color: "#0F5BD7" }}
-        >
-          QR
-        </div>
-        <h1 className="mt-5 text-xl font-semibold text-slate-900">{message}</h1>
-        <p className="mt-3 text-sm leading-6 text-slate-500">{detail}</p>
-      </div>
-    </main>
+    <AppLoadingScreen message={message} detail={detail} />
   );
 }
 
 export default dynamic(() => Promise.resolve(EntryQrPageInner), {
   ssr: false,
   loading: () => (
-    <main
-      className="app-shell flex items-center justify-center"
-      style={{ minHeight: "100vh", background: "#f4f7fb" }}
-    >
-      <div
-        className="w-full rounded-[30px] p-6 text-center"
-        style={{
-          background: "#ffffff",
-          border: "1px solid #dfe6f0",
-          boxShadow: "0 6px 18px rgba(15, 23, 42, 0.04)",
-        }}
-      >
-        <div
-          className="mx-auto flex h-16 w-16 items-center justify-center rounded-full text-3xl"
-          style={{ background: "rgba(14, 91, 215, 0.12)", color: "#0F5BD7" }}
-        >
-          QR
-        </div>
-        <h1 className="mt-5 text-xl font-semibold text-slate-900">Đang xử lý mã QR...</h1>
-        <p className="mt-3 text-sm leading-6 text-slate-500">
-          Hệ thống đang kiểm tra quyền truy cập và mở đúng điểm tham quan.
-        </p>
-      </div>
-    </main>
+    <AppLoadingScreen
+      message="Đang xử lý mã QR..."
+      detail="Hệ thống đang kiểm tra quyền truy cập và mở đúng điểm tham quan."
+    />
   ),
 });

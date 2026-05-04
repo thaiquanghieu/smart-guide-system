@@ -1,6 +1,7 @@
 import { useRouter } from "next/router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import AppHeader from "@/components/AppHeader";
+import AppLoadingScreen from "@/components/AppLoadingScreen";
 import BottomNav from "@/components/BottomNav";
 import ToastBanner from "@/components/ToastBanner";
 import apiClient, { assetUrl } from "@/lib/api";
@@ -247,7 +248,13 @@ export default function DetailPage() {
     void playCurrentPoi(poi);
   }, [freePlaysRemaining, isPlaying, poi, subscriptionActive]);
 
-  if (!poi) return <main className="app-shell">{errorMessage || t("detail.loading")}</main>;
+  if (!poi) {
+    return errorMessage ? (
+      <main className="app-shell text-[15px] text-[#DC2626]">{errorMessage}</main>
+    ) : (
+      <AppLoadingScreen message={t("detail.loading")} />
+    );
+  }
 
   const currentImage = assetUrl(poi.images?.[imageIndex]) || "/assets/appiconfg.png";
   const currentAudio = poi.audios?.[0];

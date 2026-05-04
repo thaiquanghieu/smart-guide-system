@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/router";
 import AppHeader from "@/components/AppHeader";
+import AppLoadingScreen from "@/components/AppLoadingScreen";
 import BottomNav from "@/components/BottomNav";
 import MapSurface from "@/components/MapSurface";
 import SearchBar from "@/components/SearchBar";
@@ -315,6 +316,10 @@ export default function HomePage() {
       router.push(`/paywall?returnTo=${encodeURIComponent(`/detail?poiId=${poi.id}`)}`);
     }
   };
+
+  if (isLoading && !pois.length && !errorMessage) {
+    return <AppLoadingScreen message={t("home.loadingPois")} />;
+  }
 
   return (
     <>
