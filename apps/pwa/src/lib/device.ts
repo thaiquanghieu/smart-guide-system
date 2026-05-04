@@ -401,7 +401,7 @@ export function getTrackingModeConfig(mode = getTrackingMode()) {
     return {
       intervalMs: 2500,
       requiredStableHits: 1,
-      globalCooldownMs: 8000,
+      globalCooldownMs: 0,
       highAccuracy: true,
     };
   }
@@ -410,7 +410,7 @@ export function getTrackingModeConfig(mode = getTrackingMode()) {
     return {
       intervalMs: 10000,
       requiredStableHits: 3,
-      globalCooldownMs: 25000,
+      globalCooldownMs: 0,
       highAccuracy: false,
     };
   }
@@ -418,7 +418,7 @@ export function getTrackingModeConfig(mode = getTrackingMode()) {
   return {
     intervalMs: 5000,
     requiredStableHits: 2,
-    globalCooldownMs: 15000,
+    globalCooldownMs: 0,
     highAccuracy: true,
   };
 }

@@ -78,11 +78,16 @@ export default function MapPage() {
   const [errorMessage, setErrorMessage] = useState("");
   const [startingQrPreview, setStartingQrPreview] = useState(false);
   const trackingTimerRef = useRef<number | null>(null);
+  const trackingTickRef = useRef<(() => void) | null>(null);
   const lastPlayedAtRef = useRef<Record<string, number>>({});
   const candidateRef = useRef<{ poiId: string; hits: number }>({ poiId: "", hits: 0 });
-  const globalCooldownUntilRef = useRef(0);
   const qrTargetPoiRef = useRef("");
   const qrAutoPlayedPoiRef = useRef("");
+  const playingPoiIdRef = useRef("");
+
+  useEffect(() => {
+    playingPoiIdRef.current = playingPoiId;
+  }, [playingPoiId]);
 
   useEffect(() => {
     const load = async () => {
@@ -287,8 +292,10 @@ export default function MapPage() {
         clearTrackingTargetPoiId();
       }
     } finally {
+      playingPoiIdRef.current = "";
       setPlayingPoiId("");
       setStartingQrPreview(false);
+      window.setTimeout(() => trackingTickRef.current?.(), 0);
     }
 
     if (!subscriptionActive) {
@@ -309,7 +316,6 @@ export default function MapPage() {
     const trackingModeConfig = getTrackingModeConfig();
     const intervalMs = trackingModeConfig.intervalMs;
     const poiCooldownMs = 4 * 60 * 1000;
-    const globalCooldownMs = trackingModeConfig.globalCooldownMs;
     const requiredStableHits = trackingModeConfig.requiredStableHits;
 
     const tick = () => {
@@ -358,13 +364,13 @@ export default function MapPage() {
             candidateRef.current = { poiId: candidatePoi.id, hits: 1 };
           }
 
+          const activePlayingPoiId = playingPoiIdRef.current;
           const canAutoPlay =
             candidateRef.current.hits >= requiredStableHits &&
-            !playingPoiId &&
-            now >= globalCooldownUntilRef.current;
+            !activePlayingPoiId;
 
           const selectedTrackingPoi =
-            (playingPoiId ? enrichedPois.find((poi) => poi.id === playingPoiId) : null) ||
+            (activePlayingPoiId ? enrichedPois.find((poi) => poi.id === activePlayingPoiId) : null) ||
             (canAutoPlay ? candidatePoi : selectedPoi) ||
             candidatePoi;
 
@@ -375,7 +381,6 @@ export default function MapPage() {
 
           if (canAutoPlay) {
             lastPlayedAtRef.current[candidatePoi.id] = now;
-            globalCooldownUntilRef.current = now + globalCooldownMs;
             await playMapPoi(candidatePoi, { optimisticCount: false });
           }
         },
@@ -384,10 +389,12 @@ export default function MapPage() {
       );
     };
 
+    trackingTickRef.current = tick;
     tick();
     trackingTimerRef.current = window.setInterval(tick, intervalMs);
 
     return () => {
+      trackingTickRef.current = null;
       if (trackingTimerRef.current) {
         window.clearInterval(trackingTimerRef.current);
         trackingTimerRef.current = null;
