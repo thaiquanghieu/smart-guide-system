@@ -255,6 +255,7 @@ export async function playPoiAudio(
     return { ok: false, message: "POI chưa có audio." };
   }
 
+  await primeAudioPlayback();
   stopRequested = false;
   await speakScript(audio.scriptText, audio.languageCode);
 
