@@ -161,14 +161,15 @@ export default function HomePage() {
 
     navigator.geolocation.getCurrentPosition(
       (position) => {
+        const currentLocation = {
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+        };
         setUserLocation({
           latitude: position.coords.latitude,
           longitude: position.coords.longitude,
         });
-        setMiniMapCenter((current) => current || {
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude,
-        });
+        setMiniMapCenter(currentLocation);
       },
       () => undefined,
       { enableHighAccuracy: true }

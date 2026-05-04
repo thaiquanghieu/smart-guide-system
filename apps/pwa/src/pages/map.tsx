@@ -73,6 +73,7 @@ export default function MapPage() {
   const [toast, setToast] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [startingQrPreview, setStartingQrPreview] = useState(false);
+  const [userLocationResolved, setUserLocationResolved] = useState(false);
   const trackingTimerRef = useRef<number | null>(null);
   const trackingTickRef = useRef<(() => void) | null>(null);
   const lastPlayedAtRef = useRef<Record<string, number>>({});
@@ -81,10 +82,15 @@ export default function MapPage() {
   const qrAutoPlayedPoiRef = useRef("");
   const playingPoiIdRef = useRef("");
   const lastTrackingAutoPoiIdRef = useRef("");
+  const selectedPoiIdRef = useRef("");
 
   useEffect(() => {
     playingPoiIdRef.current = playingPoiId;
   }, [playingPoiId]);
+
+  useEffect(() => {
+    selectedPoiIdRef.current = selectedPoiId;
+  }, [selectedPoiId]);
 
   useEffect(() => {
     if (!trackingEnabled) {
@@ -113,8 +119,8 @@ export default function MapPage() {
             setSubscriptionActive(mapCache.subscriptionActive);
             setFreePlaysRemaining(mapCache.freePlaysRemaining);
             setMapCenter(
-              mapCache.mapCenter ||
-                mapCache.userLocation ||
+              mapCache.userLocation ||
+                mapCache.mapCenter ||
                 (mapCache.pois[0]
                   ? { latitude: mapCache.pois[0].latitude, longitude: mapCache.pois[0].longitude }
                   : null)
@@ -167,8 +173,9 @@ export default function MapPage() {
         if (selectedPoi) {
           setSelectedPoiId(selectedPoi.id);
           setMapCenter({ latitude: selectedPoi.latitude, longitude: selectedPoi.longitude });
-        } else if (items[0]) {
-          setMapCenter({ latitude: items[0].latitude, longitude: items[0].longitude });
+        } else {
+          setSelectedPoiId("");
+          setMapCenter(null);
         }
 
         setSubscriptionActive(hasActiveSubscription);
@@ -192,10 +199,13 @@ export default function MapPage() {
           latitude: position.coords.latitude,
           longitude: position.coords.longitude,
         };
+        setUserLocationResolved(true);
         setUserLocation(currentLocation);
-        setMapCenter((value) => value || currentLocation);
+        setMapCenter((value) => (selectedPoiIdRef.current ? value : currentLocation));
       },
-      () => undefined,
+      () => {
+        setUserLocationResolved(true);
+      },
       { enableHighAccuracy: true }
     );
   }, []);
@@ -230,9 +240,16 @@ export default function MapPage() {
   }, [pois, userLocation]);
 
   useEffect(() => {
-    if (mapCenter || userLocation || !enrichedPois.length) return;
+    if (mapCenter || userLocation || !userLocationResolved || !enrichedPois.length) return;
     setMapCenter({ latitude: enrichedPois[0].latitude, longitude: enrichedPois[0].longitude });
-  }, [enrichedPois, mapCenter, userLocation]);
+  }, [enrichedPois, mapCenter, userLocation, userLocationResolved]);
+
+  const clearSelectedPoi = () => {
+    setSelectedPoiId("");
+    if (userLocation) {
+      setMapCenter(userLocation);
+    }
+  };
 
   const updatePoi = (poiId: string, updater: (poi: Poi) => Poi) => {
     setPois((current) => current.map((poi) => (poi.id === poiId ? updater(poi) : poi)));
@@ -481,6 +498,10 @@ export default function MapPage() {
               selectedPoiId={selectedPoiId}
               userLocation={userLocation}
               heightClassName="h-full"
+              onMapTap={() => {
+                if (!selectedPoiIdRef.current) return;
+                clearSelectedPoi();
+              }}
               onSelectPoi={(poiId) => {
                 setSelectedPoiId(poiId);
                 const poi = enrichedPois.find((item) => item.id === poiId);
@@ -504,6 +525,7 @@ export default function MapPage() {
             onCancel={() => {
               setSearchText("");
               setShowSuggestions(false);
+              clearSelectedPoi();
             }}
           />
         </div>
@@ -540,8 +562,7 @@ export default function MapPage() {
           style={{ top: "calc(env(safe-area-inset-top) + 190px)" }}
           onClick={() => {
             if (userLocation) {
-              setMapCenter(userLocation);
-              setSelectedPoiId("");
+              clearSelectedPoi();
             }
           }}
         >
