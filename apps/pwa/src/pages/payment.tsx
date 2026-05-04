@@ -93,7 +93,6 @@ export default function PaymentPage() {
           const returnTo = getReturnTo();
           const entryContext = getEntryContext();
           const fromQrEntry = !!entryContext?.entryCode;
-          const shouldShowTrackingIntroOnMap = /^\/map(?:[?#]|$)/.test(returnTo || "/map");
           if (pendingPoiId && fromQrEntry) {
             clearTrackingTargetPoiId();
           } else {
@@ -102,7 +101,7 @@ export default function PaymentPage() {
           clearReturnTo();
           clearPendingPoiId();
           clearEntryContext();
-          const mapSuffix = `refresh=${Date.now()}${shouldShowTrackingIntroOnMap ? "&trackingIntro=1" : ""}`;
+          const mapSuffix = `refresh=${Date.now()}`;
           router.replace(
             fromQrEntry
               ? `/map?${mapSuffix}`

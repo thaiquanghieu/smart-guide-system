@@ -7,7 +7,7 @@ import SearchBar from "@/components/SearchBar";
 import ToastBanner from "@/components/ToastBanner";
 import apiClient, { assetUrl } from "@/lib/api";
 import { translatePois, useAppI18n } from "@/lib/i18n";
-import { playPoiAudio, playTrackingTransitionCue, stopSpeech } from "@/lib/audio";
+import { playPoiAudio, playTrackingTransitionCue, primeAudioPlayback, stopSpeech } from "@/lib/audio";
 import {
   clearPendingPoiId,
   clearTrackingTargetPoiId,
@@ -73,7 +73,6 @@ export default function MapPage() {
   const [toast, setToast] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [startingQrPreview, setStartingQrPreview] = useState(false);
-  const [showTrackingIntro, setShowTrackingIntro] = useState(false);
   const trackingTimerRef = useRef<number | null>(null);
   const trackingTickRef = useRef<(() => void) | null>(null);
   const lastPlayedAtRef = useRef<Record<string, number>>({});
@@ -92,11 +91,6 @@ export default function MapPage() {
       lastTrackingAutoPoiIdRef.current = "";
     }
   }, [trackingEnabled]);
-
-  useEffect(() => {
-    if (!router.isReady) return;
-    setShowTrackingIntro(router.query.trackingIntro === "1");
-  }, [router.isReady, router.query.trackingIntro]);
 
   useEffect(() => {
     const load = async () => {
@@ -417,8 +411,7 @@ export default function MapPage() {
               });
             } catch (error: any) {
               setTrackingEnabled(false);
-              setShowTrackingIntro(true);
-              setToast(error?.message || "Chạm nút tracking để bắt đầu nghe.");
+              setToast(error?.message || "Không thể phát audio tự động.");
             }
           }
         },
@@ -564,11 +557,10 @@ export default function MapPage() {
             setTrackingEnabled(nextValue);
 
             if (!nextValue || playingPoiIdRef.current || !navigator.geolocation) {
-              setShowTrackingIntro(false);
               return;
             }
 
-            setShowTrackingIntro(false);
+            await primeAudioPlayback();
             navigator.geolocation.getCurrentPosition(
               async (position) => {
                 const currentLocation = {
@@ -596,8 +588,7 @@ export default function MapPage() {
                   await playMapPoi(candidatePoi, { optimisticCount: false });
                 } catch (error: any) {
                   setTrackingEnabled(false);
-                  setShowTrackingIntro(true);
-                  setToast(error?.message || "Chạm nút tracking để bắt đầu nghe.");
+                  setToast(error?.message || "Không thể phát audio tự động.");
                 }
               },
               () => undefined,
@@ -639,24 +630,6 @@ export default function MapPage() {
             >
               {startingQrPreview ? "Đang bật âm thanh..." : "Chạm để nghe miễn phí"}
             </button>
-          </div>
-        ) : null}
-
-        {showTrackingIntro ? (
-          <div
-            className="pointer-events-none absolute inset-0 z-[25] bg-[#041B2D]/55"
-          >
-            <div
-              className="absolute bottom-[calc(env(safe-area-inset-bottom)+150px)] right-4 w-[240px] rounded-[20px] border border-[#BFDBFE] bg-white/96 p-4 text-left shadow-[0_16px_32px_rgba(15,91,215,0.16)] backdrop-blur-sm"
-            >
-              <p className="text-[14px] font-semibold text-[#0F172A]">Bật tracking để bắt đầu nghe</p>
-              <p className="mt-2 text-[12px] leading-5 text-[#64748B]">
-                Nhấn nút tracking ở góc dưới bên phải để app tự động phát những POI đang ở gần bạn.
-              </p>
-              <div className="mt-3 flex justify-end">
-                <div className="h-0 w-0 border-l-[10px] border-r-[10px] border-t-[16px] border-l-transparent border-r-transparent border-t-[#0F5BD7]" />
-              </div>
-            </div>
           </div>
         ) : null}
 
