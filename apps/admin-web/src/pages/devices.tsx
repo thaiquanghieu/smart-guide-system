@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import Sidebar from '@/components/Sidebar'
 import ProtectedRoute from '@/components/ProtectedRoute'
 import apiClient from '@/lib/api'
-import { Ban, CheckCircle2, CheckSquare2, EyeOff, Search, Smartphone, Trash2, X } from 'lucide-react'
+import { Ban, CheckCircle2, CheckSquare2, Eye, EyeOff, Search, Smartphone, Trash2, X } from 'lucide-react'
 
 type Device = {
   id: number
@@ -309,7 +309,7 @@ export default function DevicesPage() {
                                       }}
                                       className="text-gray-400 hover:text-white"
                                     >
-                                      {showId ? <EyeOff size={14} /> : <span className="text-[11px] font-semibold uppercase tracking-[0.08em]">ID</span>}
+                                      {showId ? <EyeOff size={14} /> : <Eye size={14} />}
                                     </button>
                                   </div>
                                 </div>
