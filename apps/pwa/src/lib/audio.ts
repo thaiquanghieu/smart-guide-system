@@ -32,6 +32,55 @@ export function stopSpeech() {
   window.speechSynthesis.cancel();
 }
 
+export async function playTrackingTransitionCue() {
+  if (typeof window === "undefined") return;
+
+  try {
+    if (typeof navigator !== "undefined" && typeof navigator.vibrate === "function") {
+      navigator.vibrate([18, 24, 18]);
+    }
+  } catch {
+  }
+
+  const AudioContextClass =
+    window.AudioContext ||
+    (window as Window & typeof globalThis & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+
+  if (!AudioContextClass) return;
+
+  try {
+    const context = new AudioContextClass();
+    const startAt = context.currentTime + 0.01;
+    const segments = [
+      { frequency: 880, duration: 0.07, gain: 0.025 },
+      { frequency: 1174, duration: 0.09, gain: 0.02 },
+    ];
+
+    let cursor = startAt;
+    segments.forEach((segment, index) => {
+      const oscillator = context.createOscillator();
+      const gainNode = context.createGain();
+      oscillator.type = "sine";
+      oscillator.frequency.setValueAtTime(segment.frequency, cursor);
+      gainNode.gain.setValueAtTime(0.0001, cursor);
+      gainNode.gain.exponentialRampToValueAtTime(segment.gain, cursor + 0.012);
+      gainNode.gain.exponentialRampToValueAtTime(0.0001, cursor + segment.duration);
+      oscillator.connect(gainNode);
+      gainNode.connect(context.destination);
+      oscillator.start(cursor);
+      oscillator.stop(cursor + segment.duration);
+      cursor += segment.duration + (index === 0 ? 0.045 : 0);
+    });
+
+    window.setTimeout(() => {
+      context.close().catch(() => undefined);
+    }, 450);
+
+    await new Promise((resolve) => window.setTimeout(resolve, 230));
+  } catch {
+  }
+}
+
 function waitForVoices(timeoutMs = 2500) {
   if (typeof window === "undefined" || !window.speechSynthesis) {
     return Promise.resolve<SpeechSynthesisVoice[]>([]);

@@ -7,7 +7,7 @@ import SearchBar from "@/components/SearchBar";
 import ToastBanner from "@/components/ToastBanner";
 import apiClient, { assetUrl } from "@/lib/api";
 import { translatePois, useAppI18n } from "@/lib/i18n";
-import { playPoiAudio, stopSpeech } from "@/lib/audio";
+import { playPoiAudio, playTrackingTransitionCue, stopSpeech } from "@/lib/audio";
 import {
   clearPendingPoiId,
   clearTrackingTargetPoiId,
@@ -84,10 +84,17 @@ export default function MapPage() {
   const qrTargetPoiRef = useRef("");
   const qrAutoPlayedPoiRef = useRef("");
   const playingPoiIdRef = useRef("");
+  const lastTrackingAutoPoiIdRef = useRef("");
 
   useEffect(() => {
     playingPoiIdRef.current = playingPoiId;
   }, [playingPoiId]);
+
+  useEffect(() => {
+    if (!trackingEnabled) {
+      lastTrackingAutoPoiIdRef.current = "";
+    }
+  }, [trackingEnabled]);
 
   useEffect(() => {
     const load = async () => {
@@ -258,10 +265,11 @@ export default function MapPage() {
 
   const playMapPoi = async (
     targetPoi: Poi,
-    options?: { redirectToPaywallAfterFree?: boolean; optimisticCount?: boolean }
+    options?: { redirectToPaywallAfterFree?: boolean; optimisticCount?: boolean; transitionCue?: boolean }
   ) => {
     const shouldRedirectToPaywallAfterFree = options?.redirectToPaywallAfterFree ?? false;
     const shouldOptimisticCount = options?.optimisticCount ?? false;
+    const shouldPlayTransitionCue = options?.transitionCue ?? false;
 
     if (!subscriptionActive && freePlaysRemaining <= 0) {
       setReturnTo(`/map?poiId=${targetPoi.id}`);
@@ -271,6 +279,9 @@ export default function MapPage() {
 
     setPendingPoiId(targetPoi.id);
     setPlayingPoiId(targetPoi.id);
+    if (shouldPlayTransitionCue) {
+      await playTrackingTransitionCue();
+    }
     if (shouldOptimisticCount) {
       updatePoi(targetPoi.id, (current) => ({ ...current, listened_count: current.listened_count + 1 }));
     }
@@ -381,7 +392,13 @@ export default function MapPage() {
 
           if (canAutoPlay) {
             lastPlayedAtRef.current[candidatePoi.id] = now;
-            await playMapPoi(candidatePoi, { optimisticCount: false });
+            const shouldPlayTransitionCue =
+              !!lastTrackingAutoPoiIdRef.current && lastTrackingAutoPoiIdRef.current !== candidatePoi.id;
+            lastTrackingAutoPoiIdRef.current = candidatePoi.id;
+            await playMapPoi(candidatePoi, {
+              optimisticCount: false,
+              transitionCue: shouldPlayTransitionCue,
+            });
           }
         },
         () => undefined,
