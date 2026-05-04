@@ -408,8 +408,8 @@ export function getTrackingModeConfig(mode = getTrackingMode()) {
 
   if (mode === "power_save") {
     return {
-      intervalMs: 10000,
-      requiredStableHits: 3,
+      intervalMs: 8000,
+      requiredStableHits: 2,
       globalCooldownMs: 0,
       highAccuracy: false,
     };

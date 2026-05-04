@@ -234,6 +234,10 @@ export default function DetailPage() {
         setPoi((current) => current ? { ...current, listened_count: result.listenedCount || current.listened_count } : current);
         notifyProfileDataChanged();
       }
+    } catch (error: any) {
+      setToast(error?.message || t("payment.confirmError"));
+      setPoi((current) => current ? { ...current, listened_count: Math.max(0, current.listened_count - 1) } : current);
+      return;
     } finally {
       setIsPlaying(false);
     }
