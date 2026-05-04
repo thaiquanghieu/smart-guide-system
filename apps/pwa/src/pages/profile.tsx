@@ -109,7 +109,7 @@ export default function ProfilePage() {
   const [audioLang, setAudioLangState] = useState("vi");
   const [audioCustom, setAudioCustomState] = useState(false);
   const [autoPlay, setAutoPlayState] = useState(true);
-  const [trackingMode, setTrackingModeState] = useState<TrackingMode>("balanced");
+  const [trackingMode, setTrackingModeState] = useState<TrackingMode>("fast");
   const [errorMessage, setErrorMessage] = useState("");
   const [historyItems, setHistoryItems] = useState<ProfilePoiItem[]>([]);
   const [favoriteItems, setFavoriteItems] = useState<ProfilePoiItem[]>([]);

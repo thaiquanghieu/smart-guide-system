@@ -10,6 +10,7 @@ const APP_LANG_KEY = "pwa_app_lang";
 const AUTO_PLAY_KEY = "pwa_auto_play";
 const BATTERY_SAVER_KEY = "pwa_battery_saver";
 const TRACKING_MODE_KEY = "pwa_tracking_mode";
+const TRACKING_MODE_CUSTOMIZED_KEY = "pwa_tracking_mode_customized";
 const TRACKING_RADIUS_KEY = "pwa_tracking_radius";
 const TRACKING_INTERVAL_KEY = "pwa_tracking_interval";
 const AUDIO_CUSTOM_KEY = "pwa_audio_custom";
@@ -152,19 +153,13 @@ export function initializeSettingsDefaults() {
   if (!storage.getItem(BATTERY_SAVER_KEY)) storage.setItem(BATTERY_SAVER_KEY, "false");
   if (!storage.getItem(AUDIO_CUSTOM_KEY)) storage.setItem(AUDIO_CUSTOM_KEY, "false");
   if (!storage.getItem(TRACKING_RADIUS_KEY)) storage.setItem(TRACKING_RADIUS_KEY, "0.2");
-  if (!storage.getItem(TRACKING_INTERVAL_KEY)) storage.setItem(TRACKING_INTERVAL_KEY, "5000");
+  if (!storage.getItem(TRACKING_INTERVAL_KEY)) storage.setItem(TRACKING_INTERVAL_KEY, "2500");
   if (!storage.getItem(TRACKING_ENABLED_KEY)) storage.setItem(TRACKING_ENABLED_KEY, "false");
   if (!storage.getItem(TRACKING_MODE_KEY)) {
-    const batterySaverEnabled = storage.getItem(BATTERY_SAVER_KEY) === "true";
-    const trackingInterval = Number(storage.getItem(TRACKING_INTERVAL_KEY) || 5000);
-    const initialTrackingMode: TrackingMode =
-      batterySaverEnabled || trackingInterval >= 10000
-        ? "power_save"
-        : trackingInterval <= 2000
-          ? "fast"
-          : "balanced";
-
-    storage.setItem(TRACKING_MODE_KEY, initialTrackingMode);
+    storage.setItem(TRACKING_MODE_KEY, "fast");
+  }
+  if (!storage.getItem(TRACKING_MODE_CUSTOMIZED_KEY)) {
+    storage.setItem(TRACKING_MODE_CUSTOMIZED_KEY, "false");
   }
 }
 
@@ -373,12 +368,13 @@ export function setTrackingMode(value: TrackingMode) {
   if (!storage) return;
 
   storage.setItem(TRACKING_MODE_KEY, value);
+  storage.setItem(TRACKING_MODE_CUSTOMIZED_KEY, "true");
   storage.setItem(BATTERY_SAVER_KEY, String(value === "power_save"));
 
   if (value === "fast") {
     storage.setItem(TRACKING_INTERVAL_KEY, "2500");
   } else if (value === "power_save") {
-    storage.setItem(TRACKING_INTERVAL_KEY, "10000");
+    storage.setItem(TRACKING_INTERVAL_KEY, "8000");
   } else {
     storage.setItem(TRACKING_INTERVAL_KEY, "5000");
   }
@@ -386,14 +382,19 @@ export function setTrackingMode(value: TrackingMode) {
 
 export function getTrackingMode(): TrackingMode {
   const storage = getStorage();
-  if (!storage) return "balanced";
+  if (!storage) return "fast";
+
+  const customized = storage.getItem(TRACKING_MODE_CUSTOMIZED_KEY) === "true";
+  if (!customized) {
+    return "fast";
+  }
 
   const value = storage.getItem(TRACKING_MODE_KEY);
   if (value === "fast" || value === "balanced" || value === "power_save") {
     return value;
   }
 
-  return "balanced";
+  return "fast";
 }
 
 export function getTrackingModeConfig(mode = getTrackingMode()) {

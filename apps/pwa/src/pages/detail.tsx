@@ -190,27 +190,6 @@ export default function DetailPage() {
     return `${km.toFixed(1).replace(".", ",")} km`;
   }, [poi, userLocation]);
 
-  if (!poi) return <main className="app-shell">{errorMessage || t("detail.loading")}</main>;
-
-  const currentImage = assetUrl(poi.images?.[imageIndex]) || "/assets/appiconfg.png";
-  const currentAudio = poi.audios?.[0];
-  const currentShareUrl = typeof window !== "undefined" ? window.location.href : "";
-
-  const toggleFavorite = async () => {
-    const nextFavorite = !poi.is_favorite;
-    setPoi({ ...poi, is_favorite: nextFavorite });
-
-    try {
-      await apiClient.post(`/pois/favorite/${poi.id}?deviceId=${getDeviceId()}&isFavorite=${nextFavorite}`);
-      notifyProfileDataChanged();
-      if (nextFavorite) {
-        setToast("Đã thêm vào yêu thích!");
-      }
-    } catch {
-      setPoi({ ...poi, is_favorite: !nextFavorite });
-    }
-  };
-
   const playCurrentPoi = async (targetPoi: Poi) => {
     if (!subscriptionActive && freePlaysRemaining <= 0) {
       setReturnTo(`/detail?poiId=${targetPoi.id}`);
@@ -266,6 +245,27 @@ export default function DetailPage() {
     autoPlayedPoiRef.current = poi.id;
     void playCurrentPoi(poi);
   }, [freePlaysRemaining, isPlaying, poi, subscriptionActive]);
+
+  if (!poi) return <main className="app-shell">{errorMessage || t("detail.loading")}</main>;
+
+  const currentImage = assetUrl(poi.images?.[imageIndex]) || "/assets/appiconfg.png";
+  const currentAudio = poi.audios?.[0];
+  const currentShareUrl = typeof window !== "undefined" ? window.location.href : "";
+
+  const toggleFavorite = async () => {
+    const nextFavorite = !poi.is_favorite;
+    setPoi({ ...poi, is_favorite: nextFavorite });
+
+    try {
+      await apiClient.post(`/pois/favorite/${poi.id}?deviceId=${getDeviceId()}&isFavorite=${nextFavorite}`);
+      notifyProfileDataChanged();
+      if (nextFavorite) {
+        setToast("Đã thêm vào yêu thích!");
+      }
+    } catch {
+      setPoi({ ...poi, is_favorite: !nextFavorite });
+    }
+  };
 
   const sharePoi = async () => {
     const shareData = {
