@@ -12,12 +12,9 @@ import {
   clearPendingPoiId,
   clearTrackingTargetPoiId,
   ensureDeviceReady,
-  getAutoPlay,
-  getTrackingEnabled,
   getTrackingModeConfig,
   getTrackingTargetPoiId,
   getDeviceId,
-  setTrackingEnabled as persistTrackingEnabled,
   notifyProfileDataChanged,
   setPendingPoiId,
   setReturnTo,
@@ -48,7 +45,6 @@ let mapCache:
       pois: Poi[];
       searchText: string;
       userLocation: GeoPoint | null;
-      trackingEnabled: boolean;
       subscriptionActive: boolean;
       freePlaysRemaining: number;
       mapCenter: GeoPoint | null;
@@ -77,7 +73,7 @@ export default function MapPage() {
   const [toast, setToast] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [startingQrPreview, setStartingQrPreview] = useState(false);
-  const [trackingTapToStartPoiId, setTrackingTapToStartPoiId] = useState("");
+  const [showTrackingIntro, setShowTrackingIntro] = useState(false);
   const trackingTimerRef = useRef<number | null>(null);
   const trackingTickRef = useRef<(() => void) | null>(null);
   const lastPlayedAtRef = useRef<Record<string, number>>({});
@@ -94,9 +90,13 @@ export default function MapPage() {
   useEffect(() => {
     if (!trackingEnabled) {
       lastTrackingAutoPoiIdRef.current = "";
-      setTrackingTapToStartPoiId("");
     }
   }, [trackingEnabled]);
+
+  useEffect(() => {
+    if (!router.isReady) return;
+    setShowTrackingIntro(router.query.trackingIntro === "1");
+  }, [router.isReady, router.query.trackingIntro]);
 
   useEffect(() => {
     const load = async () => {
@@ -115,7 +115,7 @@ export default function MapPage() {
             setPois(translatePois<Poi>(mapCache.pois, lang));
             setSearchText(mapCache.searchText);
             setUserLocation(mapCache.userLocation);
-            setTrackingEnabled(mapCache.trackingEnabled);
+            setTrackingEnabled(false);
             setSubscriptionActive(mapCache.subscriptionActive);
             setFreePlaysRemaining(mapCache.freePlaysRemaining);
             setMapCenter(
@@ -179,7 +179,7 @@ export default function MapPage() {
 
         setSubscriptionActive(hasActiveSubscription);
         setFreePlaysRemaining(remainingFreePlays);
-        setTrackingEnabled(getTrackingEnabled());
+        setTrackingEnabled(false);
         setHasLoadedMap(true);
       } catch (error: any) {
         setErrorMessage(error?.response?.data?.message || t("map.loadError"));
@@ -220,12 +220,11 @@ export default function MapPage() {
       pois,
       searchText,
       userLocation,
-      trackingEnabled,
       subscriptionActive,
       freePlaysRemaining,
       mapCenter,
     };
-  }, [errorMessage, freePlaysRemaining, hasLoadedMap, mapCenter, pois, searchText, subscriptionActive, trackingEnabled, userLocation]);
+  }, [errorMessage, freePlaysRemaining, hasLoadedMap, mapCenter, pois, searchText, subscriptionActive, userLocation]);
 
   const enrichedPois = useMemo(() => {
     return pois.map((poi) => ({
@@ -300,7 +299,6 @@ export default function MapPage() {
       redirectToPaywallAfterFree?: boolean;
       optimisticCount?: boolean;
       transitionCue?: boolean;
-      onPlaybackBlocked?: (message: string) => void;
     }
   ) => {
     const shouldRedirectToPaywallAfterFree = options?.redirectToPaywallAfterFree ?? false;
@@ -342,10 +340,7 @@ export default function MapPage() {
       }
     } catch (error: any) {
       const message = error?.message || "Phát audio thất bại";
-      options?.onPlaybackBlocked?.(message);
-      if (!options?.onPlaybackBlocked) {
-        setToast(message);
-      }
+      throw new Error(message);
     } finally {
       playingPoiIdRef.current = "";
       setPlayingPoiId("");
@@ -415,13 +410,16 @@ export default function MapPage() {
             const shouldPlayTransitionCue =
               !!lastTrackingAutoPoiIdRef.current && lastTrackingAutoPoiIdRef.current !== candidatePoi.id;
             lastTrackingAutoPoiIdRef.current = candidatePoi.id;
-            await playMapPoi(candidatePoi, {
-              optimisticCount: false,
-              transitionCue: shouldPlayTransitionCue,
-              onPlaybackBlocked: () => {
-                setTrackingTapToStartPoiId(candidatePoi.id);
-              },
-            });
+            try {
+              await playMapPoi(candidatePoi, {
+                optimisticCount: false,
+                transitionCue: shouldPlayTransitionCue,
+              });
+            } catch (error: any) {
+              setTrackingEnabled(false);
+              setShowTrackingIntro(true);
+              setToast(error?.message || "Chạm nút tracking để bắt đầu nghe.");
+            }
           }
         },
         () => undefined,
@@ -563,13 +561,14 @@ export default function MapPage() {
           style={{ bottom: trackingBottom }}
           onClick={async () => {
             const nextValue = !trackingEnabled;
-            persistTrackingEnabled(nextValue);
             setTrackingEnabled(nextValue);
 
             if (!nextValue || playingPoiIdRef.current || !navigator.geolocation) {
+              setShowTrackingIntro(false);
               return;
             }
 
+            setShowTrackingIntro(false);
             navigator.geolocation.getCurrentPosition(
               async (position) => {
                 const currentLocation = {
@@ -591,7 +590,15 @@ export default function MapPage() {
                 lastTrackingAutoPoiIdRef.current = candidatePoi.id;
                 setSelectedPoiId(candidatePoi.id);
                 setMapCenter({ latitude: candidatePoi.latitude, longitude: candidatePoi.longitude });
-                setTrackingTapToStartPoiId(candidatePoi.id);
+                lastPlayedAtRef.current[candidatePoi.id] = Date.now();
+
+                try {
+                  await playMapPoi(candidatePoi, { optimisticCount: false });
+                } catch (error: any) {
+                  setTrackingEnabled(false);
+                  setShowTrackingIntro(true);
+                  setToast(error?.message || "Chạm nút tracking để bắt đầu nghe.");
+                }
               },
               () => undefined,
               { enableHighAccuracy: getTrackingModeConfig().highAccuracy }
@@ -635,29 +642,21 @@ export default function MapPage() {
           </div>
         ) : null}
 
-        {trackingEnabled && trackingTapToStartPoiId && !playingPoiId ? (
+        {showTrackingIntro ? (
           <div
-            className="absolute inset-x-4 z-30 rounded-[22px] border border-[#BFDBFE] bg-white/95 p-4 shadow-[0_12px_28px_rgba(15,91,215,0.14)] backdrop-blur-sm"
-            style={{ bottom: selectedPoi ? "calc(env(safe-area-inset-bottom) + 470px)" : "calc(env(safe-area-inset-bottom) + 132px)" }}
+            className="pointer-events-none absolute inset-0 z-[25] bg-[#041B2D]/55"
           >
-            <p className="text-center text-[14px] font-semibold text-[#0F172A]">Chạm để bật âm thanh tracking</p>
-            <p className="mt-1 text-center text-[12px] leading-5 text-[#64748B]">
-              iPhone cần một lần chạm để cho phép phát audio tự động khi tracking đang mở.
-            </p>
-            <button
-              type="button"
-              className="mt-3 h-[48px] w-full rounded-[16px] bg-[#0F5BD7] text-[15px] font-semibold text-white"
-              onClick={async () => {
-                const targetPoi = enrichedPois.find((poi) => poi.id === trackingTapToStartPoiId);
-                if (!targetPoi) return;
-                setTrackingTapToStartPoiId("");
-                lastPlayedAtRef.current[targetPoi.id] = Date.now();
-                lastTrackingAutoPoiIdRef.current = targetPoi.id;
-                await playMapPoi(targetPoi, { optimisticCount: false });
-              }}
+            <div
+              className="absolute bottom-[calc(env(safe-area-inset-bottom)+150px)] right-4 w-[240px] rounded-[20px] border border-[#BFDBFE] bg-white/96 p-4 text-left shadow-[0_16px_32px_rgba(15,91,215,0.16)] backdrop-blur-sm"
             >
-              Chạm để bắt đầu nghe
-            </button>
+              <p className="text-[14px] font-semibold text-[#0F172A]">Bật tracking để bắt đầu nghe</p>
+              <p className="mt-2 text-[12px] leading-5 text-[#64748B]">
+                Nhấn nút tracking ở góc dưới bên phải để app tự động phát những POI đang ở gần bạn.
+              </p>
+              <div className="mt-3 flex justify-end">
+                <div className="h-0 w-0 border-l-[10px] border-r-[10px] border-t-[16px] border-l-transparent border-r-transparent border-t-[#0F5BD7]" />
+              </div>
+            </div>
           </div>
         ) : null}
 

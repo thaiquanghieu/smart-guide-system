@@ -13,7 +13,6 @@ import {
   getDeviceId,
   getPendingPoiId,
   getReturnTo,
-  setTrackingEnabled,
 } from "@/lib/device";
 
 type PaymentPreview = {
@@ -94,26 +93,22 @@ export default function PaymentPage() {
           const returnTo = getReturnTo();
           const entryContext = getEntryContext();
           const fromQrEntry = !!entryContext?.entryCode;
-          const shouldResumeTrackingOnMap = /^\/map(?:[?#]|$)/.test(returnTo || "/map");
+          const shouldShowTrackingIntroOnMap = /^\/map(?:[?#]|$)/.test(returnTo || "/map");
           if (pendingPoiId && fromQrEntry) {
-            setTrackingEnabled(true);
             clearTrackingTargetPoiId();
-          } else if (pendingPoiId) {
-            setTrackingEnabled(true);
-          } else if (shouldResumeTrackingOnMap) {
-            setTrackingEnabled(true);
           } else {
             clearTrackingTargetPoiId();
           }
           clearReturnTo();
           clearPendingPoiId();
           clearEntryContext();
+          const mapSuffix = `refresh=${Date.now()}${shouldShowTrackingIntroOnMap ? "&trackingIntro=1" : ""}`;
           router.replace(
             fromQrEntry
-              ? `/map?refresh=${Date.now()}`
+              ? `/map?${mapSuffix}`
               : pendingPoiId
-                ? `/map?poiId=${pendingPoiId}&refresh=${Date.now()}`
-                : `${returnTo || "/map"}${(returnTo || "/map").includes("?") ? "&" : "?"}refresh=${Date.now()}`
+                ? `/map?poiId=${pendingPoiId}&${mapSuffix}`
+                : `${returnTo || "/map"}${(returnTo || "/map").includes("?") ? "&" : "?"}${mapSuffix}`
           );
           return;
         }
