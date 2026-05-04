@@ -7,7 +7,7 @@ import SearchBar from "@/components/SearchBar";
 import ToastBanner from "@/components/ToastBanner";
 import apiClient, { assetUrl } from "@/lib/api";
 import { translatePois, useAppI18n } from "@/lib/i18n";
-import { playPoiAudio, playTrackingTransitionCue, primeAudioPlayback, stopSpeech } from "@/lib/audio";
+import { playPoiAudio, playTrackingTransitionCue, stopSpeech } from "@/lib/audio";
 import {
   clearPendingPoiId,
   clearTrackingTargetPoiId,
@@ -77,6 +77,7 @@ export default function MapPage() {
   const [toast, setToast] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [startingQrPreview, setStartingQrPreview] = useState(false);
+  const [trackingTapToStartPoiId, setTrackingTapToStartPoiId] = useState("");
   const trackingTimerRef = useRef<number | null>(null);
   const trackingTickRef = useRef<(() => void) | null>(null);
   const lastPlayedAtRef = useRef<Record<string, number>>({});
@@ -93,6 +94,7 @@ export default function MapPage() {
   useEffect(() => {
     if (!trackingEnabled) {
       lastTrackingAutoPoiIdRef.current = "";
+      setTrackingTapToStartPoiId("");
     }
   }, [trackingEnabled]);
 
@@ -294,11 +296,17 @@ export default function MapPage() {
 
   const playMapPoi = async (
     targetPoi: Poi,
-    options?: { redirectToPaywallAfterFree?: boolean; optimisticCount?: boolean; transitionCue?: boolean }
+    options?: {
+      redirectToPaywallAfterFree?: boolean;
+      optimisticCount?: boolean;
+      transitionCue?: boolean;
+      onPlaybackBlocked?: (message: string) => void;
+    }
   ) => {
     const shouldRedirectToPaywallAfterFree = options?.redirectToPaywallAfterFree ?? false;
     const shouldOptimisticCount = options?.optimisticCount ?? false;
     const shouldPlayTransitionCue = options?.transitionCue ?? false;
+    let playbackSucceeded = false;
 
     if (!subscriptionActive && freePlaysRemaining <= 0) {
       setReturnTo(`/map?poiId=${targetPoi.id}`);
@@ -327,9 +335,16 @@ export default function MapPage() {
         updatePoi(targetPoi.id, (current) => ({ ...current, listened_count: result.listenedCount || current.listened_count }));
         notifyProfileDataChanged();
       }
+      playbackSucceeded = true;
       if (qrTargetPoiRef.current === targetPoi.id) {
         qrTargetPoiRef.current = "";
         clearTrackingTargetPoiId();
+      }
+    } catch (error: any) {
+      const message = error?.message || "Phát audio thất bại";
+      options?.onPlaybackBlocked?.(message);
+      if (!options?.onPlaybackBlocked) {
+        setToast(message);
       }
     } finally {
       playingPoiIdRef.current = "";
@@ -338,7 +353,7 @@ export default function MapPage() {
       window.setTimeout(() => trackingTickRef.current?.(), 0);
     }
 
-    if (!subscriptionActive) {
+    if (playbackSucceeded && !subscriptionActive) {
       setFreePlaysRemaining((value) => Math.max(0, value - 1));
       if (shouldRedirectToPaywallAfterFree) {
         clearPendingPoiId();
@@ -347,7 +362,7 @@ export default function MapPage() {
       }
     }
 
-    return true;
+    return playbackSucceeded;
   };
 
   useEffect(() => {
@@ -403,6 +418,9 @@ export default function MapPage() {
             await playMapPoi(candidatePoi, {
               optimisticCount: false,
               transitionCue: shouldPlayTransitionCue,
+              onPlaybackBlocked: () => {
+                setTrackingTapToStartPoiId(candidatePoi.id);
+              },
             });
           }
         },
@@ -545,9 +563,6 @@ export default function MapPage() {
           style={{ bottom: trackingBottom }}
           onClick={async () => {
             const nextValue = !trackingEnabled;
-            if (nextValue) {
-              await primeAudioPlayback();
-            }
             persistTrackingEnabled(nextValue);
             setTrackingEnabled(nextValue);
 
@@ -574,10 +589,9 @@ export default function MapPage() {
                   hits: trackingModeConfig.requiredStableHits,
                 };
                 lastTrackingAutoPoiIdRef.current = candidatePoi.id;
-                lastPlayedAtRef.current[candidatePoi.id] = Date.now();
                 setSelectedPoiId(candidatePoi.id);
                 setMapCenter({ latitude: candidatePoi.latitude, longitude: candidatePoi.longitude });
-                await playMapPoi(candidatePoi, { optimisticCount: false });
+                setTrackingTapToStartPoiId(candidatePoi.id);
               },
               () => undefined,
               { enableHighAccuracy: getTrackingModeConfig().highAccuracy }
@@ -607,7 +621,6 @@ export default function MapPage() {
               onClick={async () => {
                 if (!selectedPoi) return;
                 setStartingQrPreview(true);
-                await primeAudioPlayback();
                 const success = await playMapPoi(selectedPoi, {
                   redirectToPaywallAfterFree: true,
                   optimisticCount: false,
@@ -618,6 +631,32 @@ export default function MapPage() {
               }}
             >
               {startingQrPreview ? "Đang bật âm thanh..." : "Chạm để nghe miễn phí"}
+            </button>
+          </div>
+        ) : null}
+
+        {trackingEnabled && trackingTapToStartPoiId && !playingPoiId ? (
+          <div
+            className="absolute inset-x-4 z-30 rounded-[22px] border border-[#BFDBFE] bg-white/95 p-4 shadow-[0_12px_28px_rgba(15,91,215,0.14)] backdrop-blur-sm"
+            style={{ bottom: selectedPoi ? "calc(env(safe-area-inset-bottom) + 470px)" : "calc(env(safe-area-inset-bottom) + 132px)" }}
+          >
+            <p className="text-center text-[14px] font-semibold text-[#0F172A]">Chạm để bật âm thanh tracking</p>
+            <p className="mt-1 text-center text-[12px] leading-5 text-[#64748B]">
+              iPhone cần một lần chạm để cho phép phát audio tự động khi tracking đang mở.
+            </p>
+            <button
+              type="button"
+              className="mt-3 h-[48px] w-full rounded-[16px] bg-[#0F5BD7] text-[15px] font-semibold text-white"
+              onClick={async () => {
+                const targetPoi = enrichedPois.find((poi) => poi.id === trackingTapToStartPoiId);
+                if (!targetPoi) return;
+                setTrackingTapToStartPoiId("");
+                lastPlayedAtRef.current[targetPoi.id] = Date.now();
+                lastTrackingAutoPoiIdRef.current = targetPoi.id;
+                await playMapPoi(targetPoi, { optimisticCount: false });
+              }}
+            >
+              Chạm để bắt đầu nghe
             </button>
           </div>
         ) : null}
@@ -667,7 +706,6 @@ export default function MapPage() {
                     return;
                   }
 
-                  await primeAudioPlayback();
                   await playMapPoi(selectedPoi, {
                     redirectToPaywallAfterFree: !subscriptionActive,
                     optimisticCount: true,
