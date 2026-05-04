@@ -9,6 +9,7 @@ const AUDIO_LANG_KEY = "pwa_audio_lang";
 const APP_LANG_KEY = "pwa_app_lang";
 const AUTO_PLAY_KEY = "pwa_auto_play";
 const BATTERY_SAVER_KEY = "pwa_battery_saver";
+const TRACKING_MODE_KEY = "pwa_tracking_mode";
 const TRACKING_RADIUS_KEY = "pwa_tracking_radius";
 const TRACKING_INTERVAL_KEY = "pwa_tracking_interval";
 const AUDIO_CUSTOM_KEY = "pwa_audio_custom";
@@ -30,6 +31,8 @@ export type DeviceBlockedDetail = {
 export type ProfileDataChangedDetail = {
   scope: "all";
 };
+
+export type TrackingMode = "fast" | "balanced" | "power_save";
 
 function canUseStorage() {
   return typeof window !== "undefined";
@@ -151,6 +154,18 @@ export function initializeSettingsDefaults() {
   if (!storage.getItem(TRACKING_RADIUS_KEY)) storage.setItem(TRACKING_RADIUS_KEY, "0.2");
   if (!storage.getItem(TRACKING_INTERVAL_KEY)) storage.setItem(TRACKING_INTERVAL_KEY, "5000");
   if (!storage.getItem(TRACKING_ENABLED_KEY)) storage.setItem(TRACKING_ENABLED_KEY, "false");
+  if (!storage.getItem(TRACKING_MODE_KEY)) {
+    const batterySaverEnabled = storage.getItem(BATTERY_SAVER_KEY) === "true";
+    const trackingInterval = Number(storage.getItem(TRACKING_INTERVAL_KEY) || 5000);
+    const initialTrackingMode: TrackingMode =
+      batterySaverEnabled || trackingInterval >= 10000
+        ? "power_save"
+        : trackingInterval <= 2000
+          ? "fast"
+          : "balanced";
+
+    storage.setItem(TRACKING_MODE_KEY, initialTrackingMode);
+  }
 }
 
 export function getDeviceUuid() {
@@ -343,6 +358,7 @@ export function setBatterySaver(value: boolean) {
   if (value) {
     setTrackingRadiusKm(0.3);
     setTrackingIntervalMs(10000);
+    setTrackingMode("power_save");
   }
 }
 
@@ -350,6 +366,61 @@ export function getBatterySaver() {
   const storage = getStorage();
   if (!storage) return false;
   return storage.getItem(BATTERY_SAVER_KEY) === "true";
+}
+
+export function setTrackingMode(value: TrackingMode) {
+  const storage = getStorage();
+  if (!storage) return;
+
+  storage.setItem(TRACKING_MODE_KEY, value);
+  storage.setItem(BATTERY_SAVER_KEY, String(value === "power_save"));
+
+  if (value === "fast") {
+    storage.setItem(TRACKING_INTERVAL_KEY, "2500");
+  } else if (value === "power_save") {
+    storage.setItem(TRACKING_INTERVAL_KEY, "10000");
+  } else {
+    storage.setItem(TRACKING_INTERVAL_KEY, "5000");
+  }
+}
+
+export function getTrackingMode(): TrackingMode {
+  const storage = getStorage();
+  if (!storage) return "balanced";
+
+  const value = storage.getItem(TRACKING_MODE_KEY);
+  if (value === "fast" || value === "balanced" || value === "power_save") {
+    return value;
+  }
+
+  return "balanced";
+}
+
+export function getTrackingModeConfig(mode = getTrackingMode()) {
+  if (mode === "fast") {
+    return {
+      intervalMs: 2500,
+      requiredStableHits: 1,
+      globalCooldownMs: 8000,
+      highAccuracy: true,
+    };
+  }
+
+  if (mode === "power_save") {
+    return {
+      intervalMs: 10000,
+      requiredStableHits: 3,
+      globalCooldownMs: 25000,
+      highAccuracy: false,
+    };
+  }
+
+  return {
+    intervalMs: 5000,
+    requiredStableHits: 2,
+    globalCooldownMs: 15000,
+    highAccuracy: true,
+  };
 }
 
 export function setTrackingRadiusKm(value: number) {

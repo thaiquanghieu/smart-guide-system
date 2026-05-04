@@ -14,10 +14,9 @@ import {
   ensureDeviceReady,
   getAutoPlay,
   getTrackingEnabled,
+  getTrackingModeConfig,
   getTrackingTargetPoiId,
-  getBatterySaver,
   getDeviceId,
-  getTrackingIntervalMs,
   setTrackingEnabled as persistTrackingEnabled,
   notifyProfileDataChanged,
   setPendingPoiId,
@@ -307,10 +306,11 @@ export default function MapPage() {
   useEffect(() => {
     if (!trackingEnabled || !navigator.geolocation || !enrichedPois.length) return undefined;
 
-    const intervalMs = getBatterySaver() ? 10000 : getTrackingIntervalMs();
+    const trackingModeConfig = getTrackingModeConfig();
+    const intervalMs = trackingModeConfig.intervalMs;
     const poiCooldownMs = 4 * 60 * 1000;
-    const globalCooldownMs = 25 * 1000;
-    const requiredStableHits = 2;
+    const globalCooldownMs = trackingModeConfig.globalCooldownMs;
+    const requiredStableHits = trackingModeConfig.requiredStableHits;
 
     const tick = () => {
       navigator.geolocation.getCurrentPosition(
@@ -380,7 +380,7 @@ export default function MapPage() {
           }
         },
         () => undefined,
-        { enableHighAccuracy: true }
+        { enableHighAccuracy: trackingModeConfig.highAccuracy }
       );
     };
 

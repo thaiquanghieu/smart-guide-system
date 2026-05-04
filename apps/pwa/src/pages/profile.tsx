@@ -13,20 +13,17 @@ import {
   getAudioCustom,
   getAudioLanguage,
   getAutoPlay,
-  getBatterySaver,
   getDeviceId,
-  getTrackingIntervalMs,
-  getTrackingRadiusKm,
+  getTrackingMode,
   initializeSettingsDefaults,
   resetDeviceIdentity,
   setAppLanguage,
   setAudioCustom,
   setAudioLanguage,
   setAutoPlay,
-  setBatterySaver,
   setReturnTo,
-  setTrackingIntervalMs,
-  setTrackingRadiusKm,
+  setTrackingMode,
+  type TrackingMode,
 } from "@/lib/device";
 
 type ProfileSummary = {
@@ -74,9 +71,7 @@ let profileCache:
       audioLang: string;
       audioCustom: boolean;
       autoPlay: boolean;
-      batterySaver: boolean;
-      trackingRadiusIndex: number;
-      trackingIntervalIndex: number;
+      trackingMode: TrackingMode;
       historyItems: ProfilePoiItem[];
       favoriteItems: ProfilePoiItem[];
       paymentItems: PaymentHistoryItem[];
@@ -114,9 +109,7 @@ export default function ProfilePage() {
   const [audioLang, setAudioLangState] = useState("vi");
   const [audioCustom, setAudioCustomState] = useState(false);
   const [autoPlay, setAutoPlayState] = useState(true);
-  const [batterySaver, setBatterySaverState] = useState(false);
-  const [trackingRadiusIndex, setTrackingRadiusIndex] = useState(1);
-  const [trackingIntervalIndex, setTrackingIntervalIndex] = useState(1);
+  const [trackingMode, setTrackingModeState] = useState<TrackingMode>("balanced");
   const [errorMessage, setErrorMessage] = useState("");
   const [historyItems, setHistoryItems] = useState<ProfilePoiItem[]>([]);
   const [favoriteItems, setFavoriteItems] = useState<ProfilePoiItem[]>([]);
@@ -128,9 +121,6 @@ export default function ProfilePage() {
   const [historyLoading, setHistoryLoading] = useState(false);
   const [favoritesLoading, setFavoritesLoading] = useState(false);
   const [paymentsLoading, setPaymentsLoading] = useState(false);
-
-  const radiusValue = trackingRadiusIndex === 0 ? 0.1 : trackingRadiusIndex === 2 ? 0.3 : 0.2;
-  const intervalValue = trackingIntervalIndex === 0 ? 2000 : trackingIntervalIndex === 2 ? 10000 : 5000;
 
   const fetchSummary = async () => {
     await ensureDeviceReady();
@@ -202,12 +192,7 @@ export default function ProfilePage() {
     setAudioLangState(getAudioLanguage());
     setAudioCustomState(getAudioCustom());
     setAutoPlayState(getAutoPlay());
-    setBatterySaverState(getBatterySaver());
-
-    const radius = getTrackingRadiusKm();
-    const interval = getTrackingIntervalMs();
-    setTrackingRadiusIndex(radius === 0.1 ? 0 : radius === 0.3 ? 2 : 1);
-    setTrackingIntervalIndex(interval === 2000 ? 0 : interval === 10000 ? 2 : 1);
+    setTrackingModeState(getTrackingMode());
 
     const load = async () => {
       try {
@@ -222,9 +207,7 @@ export default function ProfilePage() {
           setAudioLangState(profileCache.audioLang);
           setAudioCustomState(profileCache.audioCustom);
           setAutoPlayState(profileCache.autoPlay);
-          setBatterySaverState(profileCache.batterySaver);
-          setTrackingRadiusIndex(profileCache.trackingRadiusIndex);
-          setTrackingIntervalIndex(profileCache.trackingIntervalIndex);
+          setTrackingModeState(profileCache.trackingMode);
           setHistoryItems(profileCache.historyItems || []);
           setFavoriteItems(profileCache.favoriteItems || []);
           setPaymentItems(profileCache.paymentItems || []);
@@ -301,9 +284,7 @@ export default function ProfilePage() {
       audioLang,
       audioCustom,
       autoPlay,
-      batterySaver,
-      trackingRadiusIndex,
-      trackingIntervalIndex,
+      trackingMode,
       historyItems,
       favoriteItems,
       paymentItems,
@@ -312,7 +293,7 @@ export default function ProfilePage() {
       paymentsLoaded,
       reopenOverlay: showHistory ? "history" : showFavorites ? "favorites" : showPayments ? "payments" : "",
     };
-  }, [appLang, audioCustom, audioLang, autoPlay, batterySaver, daysLeftText, favoriteItems, favoritesLoaded, historyItems, historyLoaded, paymentItems, paymentsLoaded, profile, showFavorites, showHistory, showPayments, trackingIntervalIndex, trackingRadiusIndex]);
+  }, [appLang, audioCustom, audioLang, autoPlay, daysLeftText, favoriteItems, favoritesLoaded, historyItems, historyLoaded, paymentItems, paymentsLoaded, profile, showFavorites, showHistory, showPayments, trackingMode]);
 
   useEffect(() => {
     if (!toast) return undefined;
@@ -412,6 +393,13 @@ export default function ProfilePage() {
     { icon: "support.png", label: t("profile.support") },
     { icon: "info.png", label: t("profile.about") },
   ];
+
+  const trackingModeDescriptionKey =
+    trackingMode === "fast"
+      ? "profile.trackingModeFastDesc"
+      : trackingMode === "power_save"
+        ? "profile.trackingModePowerSaveDesc"
+        : "profile.trackingModeBalancedDesc";
 
   return (
     <>
@@ -517,61 +505,25 @@ export default function ProfilePage() {
               </div>
 
               <div className="flex items-center justify-between">
-                <span>{t("profile.batterySaver")}</span>
-                <button
-                  type="button"
-                  className={`flex h-8 w-[52px] rounded-full p-1 ${batterySaver ? "justify-end bg-[#0F5BD7]" : "justify-start bg-[#E5E7EB]"}`}
-                  onClick={() => {
-                    const nextValue = !batterySaver;
-                    setBatterySaverState(nextValue);
-                    setBatterySaver(nextValue);
-                    if (nextValue) {
-                      setTrackingRadiusIndex(2);
-                      setTrackingIntervalIndex(2);
-                    }
+                <span>{t("profile.trackingMode")}</span>
+                <select
+                  value={trackingMode}
+                  onChange={(event) => {
+                    const nextValue = event.target.value as TrackingMode;
+                    setTrackingModeState(nextValue);
+                    setTrackingMode(nextValue);
                   }}
+                  className="w-[170px] rounded-[12px] border border-[#E5E7EB] bg-[#F9FAFB] px-3 py-3 text-right text-[14px] text-[#111827]"
                 >
-                  <span className="h-6 w-6 rounded-full bg-white" />
-                </button>
+                  <option value="fast">{t("profile.trackingModeFast")}</option>
+                  <option value="balanced">{t("profile.trackingModeBalanced")}</option>
+                  <option value="power_save">{t("profile.trackingModePowerSave")}</option>
+                </select>
               </div>
 
-              <div>
-                <p className="text-[13px] text-[#9CA3AF]">{t("profile.detectRadius")}</p>
-                <input
-                  type="range"
-                  min={0}
-                  max={2}
-                  step={1}
-                  value={trackingRadiusIndex}
-                  disabled={batterySaver}
-                  onChange={(event) => {
-                    const nextIndex = Number(event.target.value);
-                    setTrackingRadiusIndex(nextIndex);
-                    setTrackingRadiusKm(nextIndex === 0 ? 0.1 : nextIndex === 2 ? 0.3 : 0.2);
-                  }}
-                  className="mt-4 w-full accent-[#0F5BD7]"
-                />
-                <p className="mt-2 text-[12px] text-[#9CA3AF]">{Math.round(radiusValue * 1000)}m</p>
-              </div>
-
-              <div>
-                <p className="text-[13px] text-[#9CA3AF]">{t("profile.scanRate")}</p>
-                <input
-                  type="range"
-                  min={0}
-                  max={2}
-                  step={1}
-                  value={trackingIntervalIndex}
-                  disabled={batterySaver}
-                  onChange={(event) => {
-                    const nextIndex = Number(event.target.value);
-                    setTrackingIntervalIndex(nextIndex);
-                    setTrackingIntervalMs(nextIndex === 0 ? 2000 : nextIndex === 2 ? 10000 : 5000);
-                  }}
-                  className="mt-4 w-full accent-[#0F5BD7]"
-                />
-                <p className="mt-2 text-[12px] text-[#9CA3AF]">{intervalValue / 1000} giây</p>
-                <p className="mt-2 text-[12px] text-[#9CA3AF]">{t("profile.currentUsage", { radius: Math.round(radiusValue * 1000), seconds: intervalValue / 1000 })}</p>
+              <div className="rounded-[16px] border border-[#E5E7EB] bg-[#F8FAFC] px-4 py-4">
+                <p className="text-[13px] font-semibold text-[#0F5BD7]">{t("profile.trackingModeNoteTitle")}</p>
+                <p className="mt-2 text-[13px] leading-[1.55] text-[#6B7280]">{t(trackingModeDescriptionKey)}</p>
               </div>
 
               <button
