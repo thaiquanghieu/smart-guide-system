@@ -40,12 +40,12 @@ export default function PaywallPage() {
   }, [t]);
 
   return (
-    <main className="min-h-screen bg-[#041B2D] px-5 pb-10 text-white" style={{ paddingTop: "calc(env(safe-area-inset-top) + 14px)" }}>
+    <main className="min-h-screen bg-[#041B2D] px-5 pb-8 text-white" style={{ paddingTop: "calc(env(safe-area-inset-top) + 8px)" }}>
       <Head>
         <meta name="theme-color" content="#041B2D" />
       </Head>
-      <div className="mx-auto max-w-[540px] space-y-[12px]">
-        <div className="grid min-h-[24px] grid-cols-[28px,1fr,28px] items-center">
+      <div className="mx-auto max-w-[540px] space-y-[10px]">
+        <div className="grid min-h-[20px] grid-cols-[28px,1fr,28px] items-center">
           <div />
           <div />
           {fromRenew ? (
@@ -61,15 +61,15 @@ export default function PaywallPage() {
           )}
         </div>
 
-        <img src="/assets/appiconfg.png" alt={t("app.title")} className="mx-auto -my-4 w-[172px]" />
+        <img src="/assets/appiconfg.png" alt={t("app.title")} className="mx-auto -mt-3 -mb-5 w-[164px]" />
 
-        <p className="-mt-2 text-center text-[13px] text-[#D4E3F7]">{t("paywall.choosePlan")}</p>
+        <p className="-mt-1 text-center text-[13px] text-[#D4E3F7]">{t("paywall.choosePlan")}</p>
 
         {message ? (
           <div className="rounded-[18px] border border-red-400/30 bg-red-500/10 p-4 text-sm text-red-100">{message}</div>
         ) : null}
 
-        <section className="space-y-3">
+        <section className="space-y-[10px]">
           {isLoading ? (
             <div className="rounded-[22px] bg-[#F4F9FF] p-4 text-sm text-[#0B1320]">{t("paywall.loadingPlans")}</div>
           ) : null}
@@ -111,18 +111,17 @@ export default function PaywallPage() {
         </section>
 
         {!isLoading ? (
-          <div className="pt-1 text-center">
+          <div className="pt-0.5 text-center">
             <button
               type="button"
-              className="mx-auto flex h-[62px] w-[62px] items-center justify-center rounded-full bg-[#16A34A] shadow-[0_14px_28px_rgba(22,163,74,0.28)]"
+              className="mx-auto flex h-[58px] w-[58px] items-center justify-center rounded-full bg-[#0F5BD7] shadow-[0_14px_28px_rgba(15,91,215,0.28)]"
               onClick={() => router.push(`/scan?returnTo=${encodeURIComponent(router.asPath || "/paywall")}`)}
             >
               <QrCode className="h-7 w-7 text-white" strokeWidth={2.4} />
             </button>
-            <p className="mt-3 text-[14px] font-semibold text-white">Đã có mã QR? Quét để mở lượt nghe miễn phí</p>
             <button
               type="button"
-              className="mt-1 text-[13px] text-[#D4E3F7] underline underline-offset-4"
+              className="mt-2 text-[13px] text-[#D4E3F7] underline underline-offset-4"
               onClick={() => setShowGuide(true)}
             >
               Xem hướng dẫn

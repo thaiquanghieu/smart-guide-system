@@ -194,7 +194,10 @@ export default function ScanPage() {
               <video ref={videoRef} playsInline muted className="h-full w-full object-cover" />
             </div>
             <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-              <div className="relative h-[220px] w-[220px] rounded-[28px] border border-white/40 bg-transparent">
+              <div
+                className="relative h-[220px] w-[220px] rounded-[28px] border border-white/45 bg-transparent"
+                style={{ boxShadow: "0 0 0 999px rgba(0,0,0,0.62)" }}
+              >
                 <div className="absolute -left-1 -top-1 h-10 w-10 rounded-tl-[22px] border-l-4 border-t-4 border-[#4CD964]" />
                 <div className="absolute -right-1 -top-1 h-10 w-10 rounded-tr-[22px] border-r-4 border-t-4 border-[#4CD964]" />
                 <div className="absolute -bottom-1 -left-1 h-10 w-10 rounded-bl-[22px] border-b-4 border-l-4 border-[#4CD964]" />
@@ -215,14 +218,6 @@ export default function ScanPage() {
           >
             <ImageIcon className="h-5 w-5" strokeWidth={2.2} />
             Upload từ thiết bị
-          </button>
-
-          <button
-            type="button"
-            className="mt-3 w-full rounded-[18px] border border-white/15 px-4 py-4 text-[15px] text-[#D1E3FF]"
-            onClick={goBack}
-          >
-            Thoát
           </button>
         </section>
       </div>
