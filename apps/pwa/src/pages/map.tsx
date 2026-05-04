@@ -554,9 +554,15 @@ export default function MapPage() {
           style={{ bottom: trackingBottom }}
           onClick={async () => {
             const nextValue = !trackingEnabled;
+            await playTrackingTransitionCue();
             setTrackingEnabled(nextValue);
 
-            if (!nextValue || playingPoiIdRef.current || !navigator.geolocation) {
+            if (!nextValue) {
+              stopSpeech();
+              return;
+            }
+
+            if (playingPoiIdRef.current || !navigator.geolocation) {
               return;
             }
 
