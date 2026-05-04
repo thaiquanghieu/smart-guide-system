@@ -94,10 +94,13 @@ export default function PaymentPage() {
           const returnTo = getReturnTo();
           const entryContext = getEntryContext();
           const fromQrEntry = !!entryContext?.entryCode;
+          const shouldResumeTrackingOnMap = /^\/map(?:[?#]|$)/.test(returnTo || "/map");
           if (pendingPoiId && fromQrEntry) {
             setTrackingEnabled(true);
             clearTrackingTargetPoiId();
           } else if (pendingPoiId) {
+            setTrackingEnabled(true);
+          } else if (shouldResumeTrackingOnMap) {
             setTrackingEnabled(true);
           } else {
             clearTrackingTargetPoiId();
