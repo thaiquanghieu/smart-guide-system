@@ -1,5 +1,6 @@
 import { useRouter } from "next/router";
 import { useEffect, useMemo, useRef, useState } from "react";
+import AppHeader from "@/components/AppHeader";
 import BottomNav from "@/components/BottomNav";
 import ToastBanner from "@/components/ToastBanner";
 import apiClient, { assetUrl } from "@/lib/api";
@@ -339,23 +340,7 @@ export default function DetailPage() {
     <>
       <ToastBanner message={toast} />
       <main className="app-shell space-y-4">
-        <div className="grid grid-cols-[24px,1fr,24px] items-center">
-          <button
-            type="button"
-            className="flex h-9 w-9 items-center justify-center rounded-full bg-white/80"
-            onClick={() => router.back()}
-          >
-            <img src="/assets/back.png" alt="Back" className="h-6 w-6" />
-          </button>
-          <h1 className="text-center text-[22px] font-bold text-[#0058BC]">Smart Guide</h1>
-          <button
-            type="button"
-            className="flex h-9 w-9 items-center justify-center rounded-full bg-white/80"
-            onClick={sharePoi}
-          >
-            <img src="/assets/share.png" alt="Share" className="h-7 w-7" />
-          </button>
-        </div>
+        <AppHeader leftIcon="back" onLeftClick={() => router.back()} rightIcon="share" onRightClick={sharePoi} />
 
         <div className="overflow-hidden rounded-[30px] bg-white">
           <div className="relative h-[420px]">

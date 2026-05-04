@@ -321,7 +321,10 @@ export default function HomePage() {
       <ToastBanner message={toast} />
 
       <main className="app-shell space-y-[18px]">
-        <AppHeader showNotification />
+        <AppHeader
+          leftIcon="qr"
+          onLeftClick={() => router.push(`/scan?returnTo=${encodeURIComponent(router.asPath || "/")}`)}
+        />
 
         <section className="space-y-1">
           <p className="text-[12px] font-bold text-[#0F5BD7]" suppressHydrationWarning>

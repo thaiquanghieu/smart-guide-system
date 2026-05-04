@@ -1,5 +1,6 @@
 import { useRouter } from "next/router";
 import { useEffect, useMemo, useRef, useState } from "react";
+import AppHeader from "@/components/AppHeader";
 import BottomNav from "@/components/BottomNav";
 import DirectionsSheet from "@/components/DirectionsSheet";
 import MapSurface from "@/components/MapSurface";
@@ -475,20 +476,21 @@ export default function MapPage() {
       >
         <div
           className="absolute left-0 right-0 top-0 z-10 bg-[#F4F7FB]"
-          style={{ height: "calc(env(safe-area-inset-top) + 70px)" }}
-        />
-        <div
-          className="absolute left-0 right-0 z-20 text-center text-[22px] font-bold text-[#0F5BD7]"
-          style={{ top: "calc(env(safe-area-inset-top) + 20px)" }}
+          style={{ height: "calc(env(safe-area-inset-top) + 74px)" }}
         >
-          {t("app.title")}
+          <div className="px-4 pt-[calc(env(safe-area-inset-top)+12px)]">
+            <AppHeader
+              leftIcon="qr"
+              onLeftClick={() => router.push(`/scan?returnTo=${encodeURIComponent(router.asPath || "/map")}`)}
+            />
+          </div>
         </div>
 
         {visibleCenter ? (
           <div
             className="absolute inset-x-0 z-0 overflow-hidden"
             style={{
-              top: "calc(env(safe-area-inset-top) + 68px)",
+              top: "calc(env(safe-area-inset-top) + 74px)",
               bottom: "calc(env(safe-area-inset-bottom) + 74px)",
             }}
           >
@@ -513,7 +515,7 @@ export default function MapPage() {
           </div>
         ) : null}
 
-        <div className="absolute inset-x-4 z-20" style={{ top: "calc(env(safe-area-inset-top) + 80px)" }}>
+        <div className="absolute inset-x-4 z-20" style={{ top: "calc(env(safe-area-inset-top) + 86px)" }}>
           <SearchBar
             value={searchText}
             placeholder={t("home.search")}

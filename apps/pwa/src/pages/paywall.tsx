@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import Head from "next/head";
+import { QrCode } from "lucide-react";
 import apiClient from "@/lib/api";
 import { ensureDeviceReady, setReturnTo } from "@/lib/device";
 import { getPlanName, getPlanSubtitle, useAppI18n } from "@/lib/i18n";
@@ -18,6 +19,7 @@ export default function PaywallPage() {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [message, setMessage] = useState("");
   const [isLoading, setIsLoading] = useState(true);
+  const [showGuide, setShowGuide] = useState(false);
 
   const fromRenew = router.query.source === "renew";
 
@@ -59,7 +61,7 @@ export default function PaywallPage() {
           )}
         </div>
 
-        <img src="/assets/appiconfg.png" alt={t("app.title")} className="mx-auto -my-4 w-[200px]" />
+        <img src="/assets/appiconfg.png" alt={t("app.title")} className="mx-auto -my-4 w-[172px]" />
 
         <p className="-mt-2 text-center text-[13px] text-[#D4E3F7]">{t("paywall.choosePlan")}</p>
 
@@ -108,7 +110,56 @@ export default function PaywallPage() {
           })}
         </section>
 
+        {!isLoading ? (
+          <div className="pt-1 text-center">
+            <button
+              type="button"
+              className="mx-auto flex h-[62px] w-[62px] items-center justify-center rounded-full bg-[#16A34A] shadow-[0_14px_28px_rgba(22,163,74,0.28)]"
+              onClick={() => router.push(`/scan?returnTo=${encodeURIComponent(router.asPath || "/paywall")}`)}
+            >
+              <QrCode className="h-7 w-7 text-white" strokeWidth={2.4} />
+            </button>
+            <p className="mt-3 text-[14px] font-semibold text-white">Đã có mã QR? Quét để mở lượt nghe miễn phí</p>
+            <button
+              type="button"
+              className="mt-1 text-[13px] text-[#D4E3F7] underline underline-offset-4"
+              onClick={() => setShowGuide(true)}
+            >
+              Xem hướng dẫn
+            </button>
+          </div>
+        ) : null}
+
       </div>
+
+      {showGuide ? (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/45 px-5">
+          <div className="w-full max-w-[360px] rounded-[22px] bg-white p-5 text-[#111827]">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h3 className="text-[18px] font-bold">Hướng dẫn quét QR</h3>
+                <p className="mt-2 text-[14px] leading-[1.6] text-[#4B5563]">
+                  Nếu bạn có mã QR tại điểm tham quan, hãy bấm nút quét QR để mở camera hoặc chọn ảnh QR từ thiết bị.
+                  Hệ thống sẽ kiểm tra mã, cấp lượt nghe miễn phí nếu mã còn hiệu lực, rồi mở đúng POI hoặc đưa bạn vào bản đồ để nghe.
+                </p>
+                <p className="mt-3 text-[14px] leading-[1.6] text-[#4B5563]">
+                  Nếu mã đã hết lượt, đã bị tạm ngưng hoặc không hợp lệ, ứng dụng sẽ báo lại để bạn thử mã khác hoặc chọn mua gói.
+                </p>
+              </div>
+              <button type="button" className="text-[26px] leading-none text-[#6B7280]" onClick={() => setShowGuide(false)}>
+                ×
+              </button>
+            </div>
+            <button
+              type="button"
+              className="mt-5 w-full rounded-[16px] bg-[#0F5BD7] py-3 text-[16px] font-semibold text-white"
+              onClick={() => setShowGuide(false)}
+            >
+              Đóng
+            </button>
+          </div>
+        </div>
+      ) : null}
     </main>
   );
 }
