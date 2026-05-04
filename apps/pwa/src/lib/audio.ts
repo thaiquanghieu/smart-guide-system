@@ -15,6 +15,7 @@ export type PoiLike = {
 };
 
 let stopRequested = false;
+let audioPrimed = false;
 
 function resolveSpeechLanguage(code?: string) {
   if (!code) return "vi-VN";
@@ -30,6 +31,58 @@ export function stopSpeech() {
   if (typeof window === "undefined" || !window.speechSynthesis) return;
   stopRequested = true;
   window.speechSynthesis.cancel();
+}
+
+export async function primeAudioPlayback() {
+  if (typeof window === "undefined") return;
+  if (audioPrimed) return;
+
+  try {
+    const AudioContextClass =
+      window.AudioContext ||
+      (window as Window & typeof globalThis & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+
+    if (AudioContextClass) {
+      const context = new AudioContextClass();
+      if (context.state === "suspended") {
+        await context.resume().catch(() => undefined);
+      }
+      context.close().catch(() => undefined);
+    }
+  } catch {
+  }
+
+  try {
+    if (window.speechSynthesis) {
+      stopRequested = false;
+      await new Promise<void>((resolve) => {
+        const utterance = new SpeechSynthesisUtterance(".");
+        let settled = false;
+        const finish = () => {
+          if (settled) return;
+          settled = true;
+          resolve();
+        };
+
+        utterance.volume = 0;
+        utterance.rate = 1;
+        utterance.pitch = 1;
+        utterance.lang = resolveSpeechLanguage(getAudioLanguage());
+        utterance.onend = finish;
+        utterance.onerror = finish;
+
+        window.speechSynthesis.cancel();
+        window.speechSynthesis.speak(utterance);
+        window.setTimeout(() => {
+          window.speechSynthesis.cancel();
+          finish();
+        }, 60);
+      });
+    }
+  } catch {
+  }
+
+  audioPrimed = true;
 }
 
 export async function playTrackingTransitionCue() {

@@ -7,7 +7,7 @@ import SearchBar from "@/components/SearchBar";
 import ToastBanner from "@/components/ToastBanner";
 import apiClient, { assetUrl } from "@/lib/api";
 import { translatePois, useAppI18n } from "@/lib/i18n";
-import { playPoiAudio, playTrackingTransitionCue, stopSpeech } from "@/lib/audio";
+import { playPoiAudio, playTrackingTransitionCue, primeAudioPlayback, stopSpeech } from "@/lib/audio";
 import {
   clearPendingPoiId,
   clearTrackingTargetPoiId,
@@ -538,13 +538,14 @@ export default function MapPage() {
           type="button"
           className="absolute right-4 z-30 flex h-20 w-20 flex-col items-center justify-center rounded-full bg-[#374151] text-white shadow-[0_10px_18px_rgba(0,0,0,0.18)] transition-all duration-200"
           style={{ bottom: trackingBottom }}
-          onClick={() =>
-            setTrackingEnabled((value) => {
-              const nextValue = !value;
-              persistTrackingEnabled(nextValue);
-              return nextValue;
-            })
-          }
+          onClick={async () => {
+            const nextValue = !trackingEnabled;
+            if (nextValue) {
+              await primeAudioPlayback();
+            }
+            persistTrackingEnabled(nextValue);
+            setTrackingEnabled(nextValue);
+          }}
         >
           <img
             src={trackingEnabled ? "/assets/tracking_active.png" : "/assets/tracking.png"}
@@ -569,6 +570,7 @@ export default function MapPage() {
               onClick={async () => {
                 if (!selectedPoi) return;
                 setStartingQrPreview(true);
+                await primeAudioPlayback();
                 const success = await playMapPoi(selectedPoi, {
                   redirectToPaywallAfterFree: true,
                   optimisticCount: false,
@@ -628,6 +630,7 @@ export default function MapPage() {
                     return;
                   }
 
+                  await primeAudioPlayback();
                   await playMapPoi(selectedPoi, {
                     redirectToPaywallAfterFree: !subscriptionActive,
                     optimisticCount: true,
