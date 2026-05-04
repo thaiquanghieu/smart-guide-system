@@ -7,7 +7,7 @@ import SearchBar from "@/components/SearchBar";
 import ToastBanner from "@/components/ToastBanner";
 import apiClient, { assetUrl } from "@/lib/api";
 import { translatePois, useAppI18n } from "@/lib/i18n";
-import { playPoiAudio, playTrackingTransitionCue, primeAudioPlayback, stopSpeech } from "@/lib/audio";
+import { playPoiAudio, playTrackingStatusTts, playTrackingTransitionCue, primeAudioPlayback, stopSpeech } from "@/lib/audio";
 import {
   clearPendingPoiId,
   clearTrackingTargetPoiId,
@@ -554,13 +554,16 @@ export default function MapPage() {
           style={{ bottom: trackingBottom }}
           onClick={async () => {
             const nextValue = !trackingEnabled;
-            await playTrackingTransitionCue();
-            setTrackingEnabled(nextValue);
 
             if (!nextValue) {
               stopSpeech();
+              await playTrackingStatusTts(false);
+              setTrackingEnabled(false);
               return;
             }
+
+            await playTrackingStatusTts(true);
+            setTrackingEnabled(true);
 
             if (playingPoiIdRef.current || !navigator.geolocation) {
               return;

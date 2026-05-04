@@ -134,6 +134,13 @@ export async function playTrackingTransitionCue() {
   }
 }
 
+export async function playTrackingStatusTts(enabled: boolean) {
+  if (typeof window === "undefined" || !window.speechSynthesis) return;
+
+  stopRequested = false;
+  await speakScript(enabled ? "Tracking on" : "Tracking off", "en");
+}
+
 function waitForVoices(timeoutMs = 2500) {
   if (typeof window === "undefined" || !window.speechSynthesis) {
     return Promise.resolve<SpeechSynthesisVoice[]>([]);
