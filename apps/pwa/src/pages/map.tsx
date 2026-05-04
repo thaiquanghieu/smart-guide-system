@@ -358,16 +358,20 @@ export default function MapPage() {
             candidateRef.current = { poiId: candidatePoi.id, hits: 1 };
           }
 
-          const selectedTrackingPoi =
-            (playingPoiId ? enrichedPois.find((poi) => poi.id === playingPoiId) : null) || candidatePoi;
-
-          setSelectedPoiId(selectedTrackingPoi.id);
-          setMapCenter({ latitude: selectedTrackingPoi.latitude, longitude: selectedTrackingPoi.longitude });
-
           const canAutoPlay =
             candidateRef.current.hits >= requiredStableHits &&
             !playingPoiId &&
             now >= globalCooldownUntilRef.current;
+
+          const selectedTrackingPoi =
+            (playingPoiId ? enrichedPois.find((poi) => poi.id === playingPoiId) : null) ||
+            (canAutoPlay ? candidatePoi : selectedPoi) ||
+            candidatePoi;
+
+          if (selectedTrackingPoi.id !== selectedPoiId) {
+            setSelectedPoiId(selectedTrackingPoi.id);
+            setMapCenter({ latitude: selectedTrackingPoi.latitude, longitude: selectedTrackingPoi.longitude });
+          }
 
           if (canAutoPlay) {
             lastPlayedAtRef.current[candidatePoi.id] = now;
@@ -389,7 +393,7 @@ export default function MapPage() {
         trackingTimerRef.current = null;
       }
     };
-  }, [enrichedPois, playingPoiId, subscriptionActive, trackingEnabled]);
+  }, [enrichedPois, playingPoiId, selectedPoi, selectedPoiId, subscriptionActive, trackingEnabled]);
 
   const visibleCenter = mapCenter || userLocation;
   const shouldShowQrTapPrompt =
