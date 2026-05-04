@@ -358,8 +358,11 @@ export default function MapPage() {
             candidateRef.current = { poiId: candidatePoi.id, hits: 1 };
           }
 
-          setSelectedPoiId(candidatePoi.id);
-          setMapCenter({ latitude: candidatePoi.latitude, longitude: candidatePoi.longitude });
+          const selectedTrackingPoi =
+            (playingPoiId ? enrichedPois.find((poi) => poi.id === playingPoiId) : null) || candidatePoi;
+
+          setSelectedPoiId(selectedTrackingPoi.id);
+          setMapCenter({ latitude: selectedTrackingPoi.latitude, longitude: selectedTrackingPoi.longitude });
 
           const canAutoPlay =
             candidateRef.current.hits >= requiredStableHits &&
