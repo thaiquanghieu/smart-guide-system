@@ -73,6 +73,36 @@ function getBrowserFingerprint() {
   return parts.join("|");
 }
 
+function getReadableDeviceName() {
+  if (typeof navigator === "undefined") return "Browser";
+
+  const userAgent = navigator.userAgent || "";
+  const platform = navigator.platform || "";
+
+  if (/iphone/i.test(userAgent)) return "iPhone";
+  if (/ipad/i.test(userAgent)) return "iPad";
+  if (/android/i.test(userAgent)) return "Android";
+  if (/mac/i.test(platform) || /macintosh/i.test(userAgent)) return "Mac";
+  if (/win/i.test(platform) || /windows/i.test(userAgent)) return "Windows PC";
+  if (/linux/i.test(platform) || /linux/i.test(userAgent)) return "Linux PC";
+  return "Browser";
+}
+
+function getReadableDeviceModel() {
+  if (typeof navigator === "undefined") return "browser";
+
+  const userAgent = navigator.userAgent || "";
+  const platform = navigator.platform || "";
+
+  if (/iphone/i.test(userAgent)) return "iPhone";
+  if (/ipad/i.test(userAgent)) return "iPad";
+  if (/android/i.test(userAgent)) return "Android";
+  if (/mac/i.test(platform) || /macintosh/i.test(userAgent)) return "Mac";
+  if (/win/i.test(platform) || /windows/i.test(userAgent)) return "Windows";
+  if (/linux/i.test(platform) || /linux/i.test(userAgent)) return "Linux";
+  return platform || "browser";
+}
+
 function hashToUuid(input: string) {
   let hash = 2166136261;
 
@@ -204,9 +234,9 @@ export async function ensureDeviceReady() {
 
   const payload = {
     deviceUuid: getDeviceUuid(),
-    name: typeof navigator !== "undefined" ? (navigator.userAgent.includes("iPhone") ? "iPhone" : navigator.userAgent) : "browser",
+    name: getReadableDeviceName(),
     platform: "web",
-    model: typeof navigator !== "undefined" ? navigator.platform : "browser",
+    model: getReadableDeviceModel(),
     appVersion: "pwa-1.0",
     fingerprint: getBrowserFingerprint(),
     metadata: {

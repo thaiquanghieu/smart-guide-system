@@ -42,6 +42,30 @@ type DeviceDetail = {
   latest_history: Array<{ poiId: string; listenedAt: string; durationSeconds: number }>
 }
 
+function normalizeDeviceName(name?: string, model?: string) {
+  const raw = `${name || ''} ${model || ''}`.toLowerCase()
+
+  if (raw.includes('iphone')) return 'iPhone'
+  if (raw.includes('ipad')) return 'iPad'
+  if (raw.includes('android')) return 'Android'
+  if (raw.includes('macintosh') || raw.includes('macintel') || raw.includes(' mac ')) return 'Mac'
+  if (raw.includes('windows') || raw.includes('win32')) return 'Windows PC'
+  if (raw.includes('linux')) return 'Linux PC'
+  return name || 'Browser'
+}
+
+function normalizeDeviceModel(platform?: string, model?: string, name?: string) {
+  const raw = `${platform || ''} ${model || ''} ${name || ''}`.toLowerCase()
+
+  if (raw.includes('iphone')) return 'web iPhone'
+  if (raw.includes('ipad')) return 'web iPad'
+  if (raw.includes('android')) return 'web Android'
+  if (raw.includes('macintosh') || raw.includes('macintel') || raw.includes(' mac ')) return 'web Mac'
+  if (raw.includes('windows') || raw.includes('win32')) return 'web Windows'
+  if (raw.includes('linux')) return 'web Linux'
+  return [platform, model].filter(Boolean).join(' ') || '-'
+}
+
 export default function DevicesPage() {
   const [devices, setDevices] = useState<Device[]>([])
   const [allDevices, setAllDevices] = useState<Device[]>([])
@@ -271,11 +295,11 @@ export default function DevicesPage() {
                                 <div>
                                   <p
                                     className="max-w-[360px] truncate font-semibold text-white"
-                                    title={device.name || `Device #${device.id}`}
+                                    title={normalizeDeviceName(device.name, device.model)}
                                   >
-                                    {device.name || `Device #${device.id}`}
+                                    {normalizeDeviceName(device.name, device.model) || `Device #${device.id}`}
                                   </p>
-                                  <p className="text-xs text-gray-400">{device.platform || '-'} {device.model || ''}</p>
+                                  <p className="text-xs text-gray-400">{normalizeDeviceModel(device.platform, device.model, device.name)}</p>
                                   <div className="mt-1 flex items-center gap-2 text-[11px] text-gray-500">
                                     <span>ID: {showId ? (device.device_uuid || `#${device.id}`) : '••••••••••••••••'}</span>
                                     <button
@@ -332,8 +356,8 @@ export default function DevicesPage() {
           <div className="w-full max-w-3xl max-h-[82vh] overflow-y-auto rounded-2xl border border-gray-700 bg-secondary p-6" onClick={(event) => event.stopPropagation()}>
             <div className="mb-5 flex items-start justify-between">
               <div>
-                <h2 className="text-2xl font-bold text-white">{selectedDevice.name || `Device #${selectedDevice.id}`}</h2>
-                <p className="text-gray-400">{selectedDevice.platform || '-'} {selectedDevice.model || ''}</p>
+                <h2 className="text-2xl font-bold text-white">{normalizeDeviceName(selectedDevice.name, selectedDevice.model) || `Device #${selectedDevice.id}`}</h2>
+                <p className="text-gray-400">{normalizeDeviceModel(selectedDevice.platform, selectedDevice.model, selectedDevice.name)}</p>
               </div>
               <button onClick={() => setSelectedDevice(null)} className="rounded-lg bg-dark px-4 py-2 text-white">Đóng</button>
             </div>
