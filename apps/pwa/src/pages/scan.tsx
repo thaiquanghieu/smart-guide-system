@@ -1,7 +1,7 @@
 import { useRouter } from "next/router";
 import { useEffect, useRef, useState } from "react";
 import jsQR from "jsqr";
-import { Image as ImageIcon } from "lucide-react";
+import { Check, Image as ImageIcon } from "lucide-react";
 import AppHeader from "@/components/AppHeader";
 import { buildQrEntryPath, resolveQrPayload } from "@/lib/qr";
 
@@ -21,6 +21,7 @@ export default function ScanPage() {
   const processingRef = useRef(false);
   const [message, setMessage] = useState("Đưa mã QR vào khung để quét");
   const [cameraReady, setCameraReady] = useState(false);
+  const [scanSuccess, setScanSuccess] = useState(false);
 
   const stopScanner = () => {
     if (frameRef.current) {
@@ -55,6 +56,9 @@ export default function ScanPage() {
       return;
     }
 
+    setScanSuccess(true);
+    setMessage("Đã quét thành công");
+    await new Promise((resolve) => window.setTimeout(resolve, 260));
     await router.replace(buildQrEntryPath(payload));
   };
 
@@ -195,13 +199,26 @@ export default function ScanPage() {
             </div>
             <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
               <div
-                className="relative h-[220px] w-[220px] rounded-[28px] border border-white/45 bg-transparent"
+                className={`relative h-[220px] w-[220px] rounded-[28px] border border-white/45 bg-transparent ${scanSuccess ? "animate-scan-success" : ""}`}
                 style={{ boxShadow: "0 0 0 999px rgba(0,0,0,0.62)" }}
               >
                 <div className="absolute -left-1 -top-1 h-10 w-10 rounded-tl-[22px] border-l-4 border-t-4 border-[#4CD964]" />
                 <div className="absolute -right-1 -top-1 h-10 w-10 rounded-tr-[22px] border-r-4 border-t-4 border-[#4CD964]" />
                 <div className="absolute -bottom-1 -left-1 h-10 w-10 rounded-bl-[22px] border-b-4 border-l-4 border-[#4CD964]" />
                 <div className="absolute -bottom-1 -right-1 h-10 w-10 rounded-br-[22px] border-b-4 border-r-4 border-[#4CD964]" />
+                {!scanSuccess ? (
+                  <div
+                    className="absolute left-4 right-4 top-1/2 h-[2px] -translate-y-1/2 rounded-full bg-[rgba(76,217,100,0.9)]"
+                    style={{ boxShadow: "0 0 18px rgba(76,217,100,0.7)", animation: "scanLine 1.9s ease-in-out infinite" }}
+                  />
+                ) : null}
+                {scanSuccess ? (
+                  <div className="absolute inset-0 flex items-center justify-center rounded-[28px] bg-[#0F5BD7]/20">
+                    <div className="flex h-16 w-16 items-center justify-center rounded-full bg-white text-[#0F5BD7] shadow-[0_12px_30px_rgba(15,91,215,0.24)]">
+                      <Check className="h-8 w-8" strokeWidth={2.8} />
+                    </div>
+                  </div>
+                ) : null}
               </div>
             </div>
             {!cameraReady ? (

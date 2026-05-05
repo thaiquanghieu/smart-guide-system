@@ -483,8 +483,8 @@ export default function ProfilePage() {
       </main>
 
       {showSettings ? (
-        <div className="fixed inset-0 z-30 bg-black/40" onClick={() => setShowSettings(false)}>
-          <div className="absolute bottom-0 left-0 right-0 mx-auto max-w-[540px] rounded-t-[20px] bg-white px-5 pb-6 pt-5">
+        <div className="fixed inset-0 z-30 bg-black/40 animate-fade-in" onClick={() => setShowSettings(false)}>
+          <div className="absolute bottom-0 left-0 right-0 mx-auto max-w-[540px] rounded-t-[20px] bg-white px-5 pb-6 pt-5 animate-sheet-up">
             <div onClick={(event) => event.stopPropagation()}>
               <h3 className="text-[18px] font-bold text-[#111827]">{t("profile.settingsTitle")}</h3>
 
@@ -540,8 +540,8 @@ export default function ProfilePage() {
       ) : null}
 
       {showLanguage ? (
-        <div className="fixed inset-0 z-30 bg-black/40" onClick={() => setShowLanguage(false)}>
-          <div className="absolute bottom-0 left-0 right-0 mx-auto max-w-[540px] rounded-t-[20px] bg-white px-5 pb-6 pt-5">
+        <div className="fixed inset-0 z-30 bg-black/40 animate-fade-in" onClick={() => setShowLanguage(false)}>
+          <div className="absolute bottom-0 left-0 right-0 mx-auto max-w-[540px] rounded-t-[20px] bg-white px-5 pb-6 pt-5 animate-sheet-up">
             <div onClick={(event) => event.stopPropagation()}>
               <h3 className="text-[18px] font-bold text-[#111827]">{t("profile.languageTitle")}</h3>
 
@@ -618,12 +618,12 @@ export default function ProfilePage() {
 
       {showHistory ? (
         <div
-          className="fixed inset-0 z-30 bg-black/40"
+          className="fixed inset-0 z-30 bg-black/40 animate-fade-in"
           onClick={() => setShowHistory(false)}
           onTouchMove={(event) => event.preventDefault()}
         >
           <div
-            className="absolute bottom-0 left-0 right-0 mx-auto flex h-[78vh] max-w-[540px] flex-col overflow-hidden rounded-t-[20px] bg-white px-5 pb-6 pt-5"
+            className="absolute bottom-0 left-0 right-0 mx-auto flex h-[78vh] max-w-[540px] flex-col overflow-hidden rounded-t-[20px] bg-white px-5 pb-6 pt-5 animate-sheet-up"
           >
             <div className="flex h-full flex-col" onClick={(event) => event.stopPropagation()}>
               <h3 className="text-[18px] font-bold text-[#111827]">{t("profile.historyTitle")}</h3>
@@ -682,12 +682,12 @@ export default function ProfilePage() {
 
       {showFavorites ? (
         <div
-          className="fixed inset-0 z-30 bg-black/40"
+          className="fixed inset-0 z-30 bg-black/40 animate-fade-in"
           onClick={() => setShowFavorites(false)}
           onTouchMove={(event) => event.preventDefault()}
         >
           <div
-            className="absolute bottom-0 left-0 right-0 mx-auto flex h-[78vh] max-w-[540px] flex-col overflow-hidden rounded-t-[20px] bg-white px-5 pb-6 pt-5"
+            className="absolute bottom-0 left-0 right-0 mx-auto flex h-[78vh] max-w-[540px] flex-col overflow-hidden rounded-t-[20px] bg-white px-5 pb-6 pt-5 animate-sheet-up"
           >
             <div className="flex h-full flex-col" onClick={(event) => event.stopPropagation()}>
               <h3 className="text-[18px] font-bold text-[#111827]">{t("profile.favoritesTitle")}</h3>
@@ -746,11 +746,11 @@ export default function ProfilePage() {
 
       {showPayments ? (
         <div
-          className="fixed inset-0 z-30 bg-black/40"
+          className="fixed inset-0 z-30 bg-black/40 animate-fade-in"
           onClick={() => setShowPayments(false)}
           onTouchMove={(event) => event.preventDefault()}
         >
-          <div className="absolute bottom-0 left-0 right-0 mx-auto flex h-[78vh] max-w-[540px] flex-col overflow-hidden rounded-t-[20px] bg-white px-5 pb-6 pt-5">
+          <div className="absolute bottom-0 left-0 right-0 mx-auto flex h-[78vh] max-w-[540px] flex-col overflow-hidden rounded-t-[20px] bg-white px-5 pb-6 pt-5 animate-sheet-up">
             <div className="flex h-full flex-col" onClick={(event) => event.stopPropagation()}>
               <h3 className="text-[18px] font-bold text-[#111827]">Lịch sử thanh toán</h3>
 
@@ -831,8 +831,8 @@ export default function ProfilePage() {
       ) : null}
 
       {selectedPayment ? (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/30 px-5" onClick={() => setSelectedPayment(null)}>
-          <div className="w-full max-w-[360px] rounded-[20px] bg-white p-5 text-[#111827]" onClick={(event) => event.stopPropagation()}>
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/30 px-5 animate-fade-in" onClick={() => setSelectedPayment(null)}>
+          <div className="w-full max-w-[360px] rounded-[20px] bg-white p-5 text-[#111827] animate-pop-in" onClick={(event) => event.stopPropagation()}>
             <div className="flex items-start justify-between gap-3">
               <div>
                 <h3 className="text-[18px] font-bold">{selectedPayment.plan_name || selectedPayment.description || "Thanh toán Smart Guide"}</h3>
@@ -867,8 +867,8 @@ export default function ProfilePage() {
       ) : null}
 
       {showDeleteConfirm ? (
-        <div className="fixed inset-0 z-30 bg-black/40" onClick={() => setShowDeleteConfirm(false)}>
-          <div className="absolute bottom-0 left-0 right-0 mx-auto max-w-[540px] rounded-t-[20px] bg-white px-5 pb-6 pt-5">
+        <div className="fixed inset-0 z-30 bg-black/40 animate-fade-in" onClick={() => setShowDeleteConfirm(false)}>
+          <div className="absolute bottom-0 left-0 right-0 mx-auto max-w-[540px] rounded-t-[20px] bg-white px-5 pb-6 pt-5 animate-sheet-up">
             <div onClick={(event) => event.stopPropagation()}>
               <h3 className="text-[18px] font-bold text-[#111827]">{t("profile.deleteDevice")}</h3>
               <p className="mt-3 text-[14px] leading-[1.5] text-[#6B7280]">

@@ -63,6 +63,84 @@ body {
   }
 }
 
+@keyframes fadeInSoft {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes sheetUp {
+  from {
+    opacity: 0;
+    transform: translateY(28px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes popInSoft {
+  from {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes scanLine {
+  0% {
+    transform: translateY(-88px);
+    opacity: 0;
+  }
+  15% {
+    opacity: 1;
+  }
+  85% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(88px);
+    opacity: 0;
+  }
+}
+
+@keyframes successFlash {
+  0% {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+  55% {
+    opacity: 1;
+    transform: scale(1.04);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes paywallCardPress {
+  0% {
+    transform: scale(1);
+  }
+  28% {
+    transform: scale(0.965);
+  }
+  62% {
+    transform: scale(1.02);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
 a {
   color: inherit;
   text-decoration: none;
@@ -83,6 +161,32 @@ a {
 .animate-app-heartbeat {
   animation: appHeartbeat 1.7s ease-in-out infinite;
   transform-origin: center;
+}
+
+.animate-app-heartbeat-soft {
+  animation: appHeartbeat 1.7s ease-in-out infinite;
+  animation-delay: 0.08s;
+  transform-origin: center;
+}
+
+.animate-fade-in {
+  animation: fadeInSoft 180ms ease-out;
+}
+
+.animate-sheet-up {
+  animation: sheetUp 240ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.animate-pop-in {
+  animation: popInSoft 190ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.animate-scan-success {
+  animation: successFlash 220ms ease-out forwards;
+}
+
+.animate-paywall-card-press {
+  animation: paywallCardPress 260ms cubic-bezier(0.2, 0.9, 0.22, 1);
 }
 
 .ios-card {

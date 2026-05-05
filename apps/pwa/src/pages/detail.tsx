@@ -524,9 +524,9 @@ export default function DetailPage() {
       </main>
 
       {scriptOpen ? (
-        <div className="fixed inset-0 z-40 bg-black/35 px-5 py-10" onClick={() => setScriptOpen(false)}>
+        <div className="fixed inset-0 z-40 bg-black/35 px-5 py-10 animate-fade-in" onClick={() => setScriptOpen(false)}>
           <div
-            className="mx-auto max-h-full max-w-[540px] overflow-auto rounded-[24px] bg-white p-5"
+            className="mx-auto max-h-full max-w-[540px] overflow-auto rounded-[24px] bg-white p-5 animate-pop-in"
             onClick={(event) => event.stopPropagation()}
           >
             <h3 className="text-[20px] font-bold text-[#111827]">{t("detail.scriptTitle")}</h3>

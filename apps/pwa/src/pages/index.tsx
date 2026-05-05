@@ -499,8 +499,8 @@ export default function HomePage() {
       </main>
 
       {showFilterSheet ? (
-        <div className="fixed inset-0 z-40 bg-black/30" onClick={() => setShowFilterSheet(false)}>
-          <div className="absolute bottom-0 left-0 right-0 mx-auto max-w-[540px] rounded-t-[20px] bg-white p-5" onClick={(event) => event.stopPropagation()}>
+        <div className="fixed inset-0 z-40 bg-black/30 animate-fade-in" onClick={() => setShowFilterSheet(false)}>
+          <div className="absolute bottom-0 left-0 right-0 mx-auto max-w-[540px] rounded-t-[20px] bg-white p-5 animate-sheet-up" onClick={(event) => event.stopPropagation()}>
             <h3 className="text-[18px] font-bold text-[#111827]">{t("home.chooseCategory")}</h3>
             <div className="mt-4 grid gap-3">
               {(["nearby", "all", "free"] as FilterOption[]).map((option) => (
@@ -522,8 +522,8 @@ export default function HomePage() {
       ) : null}
 
       {showSortSheet ? (
-        <div className="fixed inset-0 z-40 bg-black/30" onClick={() => setShowSortSheet(false)}>
-          <div className="absolute bottom-0 left-0 right-0 mx-auto max-w-[540px] rounded-t-[20px] bg-white p-5" onClick={(event) => event.stopPropagation()}>
+        <div className="fixed inset-0 z-40 bg-black/30 animate-fade-in" onClick={() => setShowSortSheet(false)}>
+          <div className="absolute bottom-0 left-0 right-0 mx-auto max-w-[540px] rounded-t-[20px] bg-white p-5 animate-sheet-up" onClick={(event) => event.stopPropagation()}>
             <h3 className="text-[18px] font-bold text-[#111827]">{t("home.sort")}</h3>
             <p className="mt-1 text-[13px] text-[#6B7280]">{sortLabel}</p>
             <div className="mt-4 grid gap-3">

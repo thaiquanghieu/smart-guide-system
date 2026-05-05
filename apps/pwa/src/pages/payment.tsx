@@ -230,8 +230,8 @@ export default function PaymentPage() {
       </div>
 
       {showSuccess ? (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/20 px-5">
-          <div className="w-full max-w-[320px] overflow-hidden rounded-[18px] bg-white text-center text-[#111827]">
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/20 px-5 animate-fade-in">
+          <div className="w-full max-w-[320px] overflow-hidden rounded-[18px] bg-white text-center text-[#111827] animate-pop-in">
             <div className="px-5 pb-4 pt-5">
               <h3 className="text-[18px] font-bold">{t("payment.success")}</h3>
               <p className="mt-2 text-[15px]">{t("payment.successMessage")}</p>
@@ -248,8 +248,8 @@ export default function PaymentPage() {
       ) : null}
 
       {showRejectedNotice ? (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/30 px-5">
-          <div className="w-full max-w-[340px] overflow-hidden rounded-[18px] bg-white text-center text-[#111827]">
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/30 px-5 animate-fade-in">
+          <div className="w-full max-w-[340px] overflow-hidden rounded-[18px] bg-white text-center text-[#111827] animate-pop-in">
             <div className="px-5 pb-4 pt-5">
               <h3 className="text-[18px] font-bold">Chưa xác minh được thanh toán</h3>
               <p className="mt-2 text-[15px] leading-[1.5]">

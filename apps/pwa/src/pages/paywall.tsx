@@ -20,6 +20,7 @@ export default function PaywallPage() {
   const [message, setMessage] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [showGuide, setShowGuide] = useState(false);
+  const [pendingPlanId, setPendingPlanId] = useState<number | null>(null);
 
   const fromRenew = router.query.source === "renew";
 
@@ -81,16 +82,26 @@ export default function PaywallPage() {
               <button
                 key={plan.id}
                 type="button"
-                className={`w-full rounded-[22px] border p-[18px] text-left ${
+                className={`w-full rounded-[22px] border p-[18px] text-left transition-shadow duration-200 active:scale-[0.97] ${
+                  pendingPlanId === plan.id ? "animate-paywall-card-press shadow-[0_18px_30px_rgba(15,91,215,0.18)]" : "shadow-[0_8px_18px_rgba(15,23,42,0.05)]"
+                } ${
                   highlighted
                     ? "border-[#4C8FF1] bg-[#0F5BD7] text-white"
                     : "border-[#B9D8FF] bg-[#F4F9FF] text-[#111827]"
                 }`}
                 onClick={() => {
+                  setPendingPlanId(plan.id);
                   const returnTo =
                     typeof router.query.returnTo === "string" ? router.query.returnTo : "/map";
                   setReturnTo(returnTo);
-                  router.push(`/payment?planId=${plan.id}`);
+                  window.setTimeout(() => {
+                    router.push(`/payment?planId=${plan.id}`);
+                  }, 150);
+                }}
+                onAnimationEnd={() => {
+                  if (pendingPlanId === plan.id) {
+                    setPendingPlanId(null);
+                  }
                 }}
               >
                 <div className="grid grid-cols-[1fr,auto] gap-3">
@@ -132,8 +143,8 @@ export default function PaywallPage() {
       </div>
 
       {showGuide ? (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/45 px-5">
-          <div className="w-full max-w-[360px] rounded-[22px] bg-white p-5 text-[#111827]">
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/45 px-5 animate-fade-in">
+          <div className="w-full max-w-[360px] rounded-[22px] bg-white p-5 text-[#111827] animate-pop-in">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <h3 className="text-[18px] font-bold">Hướng dẫn quét QR</h3>
