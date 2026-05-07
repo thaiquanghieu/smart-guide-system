@@ -611,88 +611,763 @@ sequenceDiagram
 
     User ->> PWA: Truy cập ứng dụng / màn hình cần dữ liệu
     PWA ->> DeviceLib: ensureDeviceReady()
-    DeviceLib ->> DeviceLib: initializeSettingsDefaults()
 
     alt Chưa có deviceUuid trong localStorage
-        DeviceLib ->> DeviceLib: generateUuid()
         DeviceLib ->> Storage: Lưu pwa_device_uuid
     else Đã có deviceUuid
         DeviceLib ->> Storage: Đọc pwa_device_uuid
     end
 
-    DeviceLib ->> DeviceLib: getReadableDeviceName()
-    DeviceLib ->> DeviceLib: getReadableDeviceModel()
-    DeviceLib ->> DeviceLib: getBrowserFingerprint()
     DeviceLib ->> API: POST /api/devices/register(deviceUuid, name, platform, model, appVersion, fingerprint, metadata)
     API ->> DevicesCtl: Register(request)
+    DevicesCtl ->> DB: Tìm Device theo deviceUuid
 
-    alt deviceUuid không hợp lệ
-        DevicesCtl -->> API: 400 Bad Request
-        API -->> DeviceLib: Lỗi đăng ký thiết bị
-        DeviceLib -->> PWA: Throw error
-    else deviceUuid hợp lệ
-        DevicesCtl ->> DB: Tìm Device theo deviceUuid
+    alt Tìm thấy thiết bị hiện có
+        DB -->> DevicesCtl: Device theo deviceUuid
+    else Không tìm thấy theo deviceUuid
+        DevicesCtl ->> DB: Nhận diện lại theo fingerprint hoặc thiết bị còn gói sử dụng
 
-        alt Tìm thấy theo deviceUuid
-            DB -->> DevicesCtl: Trả về device hiện có
-        else Không thấy theo deviceUuid
-            opt Có fingerprint
-                DevicesCtl ->> DB: Tìm device active cùng platform
-                DB -->> DevicesCtl: Danh sách candidate devices
-                DevicesCtl ->> DevicesCtl: So khớp fingerprint trong metadata
-            end
-
-            alt Không khớp fingerprint
-                DevicesCtl ->> DB: Tìm device active còn subscription cùng platform + name
-                DB -->> DevicesCtl: Device phù hợp hoặc rỗng
-            end
-
-            alt Vẫn chưa tìm thấy device phù hợp
-                DevicesCtl ->> DB: Tạo Device mới
-                DB -->> DevicesCtl: Device mới
-            else Tìm thấy device phù hợp
-                DevicesCtl ->> DevicesCtl: Gán lại deviceUuid mới cho device đã nhận diện
-            end
+        alt Nhận diện được thiết bị cũ
+            DB -->> DevicesCtl: Device phù hợp
+            DevicesCtl ->> DevicesCtl: Gán lại deviceUuid cho thiết bị đã nhận diện
+        else Không nhận diện được
+            DevicesCtl ->> DB: Tạo Device mới
+            DB -->> DevicesCtl: Device mới
         end
+    end
 
-        alt Device có trạng thái banned
-            DevicesCtl -->> API: 403 Forbidden
-            API -->> DeviceLib: message + reason
-            DeviceLib -->> PWA: Throw blocked error
-            PWA -->> User: Hiển thị thiết bị bị khóa
-        else Device hợp lệ
-            DevicesCtl ->> DevicesCtl: Cập nhật name, platform, model, appVersion, pushToken, qrCode, metadata
-            DevicesCtl ->> DevicesCtl: Set isActive = true, status = active, deletedAt = null, lastSeen = now
-            DevicesCtl ->> DB: SaveChanges()
-            DB -->> DevicesCtl: Thành công
-            DevicesCtl -->> API: 200 OK(deviceId, deviceUuid, isActive)
-            API -->> DeviceLib: deviceId
-            DeviceLib ->> Storage: Lưu pwa_device_id
-            DeviceLib -->> PWA: Device sẵn sàng
-            PWA -->> User: Tiếp tục tải dữ liệu màn hình
-        end
+    alt Thiết bị bị khóa
+        DevicesCtl -->> API: 403 Forbidden
+        API -->> DeviceLib: message + reason
+        PWA -->> User: Hiển thị thiết bị bị khóa
+    else Thiết bị hợp lệ
+        DevicesCtl ->> DB: Cập nhật thông tin thiết bị và lastSeen
+        DB -->> DevicesCtl: Lưu thành công
+        DevicesCtl -->> API: 200 OK(deviceId, deviceUuid)
+        API -->> DeviceLib: deviceId
+        DeviceLib ->> Storage: Lưu pwa_device_id
+        DeviceLib -->> PWA: Device sẵn sàng
+        PWA -->> User: Tiếp tục tải dữ liệu màn hình
     end
 ```
 
 ### 10.2. Sequence Quét QR Và Cấp Lượt Nghe Miễn Phí
 
-Nội dung sơ đồ sẽ bổ sung sau.
+> Bao gồm các trường hợp: QR không hợp lệ, QR bị tạm ngưng, QR hết lượt hoặc hết hạn, thiết bị đã có gói sử dụng, thiết bị đã dùng lượt nghe miễn phí trước đó và thiết bị mới được cấp lượt nghe miễn phí.
+
+```mermaid
+%%{init: {
+  "theme": "base",
+  "themeVariables": {
+    "primaryColor": "#EAF4FF",
+    "primaryBorderColor": "#2563EB",
+    "primaryTextColor": "#0F172A",
+    "lineColor": "#2563EB",
+    "secondaryColor": "#DBEAFE",
+    "tertiaryColor": "#F8FBFF",
+    "noteBkgColor": "#EFF6FF",
+    "noteBorderColor": "#3B82F6",
+    "activationBorderColor": "#2563EB",
+    "activationBkgColor": "#DBEAFE",
+    "sequenceNumberColor": "#0F172A"
+  }
+}}%%
+sequenceDiagram
+    participant User as User
+    participant ScanPage as Scan Page
+    participant QrPage as QR Entry Page
+    participant DeviceLib as device.ts
+    participant API as ApiClient
+    participant AccessCtl as AccessController
+    participant DB as PostgreSQL
+    participant MapPage as Map Page
+    participant Paywall as Paywall Page
+
+    User ->> ScanPage: Quét mã QR hoặc chọn ảnh QR
+    ScanPage ->> ScanPage: resolveQrPayload(rawText)
+
+    alt QR payload không hợp lệ
+        ScanPage -->> User: Hiển thị lỗi quét QR
+    else QR payload hợp lệ
+        ScanPage ->> QrPage: router.replace(/qr/[entryCode]?poiId=...)
+        QrPage ->> DeviceLib: ensureDeviceReady()
+        QrPage ->> DeviceLib: saveEntryContext(entryCode, poiId)
+        QrPage ->> API: POST /api/access/entry(deviceId, entryCode, poiId)
+        API ->> AccessCtl: RegisterEntry(request)
+        AccessCtl ->> DB: Kiểm tra Device, QrEntry và quyền truy cập hiện tại
+
+        alt QR không tồn tại hoặc bị tạm ngưng
+            AccessCtl -->> API: message lỗi
+            API -->> QrPage: Hiển thị lỗi xử lý QR
+        else QR đã hết lượt hoặc đã hết hạn
+            AccessCtl ->> DB: Ghi QrLog(quota_exceeded)
+            AccessCtl -->> API: granted = false, freePlaysRemaining = 0
+            QrPage ->> MapPage: Mở POI tương ứng
+            MapPage ->> API: GET /api/access/free-listen
+            API ->> AccessCtl: GetFreeListenStatus(deviceId)
+            AccessCtl -->> API: isAllowed = false
+            API -->> MapPage: Không có quyền nghe
+            MapPage ->> Paywall: Chuyển sang thanh toán
+        else QR còn lượt
+            AccessCtl ->> DB: Cập nhật UsedScans và kiểm tra subscription / grant
+
+            alt Thiết bị đã có gói sử dụng
+                AccessCtl ->> DB: Ghi QrLog(subscription_active)
+                AccessCtl -->> API: hasActiveSubscription = true
+                QrPage ->> MapPage: Mở POI tương ứng
+                MapPage ->> API: GET /api/access/free-listen
+                API -->> MapPage: isAllowed = true
+                MapPage -->> User: Mở nội dung POI
+            else Thiết bị đã dùng free listen trước đó
+                AccessCtl ->> DB: Ghi QrLog(free_already_used)
+                AccessCtl -->> API: granted = false
+                QrPage ->> MapPage: Mở POI tương ứng
+                MapPage ->> API: GET /api/access/free-listen
+                API -->> MapPage: isAllowed = false
+                MapPage ->> Paywall: Chuyển sang thanh toán
+            else Thiết bị đủ điều kiện nhận free listen
+                AccessCtl ->> DB: Tạo DeviceEntryGrant và QrLog(granted)
+                AccessCtl -->> API: granted = true, freePlaysRemaining = 1
+                QrPage ->> MapPage: Mở POI tương ứng
+                MapPage ->> API: GET /api/access/free-listen
+                API -->> MapPage: isAllowed = true, freePlaysRemaining = 1
+                MapPage -->> User: Mở nội dung POI
+            end
+        end
+    end
+```
 
 ### 10.3. Sequence Thanh Toán Gói Người Dùng
 
-Nội dung sơ đồ sẽ bổ sung sau.
+> Bao gồm các trường hợp: thiết bị không hợp lệ, plan không tồn tại, tạo giao dịch thành công, polling trạng thái giao dịch, người dùng chủ động xác nhận đã thanh toán, giao dịch được đồng bộ thành công, giao dịch chưa được ghi nhận và giao dịch hết thời gian chờ.
+
+```mermaid
+%%{init: {
+  "theme": "base",
+  "themeVariables": {
+    "primaryColor": "#EAF4FF",
+    "primaryBorderColor": "#2563EB",
+    "primaryTextColor": "#0F172A",
+    "lineColor": "#2563EB",
+    "secondaryColor": "#DBEAFE",
+    "tertiaryColor": "#F8FBFF",
+    "noteBkgColor": "#EFF6FF",
+    "noteBorderColor": "#3B82F6",
+    "activationBorderColor": "#2563EB",
+    "activationBkgColor": "#DBEAFE",
+    "sequenceNumberColor": "#0F172A"
+  }
+}}%%
+sequenceDiagram
+    participant User as User
+    participant Paywall as Paywall Page
+    participant PaymentPage as Payment Page
+    participant DeviceLib as device.ts
+    participant API as ApiClient
+    participant PaymentsCtl as PaymentsController
+    participant DB as PostgreSQL
+    participant Sepay as SePay API
+    participant MapPage as Map Page
+
+    User ->> Paywall: Chọn gói sử dụng
+    Paywall ->> PaymentPage: router.push(/payment?planId=...)
+    PaymentPage ->> DeviceLib: ensureDeviceReady()
+    PaymentPage ->> API: POST /api/payments/create?deviceId=...&planId=...
+    API ->> PaymentsCtl: CreatePayment(deviceId, planId)
+    PaymentsCtl ->> DB: Kiểm tra Device và Plan
+
+    alt Thiết bị hoặc plan không hợp lệ
+        PaymentsCtl -->> API: message lỗi
+        API -->> PaymentPage: Hiển thị lỗi tạo thanh toán
+    else Tạo giao dịch thành công
+        PaymentsCtl ->> DB: Tạo Payment(status = pending, paymentType = user_plan, code = SGPAY...)
+        PaymentsCtl -->> API: 200 OK(checkoutResponse)
+        API -->> PaymentPage: QR SePay + transfer content + payment code
+        PaymentPage -->> User: Hiển thị màn QR thanh toán
+
+        loop Mỗi 3 giây khi payment đang pending
+            PaymentPage ->> API: GET /api/payments/status?code=...&deviceId=...
+            API ->> PaymentsCtl: GetDevicePaymentStatus(code, deviceId)
+            PaymentsCtl ->> PaymentsCtl: TrySyncPaymentFromSepayAsync(payment)
+
+            alt Payment đã được xác nhận hoặc đã dùng
+                PaymentsCtl -->> API: status = used / confirmed
+                API -->> PaymentPage: Giao dịch thành công
+                PaymentPage -->> User: Hiển thị popup thành công
+                PaymentPage ->> MapPage: router.replace(...)
+                MapPage -->> User: Quay lại nội dung phù hợp
+            else Payment vẫn đang chờ
+                PaymentsCtl -->> API: status = pending
+                API -->> PaymentPage: Đang kiểm tra giao dịch
+                PaymentPage -->> User: Tiếp tục chờ thanh toán
+            else Payment bị từ chối hoặc hết thời gian chờ
+                PaymentsCtl -->> API: status = rejected
+                API -->> PaymentPage: rejected_reason
+                PaymentPage -->> User: Hiển thị thông báo chưa ghi nhận hoặc đã hết hạn
+            end
+        end
+
+        opt User bấm "Tôi đã thanh toán"
+            PaymentPage ->> API: POST /api/payments/submit?code=...&deviceId=...
+            API ->> PaymentsCtl: SubmitDevicePayment(code, deviceId)
+            PaymentsCtl ->> PaymentsCtl: Kiểm tra timeout và đồng bộ giao dịch từ SePay
+
+            alt Giao dịch đã được xác nhận
+                PaymentsCtl -->> API: message = đã xác nhận thành công
+                API -->> PaymentPage: payment status = used
+                PaymentPage -->> User: Hiển thị popup thành công
+                PaymentPage ->> MapPage: router.replace(...)
+            else Chưa tìm thấy giao dịch phù hợp
+                PaymentsCtl -->> API: message = chưa ghi nhận giao dịch
+                API -->> PaymentPage: payment status hiện tại
+                PaymentPage -->> User: Tiếp tục chờ hoặc kiểm tra lại chuyển khoản
+            else Giao dịch đã hết thời gian chờ
+                PaymentsCtl -->> API: status = rejected
+                API -->> PaymentPage: Hiển thị thông báo hết hạn
+            end
+        end
+    end
+```
 
 ### 10.4. Sequence Webhook Xác Nhận Thanh Toán
 
-Nội dung sơ đồ sẽ bổ sung sau.
+> Bao gồm các trường hợp: webhook không hợp lệ, không tìm thấy mã thanh toán, không tìm thấy payment tương ứng, payment đã được xử lý trước đó, số tiền chuyển chưa đủ và xác nhận thanh toán thành công để kích hoạt gói người dùng.
+
+```mermaid
+%%{init: {
+  "theme": "base",
+  "themeVariables": {
+    "primaryColor": "#EAF4FF",
+    "primaryBorderColor": "#2563EB",
+    "primaryTextColor": "#0F172A",
+    "lineColor": "#2563EB",
+    "secondaryColor": "#DBEAFE",
+    "tertiaryColor": "#F8FBFF",
+    "noteBkgColor": "#EFF6FF",
+    "noteBorderColor": "#3B82F6",
+    "activationBorderColor": "#2563EB",
+    "activationBkgColor": "#DBEAFE",
+    "sequenceNumberColor": "#0F172A"
+  }
+}}%%
+sequenceDiagram
+    participant Sepay as SePay
+    participant API as ApiClient / Webhook Endpoint
+    participant PaymentsCtl as PaymentsController
+    participant DB as PostgreSQL
+    participant PaymentSvc as Payment Logic
+
+    Sepay ->> API: POST /api/payments/sepay/webhook(payload)
+    API ->> PaymentsCtl: HandleSepayWebhook(payload)
+
+    alt Webhook không hợp lệ
+        PaymentsCtl -->> API: 401 Unauthorized
+        API -->> Sepay: message = webhook không hợp lệ
+    else Webhook hợp lệ
+        PaymentsCtl ->> PaymentsCtl: ResolvePaymentCode(payload)
+        alt Không trích xuất được mã thanh toán
+            PaymentsCtl -->> API: 200 OK(message = không tìm thấy mã thanh toán hợp lệ)
+            API -->> Sepay: Bỏ qua payload
+        else Trích xuất được paymentCode
+            PaymentsCtl ->> DB: Tìm Payment theo normalized code
+
+            alt Không tìm thấy payment tương ứng
+                DB -->> PaymentsCtl: Không có payment
+                PaymentsCtl -->> API: 200 OK(message = không tìm thấy payment tương ứng)
+                API -->> Sepay: Kết thúc webhook
+            else Payment đã được xử lý trước đó
+                PaymentsCtl -->> API: 200 OK(message = payment đã được xử lý trước đó)
+                API -->> Sepay: Kết thúc webhook
+            else Payment chưa xử lý
+                alt Số tiền chuyển chưa đủ
+                    PaymentsCtl -->> API: 200 OK(message = số tiền chuyển chưa đủ)
+                    API -->> Sepay: Kết thúc webhook
+                else Số tiền hợp lệ
+                    PaymentsCtl ->> PaymentSvc: ApplySuccessfulPaymentAsync(payment, provider info, paidAt)
+
+                    alt Thanh toán gói người dùng
+                        PaymentSvc ->> DB: Tạo hoặc gia hạn Subscription
+                    else Thanh toán nâng cấp POI
+                        PaymentSvc ->> DB: Hoàn tất quy trình nâng cấp POI
+                    end
+
+                    PaymentSvc ->> DB: Cập nhật Payment(status = used)
+                    DB -->> PaymentsCtl: Lưu thành công
+                    PaymentsCtl -->> API: 200 OK(success = true, status = used)
+                    API -->> Sepay: Xác nhận webhook đã xử lý
+                end
+            end
+        end
+    end
+```
 
 ### 10.5. Sequence Seller Tạo POI
 
-Nội dung sơ đồ sẽ bổ sung sau.
+> Bao gồm các trường hợp: dữ liệu không hợp lệ, seller không đủ quyền, dịch nội dung thất bại có fallback, tạo POI thường không cần nâng cấp và tạo POI có phát sinh thanh toán nâng cấp.
+
+```mermaid
+%%{init: {
+  "theme": "base",
+  "themeVariables": {
+    "primaryColor": "#EAF4FF",
+    "primaryBorderColor": "#2563EB",
+    "primaryTextColor": "#0F172A",
+    "lineColor": "#2563EB",
+    "secondaryColor": "#DBEAFE",
+    "tertiaryColor": "#F8FBFF",
+    "noteBkgColor": "#EFF6FF",
+    "noteBorderColor": "#3B82F6",
+    "activationBorderColor": "#2563EB",
+    "activationBkgColor": "#DBEAFE",
+    "sequenceNumberColor": "#0F172A"
+  }
+}}%%
+sequenceDiagram
+    participant Seller as Seller
+    participant PoiForm as Seller PoiForm
+    participant API as ApiClient
+    participant OwnerCtl as OwnerPoisController
+    participant PaymentCtl as PaymentsController
+    participant DraftSvc as PoiDraftWorkflow
+    participant DB as PostgreSQL
+    participant UpgradePage as Seller Payment Upgrade Page
+
+    Seller ->> PoiForm: Nhập thông tin POI, ảnh, bản dịch, audio
+    PoiForm ->> PoiForm: validate() và build payload
+
+    alt Dữ liệu client không hợp lệ
+        PoiForm -->> Seller: Hiển thị lỗi tại form
+    else Dữ liệu client hợp lệ
+        opt Có ngôn ngữ cần dịch
+            PoiForm ->> API: POST /api/owner/pois/translate
+            API ->> OwnerCtl: Translate(request, ownerId)
+
+            alt Dịch thành công
+                OwnerCtl -->> API: text đã dịch
+                API -->> PoiForm: Cập nhật translations / audios
+            else Dịch thất bại
+                OwnerCtl -->> API: fallback = true, text gốc
+                API -->> PoiForm: Dùng lại nội dung hiện có
+            end
+        end
+
+        alt Chế độ tạo mới và không có upgradeAmount
+            PoiForm ->> API: POST /api/owner/pois(payload, ownerId)
+            API ->> OwnerCtl: CreatePoi(request, ownerId)
+            OwnerCtl ->> DraftSvc: Validate(request)
+
+            alt Seller không đủ quyền hoặc dữ liệu backend không hợp lệ
+                OwnerCtl -->> API: message lỗi
+                API -->> PoiForm: Hiển thị lỗi lưu POI
+            else Tạo POI thành công
+                OwnerCtl ->> DraftSvc: CreatePoiFromDraftAsync(request, ownerId)
+                DraftSvc ->> DB: Tạo POI, ảnh, bản dịch, audio
+                DB -->> OwnerCtl: poiId
+                OwnerCtl -->> API: 200 OK(poiId, message)
+                API -->> PoiForm: POI tạo thành công
+                PoiForm -->> Seller: Hiển thị "Đã tạo POI và gửi admin duyệt"
+            end
+        else Chế độ tạo mới và có upgradeAmount
+            PoiForm ->> API: POST /api/owner/payments/prepare-poi-upgrade(payload + upgrade metadata, ownerId)
+            API ->> PaymentCtl: PreparePoiUpgradePayment(request, ownerId)
+            PaymentCtl ->> DraftSvc: Validate(request)
+
+            alt Không đủ quyền hoặc dữ liệu không hợp lệ
+                PaymentCtl -->> API: message lỗi
+                API -->> PoiForm: Hiển thị lỗi chuẩn bị nâng cấp
+            else Chuẩn bị payment nâng cấp thành công
+                PaymentCtl ->> DB: Tạo Payment(paymentType = poi_upgrade, status = pending, draftPayload)
+                PaymentCtl -->> API: 200 OK(checkoutResponse)
+                API -->> PoiForm: payment code
+                PoiForm ->> UpgradePage: router.push(/payments/poi-upgrade?code=...)
+                UpgradePage -->> Seller: Mở màn thanh toán nâng cấp POI
+            end
+        end
+    end
+```
 
 ### 10.6. Sequence Admin Xử Lý QR Bị Tạm Ngưng
 
-Nội dung sơ đồ sẽ bổ sung sau.
+> Bao gồm các trường hợp: admin xem danh sách QR, tạm ngưng QR đang hoạt động, seller gửi yêu cầu kích hoạt lại, admin chấp thuận mở lại QR hoặc từ chối yêu cầu kích hoạt lại.
+
+```mermaid
+%%{init: {
+  "theme": "base",
+  "themeVariables": {
+    "primaryColor": "#EAF4FF",
+    "primaryBorderColor": "#2563EB",
+    "primaryTextColor": "#0F172A",
+    "lineColor": "#2563EB",
+    "secondaryColor": "#DBEAFE",
+    "tertiaryColor": "#F8FBFF",
+    "noteBkgColor": "#EFF6FF",
+    "noteBorderColor": "#3B82F6",
+    "activationBorderColor": "#2563EB",
+    "activationBkgColor": "#DBEAFE",
+    "sequenceNumberColor": "#0F172A"
+  }
+}}%%
+sequenceDiagram
+    participant Admin as Admin
+    participant AdminQrPage as Admin QR Page
+    participant Seller as Seller
+    participant SellerQrPage as Seller QR Page
+    participant API as ApiClient
+    participant AdminQrCtl as AdminQrController
+    participant OwnerQrCtl as OwnerQrController
+    participant DB as PostgreSQL
+
+    Admin ->> AdminQrPage: Mở màn quản lý QR
+    AdminQrPage ->> API: GET /api/admin/qr?adminId=...
+    API ->> AdminQrCtl: GetAllQrEntries(adminId)
+    AdminQrCtl ->> DB: Lấy danh sách QR, owner, POI, log liên quan
+    DB -->> AdminQrCtl: Dữ liệu QR toàn hệ thống
+    AdminQrCtl -->> API: Danh sách QR
+    API -->> AdminQrPage: Hiển thị danh sách QR
+
+    alt Admin tạm ngưng QR đang hoạt động
+        Admin ->> AdminQrPage: Chọn "Tạm ngưng" và nhập lý do
+        AdminQrPage ->> API: PUT /api/admin/qr/{id}/status(status=admin_suspended, reason)
+        API ->> AdminQrCtl: UpdateQrStatus(id, request, adminId)
+
+        alt Admin không hợp lệ hoặc QR không tồn tại
+            AdminQrCtl -->> API: message lỗi
+            API -->> AdminQrPage: Hiển thị lỗi cập nhật trạng thái
+        else Cập nhật thành công
+            AdminQrCtl ->> DB: Đổi status = admin_suspended, lưu suspensionReason
+            DB -->> AdminQrCtl: Lưu thành công
+            AdminQrCtl -->> API: message = đã cập nhật trạng thái QR
+            API -->> AdminQrPage: QR chuyển sang trạng thái tạm ngưng
+        end
+    end
+
+    opt Seller gửi yêu cầu kích hoạt lại
+        Seller ->> SellerQrPage: Chọn QR bị tạm ngưng và gửi yêu cầu
+        SellerQrPage ->> API: POST /api/owner/qr/{id}/activation-request(note)
+        API ->> OwnerQrCtl: RequestActivation(id, request, ownerId)
+
+        alt Seller không hợp lệ hoặc QR không thuộc seller
+            OwnerQrCtl -->> API: message lỗi
+            API -->> SellerQrPage: Hiển thị lỗi gửi yêu cầu
+        else QR không ở trạng thái admin_suspended
+            OwnerQrCtl -->> API: message = QR này không bị hệ thống tạm ngưng
+            API -->> SellerQrPage: Hiển thị thông báo không thể gửi yêu cầu
+        else Gửi yêu cầu thành công
+            OwnerQrCtl ->> DB: Lưu activationRequestedAt và activationRequestNote
+            DB -->> OwnerQrCtl: Lưu thành công
+            OwnerQrCtl -->> API: message = đã gửi yêu cầu kích hoạt lại cho admin
+            API -->> SellerQrPage: Hiển thị trạng thái đang chờ admin xử lý
+        end
+    end
+
+    alt Admin chấp thuận mở lại QR
+        Admin ->> AdminQrPage: Chọn "Mở lại QR"
+        AdminQrPage ->> API: PUT /api/admin/qr/{id}/status(status=active)
+        API ->> AdminQrCtl: UpdateQrStatus(id, request, adminId)
+
+        alt Admin không hợp lệ hoặc QR không tồn tại
+            AdminQrCtl -->> API: message lỗi
+            API -->> AdminQrPage: Hiển thị lỗi mở lại QR
+        else Mở lại thành công
+            AdminQrCtl ->> DB: Đổi status = active, xóa activationRequestedAt, activationRequestNote và suspensionReason
+            DB -->> AdminQrCtl: Lưu thành công
+            AdminQrCtl -->> API: message = đã cập nhật trạng thái QR
+            API -->> AdminQrPage: QR hoạt động trở lại
+        end
+    else Admin từ chối yêu cầu kích hoạt lại
+        Admin ->> AdminQrPage: Chọn "Từ chối yêu cầu" và nhập lý do
+        AdminQrPage ->> API: POST /api/admin/qr/{id}/activation-request/reject(reason)
+        API ->> AdminQrCtl: RejectActivationRequest(id, request, adminId)
+
+        alt Admin không hợp lệ hoặc QR không tồn tại
+            AdminQrCtl -->> API: message lỗi
+            API -->> AdminQrPage: Hiển thị lỗi từ chối yêu cầu
+        else Từ chối thành công
+            AdminQrCtl ->> DB: Giữ status = admin_suspended, cập nhật suspensionReason mới, xóa activationRequestedAt và activationRequestNote
+            DB -->> AdminQrCtl: Lưu thành công
+            AdminQrCtl -->> API: message = đã từ chối yêu cầu kích hoạt lại
+            API -->> AdminQrPage: QR tiếp tục ở trạng thái tạm ngưng
+        end
+    end
+```
+
+### 10.7. Sequence Kiểm Tra Quyền Truy Cập Và Phát Audio
+
+> Bao gồm các trường hợp: tải màn chi tiết, kiểm tra gói sử dụng hoặc lượt nghe miễn phí, chuyển sang paywall khi không đủ quyền, phát audio, tiêu thụ lượt nghe miễn phí và cập nhật số lượt nghe của POI.
+
+```mermaid
+%%{init: {
+  "theme": "base",
+  "themeVariables": {
+    "primaryColor": "#EAF4FF",
+    "primaryBorderColor": "#2563EB",
+    "primaryTextColor": "#0F172A",
+    "lineColor": "#2563EB",
+    "secondaryColor": "#DBEAFE",
+    "tertiaryColor": "#F8FBFF",
+    "noteBkgColor": "#EFF6FF",
+    "noteBorderColor": "#3B82F6",
+    "activationBorderColor": "#2563EB",
+    "activationBkgColor": "#DBEAFE",
+    "sequenceNumberColor": "#0F172A"
+  }
+}}%%
+sequenceDiagram
+    participant User as User
+    participant DetailPage as Detail Page
+    participant DeviceLib as device.ts
+    participant AudioSvc as audio.ts
+    participant API as ApiClient
+    participant AccessCtl as AccessController
+    participant PoiCtl as PoisController
+    participant DB as PostgreSQL
+
+    User ->> DetailPage: Mở chi tiết POI
+    DetailPage ->> DeviceLib: ensureDeviceReady()
+    DetailPage ->> API: GET /api/pois/{poiId}?deviceId=...&lang=...
+    DetailPage ->> API: GET /api/access/free-listen?deviceId=...
+    API ->> PoiCtl: Lấy dữ liệu POI
+    API ->> AccessCtl: GetFreeListenStatus(deviceId)
+    PoiCtl ->> DB: Lấy POI, audio, ảnh, rating
+    AccessCtl ->> DB: Kiểm tra subscription và DeviceEntryGrant
+    DB -->> PoiCtl: Dữ liệu POI
+    DB -->> AccessCtl: Trạng thái quyền truy cập
+    PoiCtl -->> API: Thông tin chi tiết POI
+    AccessCtl -->> API: isAllowed, hasActiveSubscription, freePlaysRemaining
+
+    alt Không có gói và không còn lượt nghe miễn phí
+        API -->> DetailPage: Chưa đủ quyền truy cập
+        DetailPage ->> DetailPage: setReturnTo(/detail?poiId=...)
+        DetailPage -->> User: Chuyển sang Paywall
+    else Đủ điều kiện xem và nghe nội dung
+        API -->> DetailPage: Hiển thị chi tiết POI
+        DetailPage -->> User: Mở trang chi tiết
+
+        User ->> DetailPage: Chọn "Nghe thuyết minh"
+        DetailPage ->> AudioSvc: playPoiAudio(poi, consumeFreeListen)
+        AudioSvc ->> AudioSvc: Chọn audio theo ngôn ngữ hiện tại
+
+        alt Thiết bị không hỗ trợ audio hoặc POI chưa có script
+            AudioSvc -->> DetailPage: message lỗi
+            DetailPage -->> User: Hiển thị thông báo phát audio thất bại
+        else Phát audio thành công
+            opt Đang dùng lượt nghe miễn phí
+                AudioSvc ->> API: POST /api/access/free-listen/consume(deviceId, poiId)
+                API ->> AccessCtl: ConsumeFreeListen(request)
+                AccessCtl ->> DB: Kiểm tra grant còn hiệu lực và cập nhật FreePlaysUsed
+
+                alt Hết lượt nghe miễn phí
+                    AccessCtl -->> API: message lỗi
+                    API -->> AudioSvc: Không tiêu thụ được free listen
+                else Tiêu thụ thành công
+                    DB -->> AccessCtl: Lưu thành công
+                    AccessCtl -->> API: freePlaysRemaining mới
+                    API -->> AudioSvc: Đã cập nhật số lượt miễn phí còn lại
+                end
+            end
+
+            AudioSvc ->> API: POST /api/pois/listened/{poiId}?deviceId=...
+            API ->> PoiCtl: IncreaseListened(poiId, deviceId)
+            PoiCtl ->> DB: Tạo ListenLog và tăng listenedCount
+            DB -->> PoiCtl: listened_count mới
+            PoiCtl -->> API: listened_count, device_listened
+            API -->> AudioSvc: Kết quả cập nhật lượt nghe
+            AudioSvc -->> DetailPage: Phát xong audio
+            DetailPage -->> User: Cập nhật số lượt nghe và trạng thái quyền truy cập
+        end
+    end
+```
+
+### 10.8. Sequence Seller Tạo Và Quản Lý QR
+
+> Bao gồm các trường hợp: seller mở màn QR, tạo QR mới cho POI, cộng thêm lượt quét, bật hoặc tắt QR, gửi yêu cầu kích hoạt lại khi QR bị hệ thống tạm ngưng và xóa QR khỏi trang seller.
+
+```mermaid
+%%{init: {
+  "theme": "base",
+  "themeVariables": {
+    "primaryColor": "#EAF4FF",
+    "primaryBorderColor": "#2563EB",
+    "primaryTextColor": "#0F172A",
+    "lineColor": "#2563EB",
+    "secondaryColor": "#DBEAFE",
+    "tertiaryColor": "#F8FBFF",
+    "noteBkgColor": "#EFF6FF",
+    "noteBorderColor": "#3B82F6",
+    "activationBorderColor": "#2563EB",
+    "activationBkgColor": "#DBEAFE",
+    "sequenceNumberColor": "#0F172A"
+  }
+}}%%
+sequenceDiagram
+    participant Seller as Seller
+    participant SellerQrPage as Seller QR Page
+    participant API as ApiClient
+    participant OwnerQrCtl as OwnerQrController
+    participant DB as PostgreSQL
+
+    Seller ->> SellerQrPage: Mở màn quản lý QR
+    SellerQrPage ->> API: GET /api/owner/qr?ownerId=...
+    API ->> OwnerQrCtl: GetQrEntries(ownerId)
+    OwnerQrCtl ->> DB: Lấy QR của seller, POI liên quan và log quét
+    DB -->> OwnerQrCtl: Danh sách QR
+    OwnerQrCtl -->> API: Dữ liệu QR
+    API -->> SellerQrPage: Hiển thị danh sách QR
+
+    alt Seller tạo QR mới
+        Seller ->> SellerQrPage: Nhập POI, tên QR, số lượt quét
+        SellerQrPage ->> API: POST /api/owner/qr(payload, ownerId)
+        API ->> OwnerQrCtl: CreateQrEntry(request, ownerId)
+
+        alt Seller không hợp lệ hoặc POI không hợp lệ
+            OwnerQrCtl -->> API: message lỗi
+            API -->> SellerQrPage: Hiển thị lỗi tạo QR
+        else Tạo QR thành công
+            OwnerQrCtl ->> DB: Tạo QrEntry(status = active, usedScans = 0)
+            DB -->> OwnerQrCtl: entryCode, qrUrl
+            OwnerQrCtl -->> API: 200 OK(message, qrUrl)
+            API -->> SellerQrPage: Hiển thị QR mới
+        end
+    else Seller cộng thêm lượt quét
+        Seller ->> SellerQrPage: Chọn "Cộng lượt quét"
+        SellerQrPage ->> API: PUT /api/owner/qr/{id}/topup(additionalScans)
+        API ->> OwnerQrCtl: TopUpQrEntry(id, request, ownerId)
+
+        alt QR không tồn tại hoặc số lượt cộng thêm không hợp lệ
+            OwnerQrCtl -->> API: message lỗi
+            API -->> SellerQrPage: Hiển thị lỗi gia hạn QR
+        else QR đang bị admin_suspended
+            OwnerQrCtl -->> API: message = cần gửi yêu cầu kích hoạt lại
+            API -->> SellerQrPage: Hiển thị thông báo không thể topup trực tiếp
+        else Gia hạn thành công
+            OwnerQrCtl ->> DB: Cộng TotalScans, cập nhật trạng thái nếu cần
+            DB -->> OwnerQrCtl: Lưu thành công
+            OwnerQrCtl -->> API: message = đã gia hạn lượt quét
+            API -->> SellerQrPage: Cập nhật số lượt còn lại
+        end
+    else Seller bật hoặc tắt QR
+        Seller ->> SellerQrPage: Chọn chuyển trạng thái active/inactive
+        SellerQrPage ->> API: PUT /api/owner/qr/{id}/status(status)
+        API ->> OwnerQrCtl: UpdateQrEntryStatus(id, request, ownerId)
+
+        alt QR không tồn tại hoặc trạng thái không hợp lệ
+            OwnerQrCtl -->> API: message lỗi
+            API -->> SellerQrPage: Hiển thị lỗi cập nhật trạng thái
+        else QR bị hệ thống tạm ngưng và seller muốn bật lại
+            OwnerQrCtl -->> API: message = cần gửi yêu cầu kích hoạt lại
+            API -->> SellerQrPage: Hiển thị hướng dẫn gửi yêu cầu cho admin
+        else Cập nhật trạng thái thành công
+            OwnerQrCtl ->> DB: Đổi trạng thái QR
+            DB -->> OwnerQrCtl: Lưu thành công
+            OwnerQrCtl -->> API: message = đã cập nhật trạng thái QR
+            API -->> SellerQrPage: Làm mới danh sách QR
+        end
+    else Seller gửi yêu cầu kích hoạt lại
+        Seller ->> SellerQrPage: Nhập ghi chú gửi admin
+        SellerQrPage ->> API: POST /api/owner/qr/{id}/activation-request(note)
+        API ->> OwnerQrCtl: RequestActivation(id, request, ownerId)
+
+        alt QR không tồn tại hoặc không thuộc seller
+            OwnerQrCtl -->> API: message lỗi
+            API -->> SellerQrPage: Hiển thị lỗi gửi yêu cầu
+        else QR không ở trạng thái admin_suspended
+            OwnerQrCtl -->> API: message = QR này không bị hệ thống tạm ngưng
+            API -->> SellerQrPage: Hiển thị thông báo không thể gửi yêu cầu
+        else Gửi yêu cầu thành công
+            OwnerQrCtl ->> DB: Lưu activationRequestedAt và activationRequestNote
+            DB -->> OwnerQrCtl: Lưu thành công
+            OwnerQrCtl -->> API: message = đã gửi yêu cầu kích hoạt lại
+            API -->> SellerQrPage: Hiển thị trạng thái đang chờ admin xử lý
+        end
+    else Seller xóa QR khỏi trang của mình
+        Seller ->> SellerQrPage: Xác nhận xóa QR
+        SellerQrPage ->> API: DELETE /api/owner/qr/{id}
+        API ->> OwnerQrCtl: DeleteQrEntry(id, ownerId)
+
+        alt QR không tồn tại hoặc seller không hợp lệ
+            OwnerQrCtl -->> API: message lỗi
+            API -->> SellerQrPage: Hiển thị lỗi xóa QR
+        else Xóa thành công
+            OwnerQrCtl ->> DB: Đổi status = seller_deleted
+            DB -->> OwnerQrCtl: Lưu thành công
+            OwnerQrCtl -->> API: message = đã xóa QR khỏi trang seller
+            API -->> SellerQrPage: Gỡ QR khỏi danh sách hiển thị
+        end
+    end
+```
+
+### 10.9. Sequence Admin Duyệt POI
+
+> Bao gồm các trường hợp: admin mở danh sách POI, lọc POI cần duyệt, xem chi tiết, phê duyệt POI và audio liên quan hoặc từ chối POI với lý do cụ thể.
+
+```mermaid
+%%{init: {
+  "theme": "base",
+  "themeVariables": {
+    "primaryColor": "#EAF4FF",
+    "primaryBorderColor": "#2563EB",
+    "primaryTextColor": "#0F172A",
+    "lineColor": "#2563EB",
+    "secondaryColor": "#DBEAFE",
+    "tertiaryColor": "#F8FBFF",
+    "noteBkgColor": "#EFF6FF",
+    "noteBorderColor": "#3B82F6",
+    "activationBorderColor": "#2563EB",
+    "activationBkgColor": "#DBEAFE",
+    "sequenceNumberColor": "#0F172A"
+  }
+}}%%
+sequenceDiagram
+    participant Admin as Admin
+    participant AdminPoisPage as Admin POIs Page
+    participant API as ApiClient
+    participant AdminCtl as AdminController
+    participant DB as PostgreSQL
+
+    Admin ->> AdminPoisPage: Mở màn quản lý POI
+    AdminPoisPage ->> API: GET /api/admin/pois?adminId=...&status=...
+    API ->> AdminCtl: GetAllPois(adminId, status, q, ownerId)
+    AdminCtl ->> DB: Lấy danh sách POI, ảnh, audio và seller liên quan
+    DB -->> AdminCtl: Dữ liệu POI
+    AdminCtl -->> API: Danh sách POI đã chuẩn hóa
+    API -->> AdminPoisPage: Hiển thị danh sách và hàng chờ duyệt
+
+    opt Admin xem chi tiết POI
+        Admin ->> AdminPoisPage: Chọn một POI để xem
+        AdminPoisPage -->> Admin: Mở thông tin mô tả, ảnh, audio, seller và trạng thái hiện tại
+    end
+
+    alt Admin phê duyệt POI
+        Admin ->> AdminPoisPage: Chọn "Duyệt"
+        AdminPoisPage ->> API: PUT /api/admin/pois/{id}/approve
+        API ->> AdminCtl: ApprovePoi(id, adminId)
+
+        alt Admin không hợp lệ hoặc POI không tồn tại
+            AdminCtl -->> API: message lỗi
+            API -->> AdminPoisPage: Hiển thị lỗi phê duyệt
+        else Duyệt thành công
+            AdminCtl ->> DB: Đổi status POI = approved, xóa rejectedReason
+            AdminCtl ->> DB: Đổi approvalStatus của audio liên quan = approved
+            DB -->> AdminCtl: Lưu thành công
+            AdminCtl -->> API: message = POI được phê duyệt thành công
+            API -->> AdminPoisPage: Cập nhật trạng thái POI và audio
+        end
+    else Admin từ chối POI
+        Admin ->> AdminPoisPage: Chọn "Từ chối" và nhập lý do
+        AdminPoisPage ->> API: PUT /api/admin/pois/{id}/reject(reason)
+        API ->> AdminCtl: RejectPoi(id, request, adminId)
+
+        alt Admin không hợp lệ hoặc POI không tồn tại
+            AdminCtl -->> API: message lỗi
+            API -->> AdminPoisPage: Hiển thị lỗi từ chối
+        else Từ chối thành công
+            AdminCtl ->> DB: Đổi status POI = rejected, lưu rejectedReason
+            DB -->> AdminCtl: Lưu thành công
+            AdminCtl -->> API: message = POI bị từ chối
+            API -->> AdminPoisPage: Hiển thị trạng thái bị từ chối
+        end
+    end
+```
 
 ---
 
