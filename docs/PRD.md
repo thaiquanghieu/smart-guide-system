@@ -3,17 +3,77 @@
 ## Mục lục
 
 1. [Giới Thiệu Chung](#1-giới-thiệu-chung)
+    - [1.1. Mục tiêu hệ thống](#11-mục-tiêu-hệ-thống)
+    - [1.2. Mục tiêu tài liệu](#12-mục-tiêu-tài-liệu)
 2. [Phân Quyền Và Đối Tượng Người Dùng](#2-phân-quyền-và-đối-tượng-người-dùng)
+    - [2.1. Mô hình nhận diện người dùng](#21-mô-hình-nhận-diện-người-dùng)
+    - [2.2. Mô hình cấp quyền truy cập nội dung](#22-mô-hình-cấp-quyền-truy-cập-nội-dung)
 3. [User Stories Và Yêu Cầu Chức Năng](#3-user-stories-và-yêu-cầu-chức-năng)
+    - [Epic 1: Trải Nghiệm Người Dùng Trên PWA](#epic-1-trải-nghiệm-người-dùng-trên-pwa)
+    - [Epic 2: Seller Quản Lý Nội Dung Và Tài Nguyên](#epic-2-seller-quản-lý-nội-dung-và-tài-nguyên)
+    - [Epic 3: Admin Điều Hành Toàn Hệ Thống](#epic-3-admin-điều-hành-toàn-hệ-thống)
 4. [Yêu Cầu Phi Chức Năng](#4-yêu-cầu-phi-chức-năng)
 5. [Technology Stack Và Kiến Trúc Hệ Thống](#5-technology-stack-và-kiến-trúc-hệ-thống)
+    - [5.1. Technology Stack](#51-technology-stack)
+    - [5.2. Kiến trúc hệ thống tổng quan](#52-kiến-trúc-hệ-thống-tổng-quan)
+    - [5.3. Hạ tầng triển khai](#53-hạ-tầng-triển-khai)
+    - [5.4. Luồng tổng quát](#54-luồng-tổng-quát)
 6. [Cơ Sở Dữ Liệu](#6-cơ-sở-dữ-liệu)
+    - [6.1. Các thực thể chính](#61-các-thực-thể-chính)
+    - [6.2. Ghi chú dữ liệu nghiệp vụ](#62-ghi-chú-dữ-liệu-nghiệp-vụ)
+    - [6.3. Ràng buộc đáng chú ý](#63-ràng-buộc-đáng-chú-ý)
 7. [Danh Mục API Routes](#7-danh-mục-api-routes)
+    - [7.1. Nhóm Auth](#71-nhóm-auth)
+    - [7.2. Nhóm Devices](#72-nhóm-devices)
+    - [7.3. Nhóm Access](#73-nhóm-access)
+    - [7.4. Nhóm PWA Content](#74-nhóm-pwa-content)
+    - [7.5. Nhóm Seller](#75-nhóm-seller)
+    - [7.6. Nhóm Admin](#76-nhóm-admin)
+    - [7.7. Nhóm Plans Và Payments](#77-nhóm-plans-và-payments)
 8. [Cấu Trúc Ứng Dụng Web](#8-cấu-trúc-ứng-dụng-web)
+    - [8.1. PWA](#81-pwa)
+    - [8.2. Seller Web](#82-seller-web)
+    - [8.3. Admin Web](#83-admin-web)
 9. [Sơ Đồ Use Case](#9-sơ-đồ-use-case)
+    - [9.1. Use Case Tổng Quan Hệ Thống](#91-use-case-tổng-quan-hệ-thống)
+    - [9.2. Use Case User / Guest](#92-use-case-user--guest)
+    - [9.3. Use Case Seller / Owner](#93-use-case-seller--owner)
+    - [9.4. Use Case Admin](#94-use-case-admin)
+    - [9.5. Use Case Thanh Toán Và Kích Hoạt Quyền Truy Cập](#95-use-case-thanh-toán-và-kích-hoạt-quyền-truy-cập)
 10. [Sơ Đồ Trình Tự](#10-sơ-đồ-trình-tự-sequence-diagram)
+    - [10.1. Sequence Tự Động Đăng Ký Thiết Bị](#101-sequence-tự-động-đăng-ký-thiết-bị)
+    - [10.2. Sequence Tìm Kiếm Và Lọc POI](#102-sequence-tìm-kiếm-và-lọc-poi)
+    - [10.3. Sequence Quét QR Và Cấp Lượt Nghe Miễn Phí](#103-sequence-quét-qr-và-cấp-lượt-nghe-miễn-phí)
+    - [10.4. Sequence Kiểm Tra Quyền Truy Cập Và Phát Audio](#104-sequence-kiểm-tra-quyền-truy-cập-và-phát-audio)
+    - [10.5. Sequence Theo Dõi Vị Trí Và Tự Động Phát Audio](#105-sequence-theo-dõi-vị-trí-và-tự-động-phát-audio)
+    - [10.6. Sequence User Lưu Và Bỏ Yêu Thích POI](#106-sequence-user-lưu-và-bỏ-yêu-thích-poi)
+    - [10.7. Sequence User Đánh Giá POI](#107-sequence-user-đánh-giá-poi)
+    - [10.8. Sequence Thanh Toán Gói Người Dùng](#108-sequence-thanh-toán-gói-người-dùng)
+    - [10.9. Sequence Webhook Xác Nhận Thanh Toán](#109-sequence-webhook-xác-nhận-thanh-toán)
+    - [10.10. Sequence Seller Tạo POI](#1010-sequence-seller-tạo-poi)
+    - [10.11. Sequence Seller Chỉnh Sửa POI Và Gửi Duyệt Lại](#1011-sequence-seller-chỉnh-sửa-poi-và-gửi-duyệt-lại)
+    - [10.12. Sequence Seller Cập Nhật Audio Và Bản Dịch](#1012-sequence-seller-cập-nhật-audio-và-bản-dịch)
+    - [10.13. Sequence Seller Tạo, Gia Hạn Và Kích Hoạt Lại QR](#1013-sequence-seller-tạo-gia-hạn-và-kích-hoạt-lại-qr)
+    - [10.14. Sequence Seller Xem Log Quét QR](#1014-sequence-seller-xem-log-quét-qr)
+    - [10.15. Sequence Admin Duyệt POI](#1015-sequence-admin-duyệt-poi)
+    - [10.16. Sequence Admin Xem Chi Tiết, Cập Nhật Trạng Thái Và Hủy Tài Khoản](#1016-sequence-admin-xem-chi-tiết-cập-nhật-trạng-thái-và-hủy-tài-khoản)
+    - [10.17. Sequence Admin Cập Nhật Trạng Thái Thiết Bị](#1017-sequence-admin-cập-nhật-trạng-thái-thiết-bị)
+    - [10.18. Sequence Admin Xử Lý QR Bị Tạm Ngưng](#1018-sequence-admin-xử-lý-qr-bị-tạm-ngưng)
+    - [10.19. Sequence Admin Tạo, Cập Nhật Và Xóa Gói Sử Dụng](#1019-sequence-admin-tạo-cập-nhật-và-xóa-gói-sử-dụng)
 11. [Sơ Đồ Lớp](#11-sơ-đồ-lớp-class-diagram)
 12. [Sơ Đồ Hoạt Động](#12-sơ-đồ-hoạt-động-activity-diagram)
+    - [12.1. Activity Khởi Tạo Thiết Bị Và Truy Cập PWA](#121-activity-khởi-tạo-thiết-bị-và-truy-cập-pwa)
+    - [12.2. Activity Tìm Kiếm Và Lọc POI](#122-activity-tìm-kiếm-và-lọc-poi)
+    - [12.3. Activity User Quét QR Và Nhận Quyền Nghe](#123-activity-user-quét-qr-và-nhận-quyền-nghe)
+    - [12.4. Activity Kiểm Tra Quyền Truy Cập Và Phát Audio](#124-activity-kiểm-tra-quyền-truy-cập-và-phát-audio)
+    - [12.5. Activity Theo Dõi Vị Trí Và Tự Động Phát Audio](#125-activity-theo-dõi-vị-trí-và-tự-động-phát-audio)
+    - [12.6. Activity Seller Tạo Và Gửi Duyệt POI](#126-activity-seller-tạo-và-gửi-duyệt-poi)
+    - [12.7. Activity Seller Quản Lý QR](#127-activity-seller-quản-lý-qr)
+    - [12.8. Activity Thanh Toán Và Kích Hoạt Gói](#128-activity-thanh-toán-và-kích-hoạt-gói)
+    - [12.9. Activity Admin Duyệt POI](#129-activity-admin-duyệt-poi)
+    - [12.10. Activity Admin Xử Lý QR Bị Tạm Ngưng](#1210-activity-admin-xử-lý-qr-bị-tạm-ngưng)
+    - [12.11. Activity Admin Quản Trị Hệ Thống](#1211-activity-admin-quản-trị-hệ-thống)
+13. [Phụ Lục: Cấu Trúc Thư Mục Dự Án](#13-phụ-lục-cấu-trúc-thư-mục-dự-án)
 
 ---
 
@@ -602,10 +662,10 @@ Theo `AppDbContext`, hệ thống hiện có các nhóm dữ liệu chính sau:
 }}%%
 sequenceDiagram
     participant User as User
-    participant PWA as PWA Page
-    participant DeviceLib as device.ts
+    participant PWA as PWA App
+    participant DeviceLib as Device Service
     participant Storage as LocalStorage
-    participant API as ApiClient
+    participant API as API Gateway
     participant DevicesCtl as DevicesController
     participant DB as PostgreSQL
 
@@ -651,7 +711,68 @@ sequenceDiagram
     end
 ```
 
-### 10.2. Sequence Quét QR Và Cấp Lượt Nghe Miễn Phí
+### 10.2. Sequence Tìm Kiếm Và Lọc POI
+
+> Bao gồm các trường hợp: người dùng tải danh sách POI, nhập từ khóa tìm kiếm, lọc theo khoảng cách hoặc giá miễn phí và sắp xếp lại kết quả hiển thị.
+
+```mermaid
+%%{init: {
+  "theme": "base",
+  "themeVariables": {
+    "primaryColor": "#EAF4FF",
+    "primaryBorderColor": "#2563EB",
+    "primaryTextColor": "#0F172A",
+    "lineColor": "#2563EB",
+    "secondaryColor": "#DBEAFE",
+    "tertiaryColor": "#F8FBFF",
+    "noteBkgColor": "#EFF6FF",
+    "noteBorderColor": "#3B82F6",
+    "activationBorderColor": "#2563EB",
+    "activationBkgColor": "#DBEAFE",
+    "sequenceNumberColor": "#0F172A"
+  }
+}}%%
+sequenceDiagram
+    participant User as User
+    participant ExploreFlow as POI Discovery Flow
+    participant DeviceSvc as Device Service
+    participant API as API Gateway
+    participant PoiCtl as PoisController
+    participant DB as PostgreSQL
+
+    User ->> ExploreFlow: Mở danh sách hoặc bản đồ POI
+    ExploreFlow ->> DeviceSvc: ensureDeviceReady()
+    ExploreFlow ->> API: GET /api/pois?deviceId=...&lang=...
+    API ->> PoiCtl: GetPois(deviceId, lang)
+    PoiCtl ->> DB: Lấy POI, favorite, rating và audio liên quan
+    DB -->> PoiCtl: Dữ liệu POI
+    PoiCtl -->> API: Danh sách POI đã chuẩn hóa
+    API -->> ExploreFlow: Hiển thị danh sách POI ban đầu
+
+    opt Người dùng nhập từ khóa tìm kiếm
+        User ->> ExploreFlow: Nhập tên, địa chỉ hoặc danh mục
+        ExploreFlow ->> ExploreFlow: Lọc theo keyword trên danh sách hiện có
+        ExploreFlow -->> User: Cập nhật danh sách gợi ý và kết quả phù hợp
+    end
+
+    opt Người dùng chọn bộ lọc
+        alt Lọc gần vị trí hiện tại
+            ExploreFlow ->> ExploreFlow: Tính distanceKm và giữ POI trong bán kính gần
+        else Lọc POI miễn phí
+            ExploreFlow ->> ExploreFlow: Giữ POI có thông tin giá miễn phí
+        else Hiển thị tất cả
+            ExploreFlow ->> ExploreFlow: Giữ toàn bộ POI
+        end
+        ExploreFlow -->> User: Cập nhật danh sách sau khi lọc
+    end
+
+    opt Người dùng đổi cách sắp xếp
+        ExploreFlow ->> ExploreFlow: Sắp xếp theo khoảng cách, tên hoặc lượt nghe
+        ExploreFlow -->> User: Hiển thị thứ tự kết quả mới
+    end
+```
+
+### 10.3. Sequence Quét QR Và Cấp Lượt Nghe Miễn Phí
 
 > Bao gồm các trường hợp: QR không hợp lệ, QR bị tạm ngưng, QR hết lượt hoặc hết hạn, thiết bị đã có gói sử dụng, thiết bị đã dùng lượt nghe miễn phí trước đó và thiết bị mới được cấp lượt nghe miễn phí.
 
@@ -674,70 +795,339 @@ sequenceDiagram
 }}%%
 sequenceDiagram
     participant User as User
-    participant ScanPage as Scan Page
-    participant QrPage as QR Entry Page
-    participant DeviceLib as device.ts
-    participant API as ApiClient
+    participant Scanner as QR Scan Module
+    participant EntryFlow as QR Entry Flow
+    participant DeviceLib as Device Service
+    participant API as API Gateway
     participant AccessCtl as AccessController
     participant DB as PostgreSQL
-    participant MapPage as Map Page
-    participant Paywall as Paywall Page
+    participant ContentFlow as POI Access Flow
+    participant PaymentFlow as Subscription Purchase Flow
 
-    User ->> ScanPage: Quét mã QR hoặc chọn ảnh QR
-    ScanPage ->> ScanPage: resolveQrPayload(rawText)
+    User ->> Scanner: Quét mã QR hoặc chọn ảnh QR
+    Scanner ->> Scanner: resolveQrPayload(rawText)
 
     alt QR payload không hợp lệ
-        ScanPage -->> User: Hiển thị lỗi quét QR
+        Scanner -->> User: Hiển thị lỗi quét QR
     else QR payload hợp lệ
-        ScanPage ->> QrPage: router.replace(/qr/[entryCode]?poiId=...)
-        QrPage ->> DeviceLib: ensureDeviceReady()
-        QrPage ->> DeviceLib: saveEntryContext(entryCode, poiId)
-        QrPage ->> API: POST /api/access/entry(deviceId, entryCode, poiId)
+        Scanner ->> EntryFlow: Chuyển yêu cầu xử lý entryCode và poiId
+        EntryFlow ->> DeviceLib: ensureDeviceReady()
+        EntryFlow ->> DeviceLib: saveEntryContext(entryCode, poiId)
+        EntryFlow ->> API: POST /api/access/entry(deviceId, entryCode, poiId)
         API ->> AccessCtl: RegisterEntry(request)
         AccessCtl ->> DB: Kiểm tra Device, QrEntry và quyền truy cập hiện tại
 
         alt QR không tồn tại hoặc bị tạm ngưng
             AccessCtl -->> API: message lỗi
-            API -->> QrPage: Hiển thị lỗi xử lý QR
+            API -->> EntryFlow: Hiển thị lỗi xử lý QR
         else QR đã hết lượt hoặc đã hết hạn
             AccessCtl ->> DB: Ghi QrLog(quota_exceeded)
             AccessCtl -->> API: granted = false, freePlaysRemaining = 0
-            QrPage ->> MapPage: Mở POI tương ứng
-            MapPage ->> API: GET /api/access/free-listen
+            EntryFlow ->> ContentFlow: Mở POI tương ứng
+            ContentFlow ->> API: GET /api/access/free-listen
             API ->> AccessCtl: GetFreeListenStatus(deviceId)
             AccessCtl -->> API: isAllowed = false
-            API -->> MapPage: Không có quyền nghe
-            MapPage ->> Paywall: Chuyển sang thanh toán
+            API -->> ContentFlow: Không có quyền nghe
+            ContentFlow ->> PaymentFlow: Chuyển sang thanh toán
         else QR còn lượt
             AccessCtl ->> DB: Cập nhật UsedScans và kiểm tra subscription / grant
 
             alt Thiết bị đã có gói sử dụng
                 AccessCtl ->> DB: Ghi QrLog(subscription_active)
                 AccessCtl -->> API: hasActiveSubscription = true
-                QrPage ->> MapPage: Mở POI tương ứng
-                MapPage ->> API: GET /api/access/free-listen
-                API -->> MapPage: isAllowed = true
-                MapPage -->> User: Mở nội dung POI
+                EntryFlow ->> ContentFlow: Mở POI tương ứng
+                ContentFlow ->> API: GET /api/access/free-listen
+                API -->> ContentFlow: isAllowed = true
+                ContentFlow -->> User: Mở nội dung POI
             else Thiết bị đã dùng free listen trước đó
                 AccessCtl ->> DB: Ghi QrLog(free_already_used)
                 AccessCtl -->> API: granted = false
-                QrPage ->> MapPage: Mở POI tương ứng
-                MapPage ->> API: GET /api/access/free-listen
-                API -->> MapPage: isAllowed = false
-                MapPage ->> Paywall: Chuyển sang thanh toán
+                EntryFlow ->> ContentFlow: Mở POI tương ứng
+                ContentFlow ->> API: GET /api/access/free-listen
+                API -->> ContentFlow: isAllowed = false
+                ContentFlow ->> PaymentFlow: Chuyển sang thanh toán
             else Thiết bị đủ điều kiện nhận free listen
                 AccessCtl ->> DB: Tạo DeviceEntryGrant và QrLog(granted)
                 AccessCtl -->> API: granted = true, freePlaysRemaining = 1
-                QrPage ->> MapPage: Mở POI tương ứng
-                MapPage ->> API: GET /api/access/free-listen
-                API -->> MapPage: isAllowed = true, freePlaysRemaining = 1
-                MapPage -->> User: Mở nội dung POI
+                EntryFlow ->> ContentFlow: Mở POI tương ứng
+                ContentFlow ->> API: GET /api/access/free-listen
+                API -->> ContentFlow: isAllowed = true, freePlaysRemaining = 1
+                ContentFlow -->> User: Mở nội dung POI
             end
         end
     end
 ```
 
-### 10.3. Sequence Thanh Toán Gói Người Dùng
+### 10.4. Sequence Kiểm Tra Quyền Truy Cập Và Phát Audio
+
+> Bao gồm các trường hợp: tải màn chi tiết, kiểm tra gói sử dụng hoặc lượt nghe miễn phí, chuyển sang paywall khi không đủ quyền, phát audio, tiêu thụ lượt nghe miễn phí và cập nhật số lượt nghe của POI.
+
+```mermaid
+%%{init: {
+  "theme": "base",
+  "themeVariables": {
+    "primaryColor": "#EAF4FF",
+    "primaryBorderColor": "#2563EB",
+    "primaryTextColor": "#0F172A",
+    "lineColor": "#2563EB",
+    "secondaryColor": "#DBEAFE",
+    "tertiaryColor": "#F8FBFF",
+    "noteBkgColor": "#EFF6FF",
+    "noteBorderColor": "#3B82F6",
+    "activationBorderColor": "#2563EB",
+    "activationBkgColor": "#DBEAFE",
+    "sequenceNumberColor": "#0F172A"
+  }
+}}%%
+sequenceDiagram
+    participant User as User
+    participant DetailPage as POI Access Flow
+    participant DeviceLib as Device Service
+    participant AudioSvc as Audio Service
+    participant API as API Gateway
+    participant AccessCtl as AccessController
+    participant PoiCtl as PoisController
+    participant DB as PostgreSQL
+
+    User ->> DetailPage: Mở chi tiết POI
+    DetailPage ->> DeviceLib: ensureDeviceReady()
+    DetailPage ->> API: GET /api/pois/{poiId}?deviceId=...&lang=...
+    DetailPage ->> API: GET /api/access/free-listen?deviceId=...
+    API ->> PoiCtl: Lấy dữ liệu POI
+    API ->> AccessCtl: GetFreeListenStatus(deviceId)
+    PoiCtl ->> DB: Lấy POI, audio, ảnh, rating
+    AccessCtl ->> DB: Kiểm tra subscription và DeviceEntryGrant
+    DB -->> PoiCtl: Dữ liệu POI
+    DB -->> AccessCtl: Trạng thái quyền truy cập
+    PoiCtl -->> API: Thông tin chi tiết POI
+    AccessCtl -->> API: isAllowed, hasActiveSubscription, freePlaysRemaining
+
+    alt Không có gói và không còn lượt nghe miễn phí
+        API -->> DetailPage: Chưa đủ quyền truy cập
+        DetailPage ->> DetailPage: Lưu điểm quay lại sau thanh toán
+        DetailPage -->> User: Chuyển sang Paywall
+    else Đủ điều kiện xem và nghe nội dung
+        API -->> DetailPage: Hiển thị chi tiết POI
+        DetailPage -->> User: Mở trang chi tiết
+
+        User ->> DetailPage: Chọn "Nghe thuyết minh"
+        DetailPage ->> AudioSvc: Yêu cầu phát audio cho POI hiện tại
+        AudioSvc ->> AudioSvc: Chọn audio theo ngôn ngữ hiện tại
+
+        alt Thiết bị không hỗ trợ audio hoặc POI chưa có script
+            AudioSvc -->> DetailPage: message lỗi
+            DetailPage -->> User: Hiển thị thông báo phát audio thất bại
+        else Phát audio thành công
+            opt Đang dùng lượt nghe miễn phí
+                AudioSvc ->> API: POST /api/access/free-listen/consume(deviceId, poiId)
+                API ->> AccessCtl: ConsumeFreeListen(request)
+                AccessCtl ->> DB: Kiểm tra grant còn hiệu lực và cập nhật FreePlaysUsed
+
+                alt Hết lượt nghe miễn phí
+                    AccessCtl -->> API: message lỗi
+                    API -->> AudioSvc: Không tiêu thụ được free listen
+                else Tiêu thụ thành công
+                    DB -->> AccessCtl: Lưu thành công
+                    AccessCtl -->> API: freePlaysRemaining mới
+                    API -->> AudioSvc: Đã cập nhật số lượt miễn phí còn lại
+                end
+            end
+
+            AudioSvc ->> API: POST /api/pois/listened/{poiId}?deviceId=...
+            API ->> PoiCtl: IncreaseListened(poiId, deviceId)
+            PoiCtl ->> DB: Tạo ListenLog và tăng listenedCount
+            DB -->> PoiCtl: listened_count mới
+            PoiCtl -->> API: listened_count, device_listened
+            API -->> AudioSvc: Kết quả cập nhật lượt nghe
+            AudioSvc -->> DetailPage: Phát xong audio
+            DetailPage -->> User: Cập nhật số lượt nghe và trạng thái quyền truy cập
+        end
+    end
+```
+
+### 10.5. Sequence Theo Dõi Vị Trí Và Tự Động Phát Audio
+
+> Bao gồm các trường hợp: bật tracking, lấy vị trí định kỳ, chọn POI phù hợp trong vùng bán kính, ưu tiên POI mục tiêu từ QR, tự động phát audio và tắt tracking khi phát thất bại.
+
+```mermaid
+%%{init: {
+  "theme": "base",
+  "themeVariables": {
+    "primaryColor": "#EAF4FF",
+    "primaryBorderColor": "#2563EB",
+    "primaryTextColor": "#0F172A",
+    "lineColor": "#2563EB",
+    "secondaryColor": "#DBEAFE",
+    "tertiaryColor": "#F8FBFF",
+    "noteBkgColor": "#EFF6FF",
+    "noteBorderColor": "#3B82F6",
+    "activationBorderColor": "#2563EB",
+    "activationBkgColor": "#DBEAFE",
+    "sequenceNumberColor": "#0F172A"
+  }
+}}%%
+sequenceDiagram
+    participant User as User
+    participant TrackingFlow as Location Tracking Flow
+    participant GPS as Geolocation Service
+    participant AudioSvc as Audio Service
+    participant AccessFlow as POI Access Flow
+    participant API as API Gateway
+    participant AccessCtl as AccessController
+    participant PoiCtl as PoisController
+    participant DB as PostgreSQL
+
+    User ->> TrackingFlow: Bật chế độ tracking
+    TrackingFlow ->> TrackingFlow: Đọc cấu hình interval, radius và stable hits
+
+    loop Theo chu kỳ của chế độ tracking
+        TrackingFlow ->> GPS: getCurrentPosition()
+        GPS -->> TrackingFlow: Vị trí hiện tại
+        TrackingFlow ->> TrackingFlow: Tìm POI ứng viên trong bán kính
+        TrackingFlow ->> TrackingFlow: Ưu tiên POI mục tiêu từ QR, priority và khoảng cách
+
+        alt Không có POI phù hợp
+            TrackingFlow -->> User: Giữ trạng thái theo dõi hiện tại
+        else Có POI phù hợp và đạt số lần xác nhận ổn định
+            TrackingFlow ->> AccessFlow: Kiểm tra POI cần tự động phát
+            AccessFlow ->> API: GET /api/access/free-listen?deviceId=...
+            API ->> AccessCtl: GetFreeListenStatus(deviceId)
+            AccessCtl ->> DB: Kiểm tra subscription và DeviceEntryGrant
+            DB -->> AccessCtl: Trạng thái quyền truy cập
+            AccessCtl -->> API: isAllowed, freePlaysRemaining
+
+            alt Không đủ quyền nghe
+                API -->> AccessFlow: Không có quyền truy cập
+                AccessFlow -->> User: Chuyển sang luồng thanh toán nếu cần
+            else Đủ quyền nghe
+                AccessFlow ->> AudioSvc: Yêu cầu phát audio của POI
+                AudioSvc ->> API: POST /api/pois/listened/{poiId}?deviceId=...
+                API ->> PoiCtl: IncreaseListened(poiId, deviceId)
+                PoiCtl ->> DB: Tạo ListenLog và tăng listenedCount
+                DB -->> PoiCtl: listened_count mới
+                PoiCtl -->> API: Kết quả cập nhật
+                API -->> AudioSvc: Phản hồi thành công
+                AudioSvc -->> User: Tự động phát audio
+            end
+        else Phát audio thất bại
+            TrackingFlow ->> TrackingFlow: Tắt tracking để tránh lặp lỗi
+            TrackingFlow -->> User: Hiển thị thông báo không thể phát audio tự động
+        end
+    end
+```
+
+### 10.6. Sequence User Lưu Và Bỏ Yêu Thích POI
+
+> Bao gồm các trường hợp: người dùng đánh dấu POI yêu thích, hủy yêu thích, thiết bị không hợp lệ và cập nhật lại danh sách yêu thích trong hồ sơ.
+
+```mermaid
+%%{init: {
+  "theme": "base",
+  "themeVariables": {
+    "primaryColor": "#EAF4FF",
+    "primaryBorderColor": "#2563EB",
+    "primaryTextColor": "#0F172A",
+    "lineColor": "#2563EB",
+    "secondaryColor": "#DBEAFE",
+    "tertiaryColor": "#F8FBFF",
+    "noteBkgColor": "#EFF6FF",
+    "noteBorderColor": "#3B82F6",
+    "activationBorderColor": "#2563EB",
+    "activationBkgColor": "#DBEAFE",
+    "sequenceNumberColor": "#0F172A"
+  }
+}}%%
+sequenceDiagram
+    participant User as User
+    participant FavoriteFlow as Favorite Flow
+    participant API as API Gateway
+    participant PoiCtl as PoisController
+    participant ProfileCtl as ProfilesController
+    participant DB as PostgreSQL
+
+    User ->> FavoriteFlow: Chọn lưu hoặc bỏ yêu thích một POI
+    FavoriteFlow ->> API: POST /api/pois/favorite/{poiId}?deviceId=...&isFavorite=...
+    API ->> PoiCtl: ToggleFavorite(poiId, deviceId, isFavorite)
+
+    alt Thiết bị hoặc POI không hợp lệ
+        PoiCtl -->> API: message lỗi
+        API -->> FavoriteFlow: Hoàn tác trạng thái trên giao diện
+    else Thêm vào yêu thích
+        PoiCtl ->> DB: Tạo Favorite(deviceId, poiId)
+        DB -->> PoiCtl: Lưu thành công
+        PoiCtl -->> API: is_favorite = true, favorite_count mới
+        API -->> FavoriteFlow: Cập nhật biểu tượng yêu thích
+    else Bỏ khỏi yêu thích
+        PoiCtl ->> DB: Xóa Favorite(deviceId, poiId)
+        DB -->> PoiCtl: Lưu thành công
+        PoiCtl -->> API: is_favorite = false, favorite_count mới
+        API -->> FavoriteFlow: Cập nhật biểu tượng yêu thích
+    end
+
+    opt Người dùng mở danh sách yêu thích trong hồ sơ
+        FavoriteFlow ->> API: GET /api/profiles/{deviceId}/favorites?lang=...
+        API ->> ProfileCtl: GetFavorites(deviceId, lang)
+        ProfileCtl ->> DB: Lấy favorite và POI liên quan
+        DB -->> ProfileCtl: Dữ liệu yêu thích
+        ProfileCtl -->> API: Danh sách POI yêu thích
+        API -->> FavoriteFlow: Hiển thị danh sách yêu thích trong hồ sơ
+    end
+```
+
+### 10.7. Sequence User Đánh Giá POI
+
+> Bao gồm các trường hợp: gửi đánh giá mới, cập nhật đánh giá cũ, dữ liệu đánh giá không hợp lệ và cập nhật lại thống kê rating của POI.
+
+```mermaid
+%%{init: {
+  "theme": "base",
+  "themeVariables": {
+    "primaryColor": "#EAF4FF",
+    "primaryBorderColor": "#2563EB",
+    "primaryTextColor": "#0F172A",
+    "lineColor": "#2563EB",
+    "secondaryColor": "#DBEAFE",
+    "tertiaryColor": "#F8FBFF",
+    "noteBkgColor": "#EFF6FF",
+    "noteBorderColor": "#3B82F6",
+    "activationBorderColor": "#2563EB",
+    "activationBkgColor": "#DBEAFE",
+    "sequenceNumberColor": "#0F172A"
+  }
+}}%%
+sequenceDiagram
+    participant User as User
+    participant RatingFlow as POI Rating Flow
+    participant API as API Gateway
+    participant RatingsCtl as RatingsController
+    participant DB as PostgreSQL
+
+    User ->> RatingFlow: Chọn số sao cho POI
+    RatingFlow ->> RatingFlow: Cập nhật tạm rating trên giao diện
+    RatingFlow ->> API: POST /api/ratings(poiId, deviceId, ratingValue)
+    API ->> RatingsCtl: UpsertRating(dto)
+
+    alt Giá trị rating không hợp lệ hoặc thiết bị/POI không tồn tại
+        RatingsCtl -->> API: message lỗi
+        API -->> RatingFlow: Khôi phục rating cũ và hiển thị lỗi
+    else Chưa có đánh giá trước đó
+        RatingsCtl ->> DB: Tạo Rating mới
+        DB -->> RatingsCtl: Lưu thành công
+        RatingsCtl ->> DB: Tính lại rating_count và rating_avg của POI
+        DB -->> RatingsCtl: Thống kê rating mới
+        RatingsCtl -->> API: rating_count, rating_avg mới
+        API -->> RatingFlow: Hiển thị thông báo đã gửi đánh giá
+    else Đã có đánh giá trước đó
+        RatingsCtl ->> DB: Cập nhật Rating hiện có
+        DB -->> RatingsCtl: Lưu thành công
+        RatingsCtl ->> DB: Tính lại rating_count và rating_avg của POI
+        DB -->> RatingsCtl: Thống kê rating mới
+        RatingsCtl -->> API: rating_count, rating_avg mới
+        API -->> RatingFlow: Hiển thị thông báo đã cập nhật đánh giá
+    end
+```
+
+### 10.8. Sequence Thanh Toán Gói Người Dùng
 
 > Bao gồm các trường hợp: thiết bị không hợp lệ, plan không tồn tại, tạo giao dịch thành công, polling trạng thái giao dịch, người dùng chủ động xác nhận đã thanh toán, giao dịch được đồng bộ thành công, giao dịch chưa được ghi nhận và giao dịch hết thời gian chờ.
 
@@ -760,17 +1150,17 @@ sequenceDiagram
 }}%%
 sequenceDiagram
     participant User as User
-    participant Paywall as Paywall Page
-    participant PaymentPage as Payment Page
-    participant DeviceLib as device.ts
-    participant API as ApiClient
+    participant Paywall as Plan Selection Flow
+    participant PaymentPage as Payment Checkout Flow
+    participant DeviceLib as Device Service
+    participant API as API Gateway
     participant PaymentsCtl as PaymentsController
     participant DB as PostgreSQL
     participant Sepay as SePay API
-    participant MapPage as Map Page
+    participant ContentFlow as POI Access Flow
 
     User ->> Paywall: Chọn gói sử dụng
-    Paywall ->> PaymentPage: router.push(/payment?planId=...)
+    Paywall ->> PaymentPage: Chuyển sang luồng thanh toán của gói đã chọn
     PaymentPage ->> DeviceLib: ensureDeviceReady()
     PaymentPage ->> API: POST /api/payments/create?deviceId=...&planId=...
     API ->> PaymentsCtl: CreatePayment(deviceId, planId)
@@ -794,8 +1184,8 @@ sequenceDiagram
                 PaymentsCtl -->> API: status = used / confirmed
                 API -->> PaymentPage: Giao dịch thành công
                 PaymentPage -->> User: Hiển thị popup thành công
-                PaymentPage ->> MapPage: router.replace(...)
-                MapPage -->> User: Quay lại nội dung phù hợp
+                PaymentPage ->> ContentFlow: Quay lại nội dung phù hợp
+                ContentFlow -->> User: Mở lại nội dung tương ứng
             else Payment vẫn đang chờ
                 PaymentsCtl -->> API: status = pending
                 API -->> PaymentPage: Đang kiểm tra giao dịch
@@ -816,7 +1206,7 @@ sequenceDiagram
                 PaymentsCtl -->> API: message = đã xác nhận thành công
                 API -->> PaymentPage: payment status = used
                 PaymentPage -->> User: Hiển thị popup thành công
-                PaymentPage ->> MapPage: router.replace(...)
+                PaymentPage ->> ContentFlow: Quay lại nội dung tương ứng
             else Chưa tìm thấy giao dịch phù hợp
                 PaymentsCtl -->> API: message = chưa ghi nhận giao dịch
                 API -->> PaymentPage: payment status hiện tại
@@ -829,7 +1219,7 @@ sequenceDiagram
     end
 ```
 
-### 10.4. Sequence Webhook Xác Nhận Thanh Toán
+### 10.9. Sequence Webhook Xác Nhận Thanh Toán
 
 > Bao gồm các trường hợp: webhook không hợp lệ, không tìm thấy mã thanh toán, không tìm thấy payment tương ứng, payment đã được xử lý trước đó, số tiền chuyển chưa đủ và xác nhận thanh toán thành công để kích hoạt gói người dùng.
 
@@ -852,10 +1242,10 @@ sequenceDiagram
 }}%%
 sequenceDiagram
     participant Sepay as SePay
-    participant API as ApiClient / Webhook Endpoint
+    participant API as Payment Webhook Endpoint
     participant PaymentsCtl as PaymentsController
     participant DB as PostgreSQL
-    participant PaymentSvc as Payment Logic
+    participant PaymentSvc as Payment Application Service
 
     Sepay ->> API: POST /api/payments/sepay/webhook(payload)
     API ->> PaymentsCtl: HandleSepayWebhook(payload)
@@ -901,7 +1291,7 @@ sequenceDiagram
     end
 ```
 
-### 10.5. Sequence Seller Tạo POI
+### 10.10. Sequence Seller Tạo POI
 
 > Bao gồm các trường hợp: dữ liệu không hợp lệ, seller không đủ quyền, dịch nội dung thất bại có fallback, tạo POI thường không cần nâng cấp và tạo POI có phát sinh thanh toán nâng cấp.
 
@@ -924,16 +1314,16 @@ sequenceDiagram
 }}%%
 sequenceDiagram
     participant Seller as Seller
-    participant PoiForm as Seller PoiForm
-    participant API as ApiClient
+    participant PoiForm as POI Creation Flow
+    participant API as API Gateway
     participant OwnerCtl as OwnerPoisController
     participant PaymentCtl as PaymentsController
-    participant DraftSvc as PoiDraftWorkflow
+    participant DraftSvc as POI Draft Service
     participant DB as PostgreSQL
-    participant UpgradePage as Seller Payment Upgrade Page
+    participant UpgradePage as POI Upgrade Payment Flow
 
     Seller ->> PoiForm: Nhập thông tin POI, ảnh, bản dịch, audio
-    PoiForm ->> PoiForm: validate() và build payload
+    PoiForm ->> PoiForm: Kiểm tra dữ liệu và chuẩn bị payload
 
     alt Dữ liệu client không hợp lệ
         PoiForm -->> Seller: Hiển thị lỗi tại form
@@ -979,16 +1369,16 @@ sequenceDiagram
                 PaymentCtl ->> DB: Tạo Payment(paymentType = poi_upgrade, status = pending, draftPayload)
                 PaymentCtl -->> API: 200 OK(checkoutResponse)
                 API -->> PoiForm: payment code
-                PoiForm ->> UpgradePage: router.push(/payments/poi-upgrade?code=...)
+                PoiForm ->> UpgradePage: Chuyển sang luồng thanh toán nâng cấp POI
                 UpgradePage -->> Seller: Mở màn thanh toán nâng cấp POI
             end
         end
     end
 ```
 
-### 10.6. Sequence Admin Xử Lý QR Bị Tạm Ngưng
+### 10.11. Sequence Seller Chỉnh Sửa POI Và Gửi Duyệt Lại
 
-> Bao gồm các trường hợp: admin xem danh sách QR, tạm ngưng QR đang hoạt động, seller gửi yêu cầu kích hoạt lại, admin chấp thuận mở lại QR hoặc từ chối yêu cầu kích hoạt lại.
+> Bao gồm các trường hợp: seller mở POI cần sửa, cập nhật thông tin chính, ảnh, bản dịch, audio, lưu thay đổi thành công và đưa POI trở lại trạng thái chờ admin duyệt.
 
 ```mermaid
 %%{init: {
@@ -1008,92 +1398,45 @@ sequenceDiagram
   }
 }}%%
 sequenceDiagram
-    participant Admin as Admin
-    participant AdminQrPage as Admin QR Page
     participant Seller as Seller
-    participant SellerQrPage as Seller QR Page
-    participant API as ApiClient
-    participant AdminQrCtl as AdminQrController
-    participant OwnerQrCtl as OwnerQrController
+    participant EditFlow as Seller POI Edit Flow
+    participant API as API Gateway
+    participant OwnerCtl as OwnerPoisController
     participant DB as PostgreSQL
 
-    Admin ->> AdminQrPage: Mở màn quản lý QR
-    AdminQrPage ->> API: GET /api/admin/qr?adminId=...
-    API ->> AdminQrCtl: GetAllQrEntries(adminId)
-    AdminQrCtl ->> DB: Lấy danh sách QR, owner, POI, log liên quan
-    DB -->> AdminQrCtl: Dữ liệu QR toàn hệ thống
-    AdminQrCtl -->> API: Danh sách QR
-    API -->> AdminQrPage: Hiển thị danh sách QR
+    Seller ->> EditFlow: Mở POI cần chỉnh sửa
+    EditFlow ->> API: GET /api/owner/pois/{id}
+    API ->> OwnerCtl: GetPoiById(id, ownerId)
+    OwnerCtl ->> DB: Lấy POI, ảnh, bản dịch và audio hiện tại
+    DB -->> OwnerCtl: Dữ liệu POI
+    OwnerCtl -->> API: Chi tiết POI
+    API -->> EditFlow: Hiển thị form chỉnh sửa
 
-    alt Admin tạm ngưng QR đang hoạt động
-        Admin ->> AdminQrPage: Chọn "Tạm ngưng" và nhập lý do
-        AdminQrPage ->> API: PUT /api/admin/qr/{id}/status(status=admin_suspended, reason)
-        API ->> AdminQrCtl: UpdateQrStatus(id, request, adminId)
+    Seller ->> EditFlow: Cập nhật thông tin, ảnh, bản dịch hoặc audio
+    EditFlow ->> EditFlow: Kiểm tra dữ liệu và chuẩn bị payload
+    EditFlow ->> API: PUT /api/owner/pois/{id}(payload, ownerId)
+    API ->> OwnerCtl: UpdatePoi(id, request, ownerId)
 
-        alt Admin không hợp lệ hoặc QR không tồn tại
-            AdminQrCtl -->> API: message lỗi
-            API -->> AdminQrPage: Hiển thị lỗi cập nhật trạng thái
-        else Cập nhật thành công
-            AdminQrCtl ->> DB: Đổi status = admin_suspended, lưu suspensionReason
-            DB -->> AdminQrCtl: Lưu thành công
-            AdminQrCtl -->> API: message = đã cập nhật trạng thái QR
-            API -->> AdminQrPage: QR chuyển sang trạng thái tạm ngưng
-        end
-    end
-
-    opt Seller gửi yêu cầu kích hoạt lại
-        Seller ->> SellerQrPage: Chọn QR bị tạm ngưng và gửi yêu cầu
-        SellerQrPage ->> API: POST /api/owner/qr/{id}/activation-request(note)
-        API ->> OwnerQrCtl: RequestActivation(id, request, ownerId)
-
-        alt Seller không hợp lệ hoặc QR không thuộc seller
-            OwnerQrCtl -->> API: message lỗi
-            API -->> SellerQrPage: Hiển thị lỗi gửi yêu cầu
-        else QR không ở trạng thái admin_suspended
-            OwnerQrCtl -->> API: message = QR này không bị hệ thống tạm ngưng
-            API -->> SellerQrPage: Hiển thị thông báo không thể gửi yêu cầu
-        else Gửi yêu cầu thành công
-            OwnerQrCtl ->> DB: Lưu activationRequestedAt và activationRequestNote
-            DB -->> OwnerQrCtl: Lưu thành công
-            OwnerQrCtl -->> API: message = đã gửi yêu cầu kích hoạt lại cho admin
-            API -->> SellerQrPage: Hiển thị trạng thái đang chờ admin xử lý
-        end
-    end
-
-    alt Admin chấp thuận mở lại QR
-        Admin ->> AdminQrPage: Chọn "Mở lại QR"
-        AdminQrPage ->> API: PUT /api/admin/qr/{id}/status(status=active)
-        API ->> AdminQrCtl: UpdateQrStatus(id, request, adminId)
-
-        alt Admin không hợp lệ hoặc QR không tồn tại
-            AdminQrCtl -->> API: message lỗi
-            API -->> AdminQrPage: Hiển thị lỗi mở lại QR
-        else Mở lại thành công
-            AdminQrCtl ->> DB: Đổi status = active, xóa activationRequestedAt, activationRequestNote và suspensionReason
-            DB -->> AdminQrCtl: Lưu thành công
-            AdminQrCtl -->> API: message = đã cập nhật trạng thái QR
-            API -->> AdminQrPage: QR hoạt động trở lại
-        end
-    else Admin từ chối yêu cầu kích hoạt lại
-        Admin ->> AdminQrPage: Chọn "Từ chối yêu cầu" và nhập lý do
-        AdminQrPage ->> API: POST /api/admin/qr/{id}/activation-request/reject(reason)
-        API ->> AdminQrCtl: RejectActivationRequest(id, request, adminId)
-
-        alt Admin không hợp lệ hoặc QR không tồn tại
-            AdminQrCtl -->> API: message lỗi
-            API -->> AdminQrPage: Hiển thị lỗi từ chối yêu cầu
-        else Từ chối thành công
-            AdminQrCtl ->> DB: Giữ status = admin_suspended, cập nhật suspensionReason mới, xóa activationRequestedAt và activationRequestNote
-            DB -->> AdminQrCtl: Lưu thành công
-            AdminQrCtl -->> API: message = đã từ chối yêu cầu kích hoạt lại
-            API -->> AdminQrPage: QR tiếp tục ở trạng thái tạm ngưng
-        end
+    alt POI không tồn tại hoặc không thuộc seller
+        OwnerCtl -->> API: message lỗi
+        API -->> EditFlow: Hiển thị lỗi không thể cập nhật POI
+    else Lưu dữ liệu thất bại
+        OwnerCtl -->> API: message lỗi DB
+        API -->> EditFlow: Hiển thị lỗi lưu POI
+    else Cập nhật thành công
+        OwnerCtl ->> DB: Cập nhật thông tin POI
+        OwnerCtl ->> DB: Đồng bộ ảnh, bản dịch và audio liên quan
+        OwnerCtl ->> DB: Đặt status = pending, xóa rejectedReason
+        DB -->> OwnerCtl: Lưu thành công
+        OwnerCtl -->> API: message = POI được cập nhật thành công
+        API -->> EditFlow: Hiển thị thông báo đã gửi duyệt lại
+        EditFlow -->> Seller: POI quay về trạng thái chờ admin duyệt
     end
 ```
 
-### 10.7. Sequence Kiểm Tra Quyền Truy Cập Và Phát Audio
+### 10.12. Sequence Seller Cập Nhật Audio Và Bản Dịch
 
-> Bao gồm các trường hợp: tải màn chi tiết, kiểm tra gói sử dụng hoặc lượt nghe miễn phí, chuyển sang paywall khi không đủ quyền, phát audio, tiêu thụ lượt nghe miễn phí và cập nhật số lượt nghe của POI.
+> Bao gồm các trường hợp: seller yêu cầu dịch nội dung cho nhiều ngôn ngữ, tạo audio mới, cập nhật audio hiện có, xóa audio và đưa audio về trạng thái chờ admin duyệt lại.
 
 ```mermaid
 %%{init: {
@@ -1113,72 +1456,70 @@ sequenceDiagram
   }
 }}%%
 sequenceDiagram
-    participant User as User
-    participant DetailPage as Detail Page
-    participant DeviceLib as device.ts
-    participant AudioSvc as audio.ts
-    participant API as ApiClient
-    participant AccessCtl as AccessController
-    participant PoiCtl as PoisController
+    participant Seller as Seller
+    participant ContentFlow as Seller Audio And Translation Flow
+    participant API as API Gateway
+    participant OwnerPoisCtl as OwnerPoisController
+    participant OwnerAudioCtl as OwnerAudioController
+    participant TranslateSvc as Translation Service
     participant DB as PostgreSQL
 
-    User ->> DetailPage: Mở chi tiết POI
-    DetailPage ->> DeviceLib: ensureDeviceReady()
-    DetailPage ->> API: GET /api/pois/{poiId}?deviceId=...&lang=...
-    DetailPage ->> API: GET /api/access/free-listen?deviceId=...
-    API ->> PoiCtl: Lấy dữ liệu POI
-    API ->> AccessCtl: GetFreeListenStatus(deviceId)
-    PoiCtl ->> DB: Lấy POI, audio, ảnh, rating
-    AccessCtl ->> DB: Kiểm tra subscription và DeviceEntryGrant
-    DB -->> PoiCtl: Dữ liệu POI
-    DB -->> AccessCtl: Trạng thái quyền truy cập
-    PoiCtl -->> API: Thông tin chi tiết POI
-    AccessCtl -->> API: isAllowed, hasActiveSubscription, freePlaysRemaining
+    Seller ->> ContentFlow: Mở form chỉnh sửa nội dung POI
 
-    alt Không có gói và không còn lượt nghe miễn phí
-        API -->> DetailPage: Chưa đủ quyền truy cập
-        DetailPage ->> DetailPage: setReturnTo(/detail?poiId=...)
-        DetailPage -->> User: Chuyển sang Paywall
-    else Đủ điều kiện xem và nghe nội dung
-        API -->> DetailPage: Hiển thị chi tiết POI
-        DetailPage -->> User: Mở trang chi tiết
+    opt Seller yêu cầu dịch nội dung
+        ContentFlow ->> API: POST /api/owner/pois/translate(text, sourceLanguage, targetLanguage)
+        API ->> OwnerPoisCtl: Translate(request, ownerId)
+        OwnerPoisCtl ->> TranslateSvc: Gửi yêu cầu dịch
 
-        User ->> DetailPage: Chọn "Nghe thuyết minh"
-        DetailPage ->> AudioSvc: playPoiAudio(poi, consumeFreeListen)
-        AudioSvc ->> AudioSvc: Chọn audio theo ngôn ngữ hiện tại
+        alt Dịch thành công
+            TranslateSvc -->> OwnerPoisCtl: Nội dung đã dịch
+            OwnerPoisCtl -->> API: text đã dịch
+            API -->> ContentFlow: Cập nhật translation và script audio
+        else Dịch thất bại
+            OwnerPoisCtl -->> API: fallback = text gốc
+            API -->> ContentFlow: Giữ lại nội dung hiện có
+        end
+    end
 
-        alt Thiết bị không hỗ trợ audio hoặc POI chưa có script
-            AudioSvc -->> DetailPage: message lỗi
-            DetailPage -->> User: Hiển thị thông báo phát audio thất bại
-        else Phát audio thành công
-            opt Đang dùng lượt nghe miễn phí
-                AudioSvc ->> API: POST /api/access/free-listen/consume(deviceId, poiId)
-                API ->> AccessCtl: ConsumeFreeListen(request)
-                AccessCtl ->> DB: Kiểm tra grant còn hiệu lực và cập nhật FreePlaysUsed
+    alt Seller tạo audio mới hoặc ghi đè audio theo ngôn ngữ
+        ContentFlow ->> API: POST /api/owner/audio/tts(payload, ownerId)
+        API ->> OwnerAudioCtl: CreateAudioTTS(request, ownerId)
 
-                alt Hết lượt nghe miễn phí
-                    AccessCtl -->> API: message lỗi
-                    API -->> AudioSvc: Không tiêu thụ được free listen
-                else Tiêu thụ thành công
-                    DB -->> AccessCtl: Lưu thành công
-                    AccessCtl -->> API: freePlaysRemaining mới
-                    API -->> AudioSvc: Đã cập nhật số lượt miễn phí còn lại
-                end
-            end
+        alt POI không tồn tại, không thuộc seller hoặc script rỗng
+            OwnerAudioCtl -->> API: message lỗi
+            API -->> ContentFlow: Hiển thị lỗi lưu audio
+        else Lưu audio thành công
+            OwnerAudioCtl ->> DB: Tạo mới hoặc cập nhật AudioGuide theo languageCode
+            OwnerAudioCtl ->> DB: Đặt approvalStatus = pending, xóa rejectedReason
+            DB -->> OwnerAudioCtl: Lưu thành công
+            OwnerAudioCtl -->> API: message = audio được lưu thành công
+            API -->> ContentFlow: Hiển thị trạng thái chờ admin duyệt
+        end
+    else Seller cập nhật audio hiện có
+        ContentFlow ->> API: PUT /api/owner/audio/{audioId}(payload, ownerId)
+        API ->> OwnerAudioCtl: UpdateAudio(audioId, request, ownerId)
+        OwnerAudioCtl ->> DB: Cập nhật script, giọng đọc hoặc audioUrl
+        OwnerAudioCtl ->> DB: Đặt approvalStatus = pending
+        DB -->> OwnerAudioCtl: Lưu thành công
+        OwnerAudioCtl -->> API: message = audio được cập nhật thành công
+        API -->> ContentFlow: Hiển thị trạng thái chờ duyệt lại
+    else Seller xóa audio
+        ContentFlow ->> API: DELETE /api/owner/audio/{audioId}
+        API ->> OwnerAudioCtl: DeleteAudio(audioId, ownerId)
 
-            AudioSvc ->> API: POST /api/pois/listened/{poiId}?deviceId=...
-            API ->> PoiCtl: IncreaseListened(poiId, deviceId)
-            PoiCtl ->> DB: Tạo ListenLog và tăng listenedCount
-            DB -->> PoiCtl: listened_count mới
-            PoiCtl -->> API: listened_count, device_listened
-            API -->> AudioSvc: Kết quả cập nhật lượt nghe
-            AudioSvc -->> DetailPage: Phát xong audio
-            DetailPage -->> User: Cập nhật số lượt nghe và trạng thái quyền truy cập
+        alt Audio không tồn tại hoặc không thuộc seller
+            OwnerAudioCtl -->> API: message lỗi
+            API -->> ContentFlow: Hiển thị lỗi xóa audio
+        else Xóa thành công
+            OwnerAudioCtl ->> DB: Xóa AudioGuide
+            DB -->> OwnerAudioCtl: Lưu thành công
+            OwnerAudioCtl -->> API: message = audio được xóa thành công
+            API -->> ContentFlow: Gỡ audio khỏi danh sách hiển thị
         end
     end
 ```
 
-### 10.8. Sequence Seller Tạo Và Quản Lý QR
+### 10.13. Sequence Seller Tạo, Gia Hạn Và Kích Hoạt Lại QR
 
 > Bao gồm các trường hợp: seller mở màn QR, tạo QR mới cho POI, cộng thêm lượt quét, bật hoặc tắt QR, gửi yêu cầu kích hoạt lại khi QR bị hệ thống tạm ngưng và xóa QR khỏi trang seller.
 
@@ -1201,8 +1542,8 @@ sequenceDiagram
 }}%%
 sequenceDiagram
     participant Seller as Seller
-    participant SellerQrPage as Seller QR Page
-    participant API as ApiClient
+    participant SellerQrPage as Seller QR Operation Flow
+    participant API as API Gateway
     participant OwnerQrCtl as OwnerQrController
     participant DB as PostgreSQL
 
@@ -1296,7 +1637,62 @@ sequenceDiagram
     end
 ```
 
-### 10.9. Sequence Admin Duyệt POI
+### 10.14. Sequence Seller Xem Log Quét QR
+
+> Bao gồm các trường hợp: seller xem log của một QR cụ thể, xem toàn bộ log quét của mình và lọc lại kết quả theo từ khóa hoặc trạng thái quét.
+
+```mermaid
+%%{init: {
+  "theme": "base",
+  "themeVariables": {
+    "primaryColor": "#EAF4FF",
+    "primaryBorderColor": "#2563EB",
+    "primaryTextColor": "#0F172A",
+    "lineColor": "#2563EB",
+    "secondaryColor": "#DBEAFE",
+    "tertiaryColor": "#F8FBFF",
+    "noteBkgColor": "#EFF6FF",
+    "noteBorderColor": "#3B82F6",
+    "activationBorderColor": "#2563EB",
+    "activationBkgColor": "#DBEAFE",
+    "sequenceNumberColor": "#0F172A"
+  }
+}}%%
+sequenceDiagram
+    participant Seller as Seller
+    participant QrAnalyticsFlow as Seller QR Log Flow
+    participant API as API Gateway
+    participant OwnerQrCtl as OwnerQrController
+    participant DB as PostgreSQL
+
+    Seller ->> QrAnalyticsFlow: Mở khu vực log quét QR
+
+    alt Xem log của một QR cụ thể
+        QrAnalyticsFlow ->> API: GET /api/owner/qr/{id}/logs
+        API ->> OwnerQrCtl: GetQrEntryLogs(id, ownerId)
+        OwnerQrCtl ->> DB: Lấy QrLogs theo QrEntryId
+    else Xem toàn bộ log của seller
+        QrAnalyticsFlow ->> API: GET /api/owner/qr/logs
+        API ->> OwnerQrCtl: GetOwnerQrLogs(ownerId)
+        OwnerQrCtl ->> DB: Lấy QrLogs của toàn bộ QR thuộc seller
+    end
+
+    alt Seller không hợp lệ hoặc QR không tồn tại
+        OwnerQrCtl -->> API: message lỗi
+        API -->> QrAnalyticsFlow: Hiển thị lỗi tải log
+    else Lấy log thành công
+        DB -->> OwnerQrCtl: Dữ liệu log quét
+        OwnerQrCtl -->> API: qr_name, poi_name, scanStatus, grantedFreeListen, scannedAt
+        API -->> QrAnalyticsFlow: Hiển thị danh sách log quét
+
+        opt Seller lọc hoặc tìm kiếm trong log
+            QrAnalyticsFlow ->> QrAnalyticsFlow: Lọc theo từ khóa, scanStatus hoặc thứ tự thời gian
+            QrAnalyticsFlow -->> Seller: Cập nhật bảng log quét
+        end
+    end
+```
+
+### 10.15. Sequence Admin Duyệt POI
 
 > Bao gồm các trường hợp: admin mở danh sách POI, lọc POI cần duyệt, xem chi tiết, phê duyệt POI và audio liên quan hoặc từ chối POI với lý do cụ thể.
 
@@ -1319,8 +1715,8 @@ sequenceDiagram
 }}%%
 sequenceDiagram
     participant Admin as Admin
-    participant AdminPoisPage as Admin POIs Page
-    participant API as ApiClient
+    participant AdminPoisPage as Admin POI Moderation Flow
+    participant API as API Gateway
     participant AdminCtl as AdminController
     participant DB as PostgreSQL
 
@@ -1369,9 +1765,339 @@ sequenceDiagram
     end
 ```
 
+### 10.16. Sequence Admin Xem Chi Tiết, Cập Nhật Trạng Thái Và Hủy Tài Khoản
+
+> Bao gồm các trường hợp: admin tải danh sách tài khoản, tìm kiếm theo từ khóa, xem chi tiết tài khoản, cập nhật trạng thái tài khoản và hủy tài khoản khi cần thiết.
+
+```mermaid
+%%{init: {
+  "theme": "base",
+  "themeVariables": {
+    "primaryColor": "#EAF4FF",
+    "primaryBorderColor": "#2563EB",
+    "primaryTextColor": "#0F172A",
+    "lineColor": "#2563EB",
+    "secondaryColor": "#DBEAFE",
+    "tertiaryColor": "#F8FBFF",
+    "noteBkgColor": "#EFF6FF",
+    "noteBorderColor": "#3B82F6",
+    "activationBorderColor": "#2563EB",
+    "activationBkgColor": "#DBEAFE",
+    "sequenceNumberColor": "#0F172A"
+  }
+}}%%
+sequenceDiagram
+    participant Admin as Admin
+    participant AccountFlow as Admin Account Review Flow
+    participant API as API Gateway
+    participant AdminCtl as AdminController
+    participant DB as PostgreSQL
+
+    Admin ->> AccountFlow: Mở màn quản lý tài khoản
+    AccountFlow ->> API: GET /api/admin/users?role=...&q=...
+    API ->> AdminCtl: GetUsers(adminId, role, q)
+    AdminCtl ->> DB: Lấy user, seller và thống kê POI/listen liên quan
+    DB -->> AdminCtl: Danh sách tài khoản
+    AdminCtl -->> API: Danh sách user đã chuẩn hóa
+    API -->> AccountFlow: Hiển thị danh sách tài khoản
+
+    opt Admin xem chi tiết tài khoản
+        AccountFlow ->> API: GET /api/admin/users/{userId}/detail
+        API ->> AdminCtl: GetUserDetail(userId, adminId)
+        AdminCtl ->> DB: Lấy thông tin chi tiết, POI, QR, listen và favorite liên quan
+        DB -->> AdminCtl: Thông tin chi tiết tài khoản
+        AdminCtl -->> API: Chi tiết user hoặc seller
+        API -->> AccountFlow: Hiển thị hồ sơ chi tiết
+    end
+
+    alt Admin cập nhật trạng thái tài khoản
+        Admin ->> AccountFlow: Chọn active, paused, banned hoặc canceled
+        AccountFlow ->> API: PUT /api/admin/users/{userId}/status(status)
+        API ->> AdminCtl: UpdateUserStatus(userId, request, adminId)
+
+        alt Admin không hợp lệ, user không tồn tại hoặc trạng thái không hợp lệ
+            AdminCtl -->> API: message lỗi
+            API -->> AccountFlow: Hiển thị lỗi cập nhật trạng thái
+        else Cập nhật thành công
+            AdminCtl ->> DB: Cập nhật AccountStatus, IsActive, UpdatedAt
+            DB -->> AdminCtl: Lưu thành công
+            AdminCtl -->> API: message = đã cập nhật trạng thái tài khoản
+            API -->> AccountFlow: Cập nhật trạng thái trên danh sách
+        end
+    else Admin hủy tài khoản
+        Admin ->> AccountFlow: Chọn hủy tài khoản
+        AccountFlow ->> API: DELETE /api/admin/users/{userId}
+        API ->> AdminCtl: DeleteUser(userId, adminId)
+
+        alt Admin không hợp lệ hoặc user không tồn tại
+            AdminCtl -->> API: message lỗi
+            API -->> AccountFlow: Hiển thị lỗi hủy tài khoản
+        else Hủy thành công
+            AdminCtl ->> DB: Đặt accountStatus = canceled và isActive = false
+            DB -->> AdminCtl: Lưu thành công
+            AdminCtl -->> API: message = tài khoản đã được hủy
+            API -->> AccountFlow: Cập nhật danh sách tài khoản
+        end
+    end
+```
+
+### 10.17. Sequence Admin Cập Nhật Trạng Thái Thiết Bị
+
+> Bao gồm các trường hợp: admin mở danh sách thiết bị, xem chi tiết thiết bị, cập nhật trạng thái active, inactive, banned hoặc user_deleted và xử lý các gói còn hiệu lực khi thiết bị bị khóa hoặc bị xóa.
+
+```mermaid
+%%{init: {
+  "theme": "base",
+  "themeVariables": {
+    "primaryColor": "#EAF4FF",
+    "primaryBorderColor": "#2563EB",
+    "primaryTextColor": "#0F172A",
+    "lineColor": "#2563EB",
+    "secondaryColor": "#DBEAFE",
+    "tertiaryColor": "#F8FBFF",
+    "noteBkgColor": "#EFF6FF",
+    "noteBorderColor": "#3B82F6",
+    "activationBorderColor": "#2563EB",
+    "activationBkgColor": "#DBEAFE",
+    "sequenceNumberColor": "#0F172A"
+  }
+}}%%
+sequenceDiagram
+    participant Admin as Admin
+    participant DeviceFlow as Admin Device Control Flow
+    participant API as API Gateway
+    participant AdminCtl as AdminController
+    participant DB as PostgreSQL
+
+    Admin ->> DeviceFlow: Mở màn quản lý thiết bị
+    DeviceFlow ->> API: GET /api/admin/devices?status=...&q=...
+    API ->> AdminCtl: GetDevices(adminId, status, q)
+    AdminCtl ->> DB: Lấy danh sách thiết bị, subscription và thống kê liên quan
+    DB -->> AdminCtl: Dữ liệu thiết bị
+    AdminCtl -->> API: Danh sách thiết bị
+    API -->> DeviceFlow: Hiển thị danh sách thiết bị
+
+    opt Admin xem chi tiết thiết bị
+        DeviceFlow ->> API: GET /api/admin/devices/{deviceId}/detail
+        API ->> AdminCtl: GetDeviceDetail(deviceId, adminId)
+        AdminCtl ->> DB: Lấy listen, favorite, payment và subscription của thiết bị
+        DB -->> AdminCtl: Thông tin chi tiết thiết bị
+        AdminCtl -->> API: Chi tiết thiết bị
+        API -->> DeviceFlow: Hiển thị hồ sơ thiết bị
+    end
+
+    Admin ->> DeviceFlow: Chọn trạng thái mới cho thiết bị
+    DeviceFlow ->> API: PUT /api/admin/devices/{deviceId}/status(status, reason)
+    API ->> AdminCtl: UpdateDeviceStatus(deviceId, request, adminId)
+
+    alt Admin không hợp lệ, thiết bị không tồn tại hoặc trạng thái không hợp lệ
+        AdminCtl -->> API: message lỗi
+        API -->> DeviceFlow: Hiển thị lỗi cập nhật thiết bị
+    else Chuyển sang active hoặc inactive
+        AdminCtl ->> DB: Cập nhật Status, IsActive, LastSeen
+        DB -->> AdminCtl: Lưu thành công
+        AdminCtl -->> API: message = đã cập nhật thiết bị
+        API -->> DeviceFlow: Cập nhật trạng thái trên danh sách
+    else Chuyển sang banned hoặc user_deleted
+        AdminCtl ->> DB: Cập nhật Status, IsActive, BanReason/BannedAt/DeletedAt
+        AdminCtl ->> DB: Hết hiệu lực các subscription còn hoạt động của thiết bị
+        DB -->> AdminCtl: Lưu thành công
+        AdminCtl -->> API: message = đã cập nhật thiết bị
+        API -->> DeviceFlow: Hiển thị trạng thái bị khóa hoặc đã xóa
+    end
+```
+
+### 10.18. Sequence Admin Xử Lý QR Bị Tạm Ngưng
+
+> Bao gồm các trường hợp: admin xem danh sách QR, tạm ngưng QR đang hoạt động, seller gửi yêu cầu kích hoạt lại, admin chấp thuận mở lại QR hoặc từ chối yêu cầu kích hoạt lại.
+
+```mermaid
+%%{init: {
+  "theme": "base",
+  "themeVariables": {
+    "primaryColor": "#EAF4FF",
+    "primaryBorderColor": "#2563EB",
+    "primaryTextColor": "#0F172A",
+    "lineColor": "#2563EB",
+    "secondaryColor": "#DBEAFE",
+    "tertiaryColor": "#F8FBFF",
+    "noteBkgColor": "#EFF6FF",
+    "noteBorderColor": "#3B82F6",
+    "activationBorderColor": "#2563EB",
+    "activationBkgColor": "#DBEAFE",
+    "sequenceNumberColor": "#0F172A"
+  }
+}}%%
+sequenceDiagram
+    participant Admin as Admin
+    participant AdminQrPage as Admin QR Review Flow
+    participant Seller as Seller
+    participant SellerQrPage as Seller QR Operation Flow
+    participant API as API Gateway
+    participant AdminQrCtl as AdminQrController
+    participant OwnerQrCtl as OwnerQrController
+    participant DB as PostgreSQL
+
+    Admin ->> AdminQrPage: Mở màn quản lý QR
+    AdminQrPage ->> API: GET /api/admin/qr?adminId=...
+    API ->> AdminQrCtl: GetAllQrEntries(adminId)
+    AdminQrCtl ->> DB: Lấy danh sách QR, owner, POI, log liên quan
+    DB -->> AdminQrCtl: Dữ liệu QR toàn hệ thống
+    AdminQrCtl -->> API: Danh sách QR
+    API -->> AdminQrPage: Hiển thị danh sách QR
+
+    alt Admin tạm ngưng QR đang hoạt động
+        Admin ->> AdminQrPage: Chọn "Tạm ngưng" và nhập lý do
+        AdminQrPage ->> API: PUT /api/admin/qr/{id}/status(status=admin_suspended, reason)
+        API ->> AdminQrCtl: UpdateQrStatus(id, request, adminId)
+
+        alt Admin không hợp lệ hoặc QR không tồn tại
+            AdminQrCtl -->> API: message lỗi
+            API -->> AdminQrPage: Hiển thị lỗi cập nhật trạng thái
+        else Cập nhật thành công
+            AdminQrCtl ->> DB: Đổi status = admin_suspended, lưu suspensionReason
+            DB -->> AdminQrCtl: Lưu thành công
+            AdminQrCtl -->> API: message = đã cập nhật trạng thái QR
+            API -->> AdminQrPage: QR chuyển sang trạng thái tạm ngưng
+        end
+    end
+
+    opt Seller gửi yêu cầu kích hoạt lại
+        Seller ->> SellerQrPage: Chọn QR bị tạm ngưng và gửi yêu cầu
+        SellerQrPage ->> API: POST /api/owner/qr/{id}/activation-request(note)
+        API ->> OwnerQrCtl: RequestActivation(id, request, ownerId)
+
+        alt Seller không hợp lệ hoặc QR không thuộc seller
+            OwnerQrCtl -->> API: message lỗi
+            API -->> SellerQrPage: Hiển thị lỗi gửi yêu cầu
+        else QR không ở trạng thái admin_suspended
+            OwnerQrCtl -->> API: message = QR này không bị hệ thống tạm ngưng
+            API -->> SellerQrPage: Hiển thị thông báo không thể gửi yêu cầu
+        else Gửi yêu cầu thành công
+            OwnerQrCtl ->> DB: Lưu activationRequestedAt và activationRequestNote
+            DB -->> OwnerQrCtl: Lưu thành công
+            OwnerQrCtl -->> API: message = đã gửi yêu cầu kích hoạt lại cho admin
+            API -->> SellerQrPage: Hiển thị trạng thái đang chờ admin xử lý
+        end
+    end
+
+    alt Admin chấp thuận mở lại QR
+        Admin ->> AdminQrPage: Chọn "Mở lại QR"
+        AdminQrPage ->> API: PUT /api/admin/qr/{id}/status(status=active)
+        API ->> AdminQrCtl: UpdateQrStatus(id, request, adminId)
+
+        alt Admin không hợp lệ hoặc QR không tồn tại
+            AdminQrCtl -->> API: message lỗi
+            API -->> AdminQrPage: Hiển thị lỗi mở lại QR
+        else Mở lại thành công
+            AdminQrCtl ->> DB: Đổi status = active, xóa activationRequestedAt, activationRequestNote và suspensionReason
+            DB -->> AdminQrCtl: Lưu thành công
+            AdminQrCtl -->> API: message = đã cập nhật trạng thái QR
+            API -->> AdminQrPage: QR hoạt động trở lại
+        end
+    else Admin từ chối yêu cầu kích hoạt lại
+        Admin ->> AdminQrPage: Chọn "Từ chối yêu cầu" và nhập lý do
+        AdminQrPage ->> API: POST /api/admin/qr/{id}/activation-request/reject(reason)
+        API ->> AdminQrCtl: RejectActivationRequest(id, request, adminId)
+
+        alt Admin không hợp lệ hoặc QR không tồn tại
+            AdminQrCtl -->> API: message lỗi
+            API -->> AdminQrPage: Hiển thị lỗi từ chối yêu cầu
+        else Từ chối thành công
+            AdminQrCtl ->> DB: Giữ status = admin_suspended, cập nhật suspensionReason mới, xóa activationRequestedAt và activationRequestNote
+            DB -->> AdminQrCtl: Lưu thành công
+            AdminQrCtl -->> API: message = đã từ chối yêu cầu kích hoạt lại
+            API -->> AdminQrPage: QR tiếp tục ở trạng thái tạm ngưng
+        end
+    end
+```
+
+### 10.19. Sequence Admin Tạo, Cập Nhật Và Xóa Gói Sử Dụng
+
+> Bao gồm các trường hợp: admin mở danh sách gói, tạo gói mới, chỉnh sửa gói hiện có, xóa gói và từ chối thao tác khi dữ liệu hoặc quyền truy cập không hợp lệ.
+
+```mermaid
+%%{init: {
+  "theme": "base",
+  "themeVariables": {
+    "primaryColor": "#EAF4FF",
+    "primaryBorderColor": "#2563EB",
+    "primaryTextColor": "#0F172A",
+    "lineColor": "#2563EB",
+    "secondaryColor": "#DBEAFE",
+    "tertiaryColor": "#F8FBFF",
+    "noteBkgColor": "#EFF6FF",
+    "noteBorderColor": "#3B82F6",
+    "activationBorderColor": "#2563EB",
+    "activationBkgColor": "#DBEAFE",
+    "sequenceNumberColor": "#0F172A"
+  }
+}}%%
+sequenceDiagram
+    participant Admin as Admin
+    participant PlanFlow as Admin Plan Setup Flow
+    participant API as API Gateway
+    participant PlansCtl as PlansController
+    participant DB as PostgreSQL
+
+    Admin ->> PlanFlow: Mở màn quản lý gói sử dụng
+    PlanFlow ->> API: GET /api/Plans/admin?adminId=...
+    API ->> PlansCtl: GetPlansForAdmin(adminId)
+    PlansCtl ->> DB: Lấy danh sách plan
+    DB -->> PlansCtl: Dữ liệu gói
+    PlansCtl -->> API: Danh sách plan
+    API -->> PlanFlow: Hiển thị danh sách gói
+
+    alt Admin tạo gói mới
+        Admin ->> PlanFlow: Nhập tên gói, số ngày và giá
+        PlanFlow ->> API: POST /api/Plans(payload, adminId)
+        API ->> PlansCtl: CreatePlan(request, adminId)
+
+        alt Admin không hợp lệ hoặc dữ liệu gói không hợp lệ
+            PlansCtl -->> API: message lỗi
+            API -->> PlanFlow: Hiển thị lỗi tạo gói
+        else Tạo thành công
+            PlansCtl ->> DB: Tạo Plan mới
+            DB -->> PlansCtl: Lưu thành công
+            PlansCtl -->> API: Dữ liệu gói mới
+            API -->> PlanFlow: Cập nhật danh sách gói
+        end
+    else Admin chỉnh sửa gói hiện có
+        Admin ->> PlanFlow: Cập nhật tên, số ngày hoặc giá
+        PlanFlow ->> API: PUT /api/Plans/{id}(payload, adminId)
+        API ->> PlansCtl: UpdatePlan(id, request, adminId)
+
+        alt Admin không hợp lệ, không tìm thấy gói hoặc dữ liệu không hợp lệ
+            PlansCtl -->> API: message lỗi
+            API -->> PlanFlow: Hiển thị lỗi cập nhật gói
+        else Cập nhật thành công
+            PlansCtl ->> DB: Cập nhật thông tin plan
+            DB -->> PlansCtl: Lưu thành công
+            PlansCtl -->> API: Dữ liệu plan mới
+            API -->> PlanFlow: Làm mới danh sách gói
+        end
+    else Admin xóa gói
+        Admin ->> PlanFlow: Xác nhận xóa gói
+        PlanFlow ->> API: DELETE /api/Plans/{id}?adminId=...
+        API ->> PlansCtl: DeletePlan(id, adminId)
+
+        alt Admin không hợp lệ hoặc không tìm thấy gói
+            PlansCtl -->> API: message lỗi
+            API -->> PlanFlow: Hiển thị lỗi xóa gói
+        else Xóa thành công
+            PlansCtl ->> DB: Xóa Plan
+            DB -->> PlansCtl: Lưu thành công
+            PlansCtl -->> API: message = đã xóa gói
+            API -->> PlanFlow: Gỡ gói khỏi danh sách hiển thị
+        end
+    end
+```
+
 ---
 
 ## 11. Sơ Đồ Lớp (Class Diagram)
+
+> Giản lược theo cấu trúc API và các thực thể nghiệp vụ chính của hệ thống, không đi sâu đến toàn bộ mức chi tiết của ERD hoặc schema cơ sở dữ liệu.
 
 ![Class Diagram Tổng Quan](images/class-diagram-smart-guide.png)
 
@@ -1379,26 +2105,441 @@ sequenceDiagram
 
 ## 12. Sơ Đồ Hoạt Động (Activity Diagram)
 
-### 12.1. Activity User Truy Cập Nội Dung Trên PWA
+> **Quy ước ký hiệu:** `(( ● ))` = Bắt đầu · `(( ◉ ))` = Kết thúc · `{ }` = Điều kiện rẽ nhánh · `[ ]` = Hành động xử lý
 
-Nội dung sơ đồ sẽ bổ sung sau.
+### 12.1. Activity Khởi Tạo Thiết Bị Và Truy Cập PWA
 
-### 12.2. Activity User Quét QR Và Nhận Quyền Nghe
+```mermaid
+flowchart TD
+    START(( ● )) --> OPEN_APP[User mở PWA hoặc vào màn cần dữ liệu]
+    OPEN_APP --> CHECK_UUID{Đã có<br/>deviceUuid?}
 
-Nội dung sơ đồ sẽ bổ sung sau.
+    CHECK_UUID -- Chưa có --> GEN_UUID[Tạo deviceUuid mới]
+    GEN_UUID --> SAVE_UUID[Lưu deviceUuid vào localStorage]
+    CHECK_UUID -- Đã có --> READ_UUID[Đọc deviceUuid hiện có]
 
-### 12.3. Activity Seller Tạo Và Xuất Bản POI
+    SAVE_UUID --> REGISTER
+    READ_UUID --> REGISTER[Đăng ký thiết bị với API]
+    REGISTER --> FIND_DEVICE{Tìm thấy<br/>thiết bị cũ?}
 
-Nội dung sơ đồ sẽ bổ sung sau.
+    FIND_DEVICE -- Có --> CHECK_STATUS{Thiết bị<br/>bị khóa?}
+    FIND_DEVICE -- Không --> MATCH_FP{Nhận diện lại theo<br/>fingerprint hoặc subscription?}
 
-### 12.4. Activity Seller Quản Lý QR
+    MATCH_FP -- Có --> REBIND[Gán lại deviceUuid cho thiết bị cũ]
+    MATCH_FP -- Không --> CREATE_DEVICE[Tạo thiết bị mới]
+    REBIND --> CHECK_STATUS
+    CREATE_DEVICE --> CHECK_STATUS
 
-Nội dung sơ đồ sẽ bổ sung sau.
+    CHECK_STATUS -- Có --> BLOCKED[Hiển thị thông báo thiết bị không hợp lệ]
+    CHECK_STATUS -- Không --> SAVE_DEVICE_ID[Lưu deviceId vào localStorage]
+    SAVE_DEVICE_ID --> LOAD_INIT[Tải dữ liệu ban đầu của ứng dụng]
+    LOAD_INIT --> END_OK(( ◉ ))
+    BLOCKED --> END_BLOCK(( ◉ ))
 
-### 12.5. Activity Thanh Toán Và Kích Hoạt Gói
+    style START fill:#000,color:#fff,stroke:#000
+    style END_OK fill:#000,color:#fff,stroke:#fff,stroke-width:3px
+    style END_BLOCK fill:#000,color:#fff,stroke:#fff,stroke-width:3px
+    style BLOCKED fill:#EF4444,color:#fff
+    style LOAD_INIT fill:#2563EB,color:#fff
+```
 
-Nội dung sơ đồ sẽ bổ sung sau.
+### 12.2. Activity Tìm Kiếm Và Lọc POI
 
-### 12.6. Activity Admin Quản Trị Hệ Thống
+```mermaid
+flowchart TD
+    START(( ● )) --> LOAD_POIS[Tải danh sách POI đã được duyệt]
+    LOAD_POIS --> GET_LOCATION{Có lấy được<br/>vị trí hiện tại?}
 
-Nội dung sơ đồ sẽ bổ sung sau.
+    GET_LOCATION -- Có --> CALC_DISTANCE[Tính distanceKm cho từng POI]
+    GET_LOCATION -- Không --> RAW_LIST[Giữ danh sách POI gốc]
+    CALC_DISTANCE --> RAW_LIST
+
+    RAW_LIST --> INPUT_KEYWORD{User nhập<br/>từ khóa?}
+    INPUT_KEYWORD -- Có --> FILTER_TEXT[Lọc theo tên, địa chỉ, danh mục]
+    INPUT_KEYWORD -- Không --> FILTER_TYPE
+    FILTER_TEXT --> FILTER_TYPE{Chọn bộ lọc nào?}
+    FILTER_TYPE -- Tất cả --> KEEP_ALL[Giữ toàn bộ kết quả]
+    FILTER_TYPE -- Gần bạn --> FILTER_NEARBY[Giữ POI trong bán kính gần]
+    FILTER_TYPE -- Miễn phí --> FILTER_FREE[Giữ POI có giá miễn phí]
+
+    KEEP_ALL --> SORT_LIST
+    FILTER_NEARBY --> SORT_LIST
+    FILTER_FREE --> SORT_LIST
+    INPUT_KEYWORD -- Không --> FILTER_TYPE
+
+    SORT_LIST[Sắp xếp theo khoảng cách, tên hoặc lượt nghe] --> SHOW_RESULT[Hiển thị danh sách và gợi ý]
+    SHOW_RESULT --> SELECT_POI{User chọn POI?}
+    SELECT_POI -- Có --> OPEN_POI[Mở chi tiết hoặc định vị trên bản đồ]
+    SELECT_POI -- Không --> END_NODE(( ◉ ))
+    OPEN_POI --> END_NODE
+
+    style START fill:#000,color:#fff,stroke:#000
+    style END_NODE fill:#000,color:#fff,stroke:#fff,stroke-width:3px
+    style SHOW_RESULT fill:#2563EB,color:#fff
+```
+
+### 12.3. Activity User Quét QR Và Nhận Quyền Nghe
+
+```mermaid
+flowchart TD
+    START(( ● )) --> SCAN[User quét QR hoặc chọn ảnh QR]
+    SCAN --> PARSE{QR payload<br/>hợp lệ?}
+
+    PARSE -- Không --> ERR_QR[Hiển thị lỗi quét QR]
+    PARSE -- Có --> ENSURE_DEVICE[Đảm bảo thiết bị đã được nhận diện]
+    ENSURE_DEVICE --> CALL_ENTRY[Gửi entryCode và deviceId đến API]
+    CALL_ENTRY --> CHECK_QR{QR tồn tại và<br/>đang khả dụng?}
+
+    CHECK_QR -- Không --> ERR_ENTRY[Hiển thị lỗi QR không hợp lệ hoặc bị tạm ngưng]
+    CHECK_QR -- Có --> CHECK_QUOTA{QR còn lượt<br/>miễn phí?}
+
+    CHECK_QUOTA -- Không --> OPEN_POI_1[Mở POI tương ứng]
+    OPEN_POI_1 --> GO_PAYWALL_1[Chuyển sang paywall]
+
+    CHECK_QUOTA -- Có --> CHECK_SUB{Thiết bị đã có<br/>gói sử dụng?}
+    CHECK_SUB -- Có --> OPEN_POI_2[Mở nội dung POI]
+    CHECK_SUB -- Không --> CHECK_USED{Thiết bị đã dùng<br/>free listen trước đó?}
+
+    CHECK_USED -- Có --> OPEN_POI_3[Mở POI tương ứng]
+    OPEN_POI_3 --> GO_PAYWALL_2[Chuyển sang paywall]
+    CHECK_USED -- Không --> GRANT[Tạo DeviceEntryGrant<br/>và ghi log granted]
+    GRANT --> OPEN_POI_4[Mở nội dung POI với 1 lượt miễn phí]
+    OPEN_POI_4 --> END_OK(( ◉ ))
+    OPEN_POI_2 --> END_OK
+    GO_PAYWALL_1 --> END_FAIL(( ◉ ))
+    GO_PAYWALL_2 --> END_FAIL
+    ERR_QR --> END_FAIL
+    ERR_ENTRY --> END_FAIL
+
+    style START fill:#000,color:#fff,stroke:#000
+    style END_OK fill:#000,color:#fff,stroke:#fff,stroke-width:3px
+    style END_FAIL fill:#000,color:#fff,stroke:#fff,stroke-width:3px
+    style GRANT fill:#2563EB,color:#fff
+    style ERR_QR fill:#EF4444,color:#fff
+    style ERR_ENTRY fill:#EF4444,color:#fff
+```
+
+### 12.4. Activity Kiểm Tra Quyền Truy Cập Và Phát Audio
+
+```mermaid
+flowchart TD
+    START(( ● )) --> OPEN_POI[Mở chi tiết hoặc POI trên bản đồ]
+    OPEN_POI --> GET_ACCESS[Kiểm tra free listen và subscription]
+    GET_ACCESS --> ALLOW{Được nghe<br/>nội dung?}
+
+    ALLOW -- Không --> SAVE_RETURN[Lưu điểm quay lại]
+    SAVE_RETURN --> PAYWALL[Chuyển sang paywall]
+
+    ALLOW -- Có --> PICK_AUDIO[Chọn audio theo ngôn ngữ hiện tại]
+    PICK_AUDIO --> HAS_SCRIPT{POI có script<br/>để phát?}
+
+    HAS_SCRIPT -- Không --> ERR_AUDIO[Hiển thị thông báo chưa có audio]
+    HAS_SCRIPT -- Có --> PLAY[Phát audio hoặc TTS]
+    PLAY --> FREE_MODE{Đang dùng<br/>lượt miễn phí?}
+
+    FREE_MODE -- Có --> CONSUME[Tiêu thụ 1 lượt free listen]
+    FREE_MODE -- Không --> LOG_LISTEN
+    CONSUME --> CONSUME_OK{Tiêu thụ<br/>thành công?}
+    CONSUME_OK -- Không --> ERR_FREE[Hiển thị lỗi hết lượt miễn phí]
+    CONSUME_OK -- Có --> LOG_LISTEN[Ghi ListenLog và tăng listenedCount]
+
+    LOG_LISTEN --> UPDATE_UI[Cập nhật lượt nghe và trạng thái trên giao diện]
+    UPDATE_UI --> END_OK(( ◉ ))
+    PAYWALL --> END_FAIL(( ◉ ))
+    ERR_AUDIO --> END_FAIL
+    ERR_FREE --> END_FAIL
+
+    style START fill:#000,color:#fff,stroke:#000
+    style END_OK fill:#000,color:#fff,stroke:#fff,stroke-width:3px
+    style END_FAIL fill:#000,color:#fff,stroke:#fff,stroke-width:3px
+    style PLAY fill:#2563EB,color:#fff
+    style ERR_AUDIO fill:#EF4444,color:#fff
+    style ERR_FREE fill:#EF4444,color:#fff
+```
+
+### 12.5. Activity Theo Dõi Vị Trí Và Tự Động Phát Audio
+
+```mermaid
+flowchart TD
+    START(( ● )) --> TOGGLE{User bật<br/>tracking?}
+    TOGGLE -- Không --> END_OFF(( ◉ ))
+    TOGGLE -- Có --> LOAD_CFG[Đọc interval, radius, stable hits]
+    LOAD_CFG --> LOOP_GPS[Định kỳ lấy vị trí hiện tại]
+    LOOP_GPS --> FIND_POI{Có POI nào nằm<br/>trong bán kính?}
+
+    FIND_POI -- Không --> LOOP_GPS
+    FIND_POI -- Có --> SELECT_POI[Ưu tiên target từ QR, priority và khoảng cách]
+    SELECT_POI --> STABLE{Đã đủ số lần<br/>xác nhận ổn định?}
+
+    STABLE -- Chưa --> LOOP_GPS
+    STABLE -- Rồi --> CHECK_ACCESS[Kiểm tra quyền truy cập nội dung]
+    CHECK_ACCESS --> CAN_PLAY{Được tự động<br/>phát audio?}
+
+    CAN_PLAY -- Không --> LOOP_GPS
+    CAN_PLAY -- Có --> PLAY_AUTO[Tự động phát audio cho POI]
+    PLAY_AUTO --> PLAY_OK{Phát thành công?}
+
+    PLAY_OK -- Có --> SET_COOLDOWN[Đặt cooldown để tránh phát lặp]
+    SET_COOLDOWN --> LOOP_GPS
+    PLAY_OK -- Không --> STOP_TRACKING[Tắt tracking để tránh lặp lỗi]
+    STOP_TRACKING --> END_ERR(( ◉ ))
+
+    style START fill:#000,color:#fff,stroke:#000
+    style END_OFF fill:#000,color:#fff,stroke:#fff,stroke-width:3px
+    style END_ERR fill:#000,color:#fff,stroke:#fff,stroke-width:3px
+    style PLAY_AUTO fill:#2563EB,color:#fff
+    style STOP_TRACKING fill:#EF4444,color:#fff
+```
+
+### 12.6. Activity Seller Tạo Và Gửi Duyệt POI
+
+```mermaid
+flowchart TD
+    START(( ● )) --> OPEN_FORM[Seller mở form tạo POI]
+    OPEN_FORM --> INPUT_DATA[Nhập thông tin, ảnh, bản dịch, audio]
+    INPUT_DATA --> VALIDATE{Dữ liệu<br/>hợp lệ?}
+
+    VALIDATE -- Không --> INPUT_DATA
+    VALIDATE -- Có --> NEED_TRANSLATE{Có cần dịch<br/>nội dung?}
+
+    NEED_TRANSLATE -- Có --> TRANSLATE[Thực hiện dịch và sinh bản dịch/audio]
+    NEED_TRANSLATE -- Không --> CHECK_UPGRADE
+    TRANSLATE --> CHECK_UPGRADE{Có phát sinh<br/>upgradeAmount?}
+
+    CHECK_UPGRADE -- Không --> CREATE_POI[Tạo POI, ảnh, bản dịch và audio]
+    CREATE_POI --> SET_PENDING[Đặt POI về trạng thái pending]
+    SET_PENDING --> SHOW_SUCCESS[Thông báo đã gửi admin duyệt]
+    SHOW_SUCCESS --> END_OK(( ◉ ))
+
+    CHECK_UPGRADE -- Có --> PREPARE_PAYMENT[Chuẩn bị payment nâng cấp POI]
+    PREPARE_PAYMENT --> PAYMENT_OK{Chuẩn bị<br/>thành công?}
+    PAYMENT_OK -- Không --> ERR_PAYMENT[Hiển thị lỗi chuẩn bị nâng cấp]
+    PAYMENT_OK -- Có --> OPEN_UPGRADE[Chuyển sang luồng thanh toán nâng cấp]
+    OPEN_UPGRADE --> END_WAIT(( ◉ ))
+    ERR_PAYMENT --> END_WAIT
+
+    style START fill:#000,color:#fff,stroke:#000
+    style END_OK fill:#000,color:#fff,stroke:#fff,stroke-width:3px
+    style END_WAIT fill:#000,color:#fff,stroke:#fff,stroke-width:3px
+    style CREATE_POI fill:#2563EB,color:#fff
+    style ERR_PAYMENT fill:#EF4444,color:#fff
+```
+
+### 12.7. Activity Seller Quản Lý QR
+
+```mermaid
+flowchart TD
+    START(( ● )) --> OPEN_QR[Seller mở màn quản lý QR]
+    OPEN_QR --> CHOOSE{Chọn thao tác}
+
+    CHOOSE -- Tạo QR --> CREATE_FORM[Nhập POI, tên QR, số lượt quét]
+    CREATE_FORM --> VALID_CREATE{Dữ liệu<br/>hợp lệ?}
+    VALID_CREATE -- Không --> CREATE_FORM
+    VALID_CREATE -- Có --> CREATE_QR[Tạo QR mới]
+    CREATE_QR --> OPEN_QR
+
+    CHOOSE -- Gia hạn lượt --> TOPUP[Nhập số lượt cần cộng thêm]
+    TOPUP --> CHECK_SUSPEND{QR bị<br/>admin_suspended?}
+    CHECK_SUSPEND -- Có --> REQUEST_HINT[Hiển thị hướng dẫn gửi yêu cầu kích hoạt lại]
+    CHECK_SUSPEND -- Không --> APPLY_TOPUP[Cộng thêm TotalScans và cập nhật trạng thái]
+    APPLY_TOPUP --> OPEN_QR
+    REQUEST_HINT --> OPEN_QR
+
+    CHOOSE -- Bật/Tắt QR --> TOGGLE[Chọn active hoặc inactive]
+    TOGGLE --> CHECK_LOCK{QR bị hệ thống<br/>tạm ngưng?}
+    CHECK_LOCK -- Có --> ACT_REQUEST[Nhập ghi chú gửi admin]
+    ACT_REQUEST --> SEND_REQUEST[Gửi yêu cầu kích hoạt lại]
+    SEND_REQUEST --> OPEN_QR
+    CHECK_LOCK -- Không --> UPDATE_STATUS[Cập nhật trạng thái QR]
+    UPDATE_STATUS --> OPEN_QR
+
+    CHOOSE -- Xóa QR khỏi seller --> CONFIRM_DELETE{Xác nhận xóa?}
+    CONFIRM_DELETE -- Không --> OPEN_QR
+    CONFIRM_DELETE -- Có --> HIDE_QR[Đặt status = seller_deleted]
+    HIDE_QR --> OPEN_QR
+
+    CHOOSE -- Xem log --> VIEW_LOG[Hiển thị log quét QR]
+    VIEW_LOG --> OPEN_QR
+
+    CHOOSE -- Thoát --> END_NODE(( ◉ ))
+
+    style START fill:#000,color:#fff,stroke:#000
+    style END_NODE fill:#000,color:#fff,stroke:#fff,stroke-width:3px
+    style CREATE_QR fill:#2563EB,color:#fff
+    style APPLY_TOPUP fill:#2563EB,color:#fff
+    style REQUEST_HINT fill:#EF4444,color:#fff
+```
+
+### 12.8. Activity Thanh Toán Và Kích Hoạt Gói
+
+```mermaid
+flowchart TD
+    START(( ● )) --> SELECT_PLAN[User chọn gói sử dụng]
+    SELECT_PLAN --> CREATE_PAYMENT[Hệ thống tạo payment pending]
+    CREATE_PAYMENT --> CREATE_OK{Tạo payment<br/>thành công?}
+
+    CREATE_OK -- Không --> ERR_CREATE[Hiển thị lỗi tạo giao dịch]
+    CREATE_OK -- Có --> SHOW_QR[Hiển thị QR SePay và nội dung chuyển khoản]
+    SHOW_QR --> WAIT_PAY{Giao dịch đã<br/>được ghi nhận?}
+
+    WAIT_PAY -- Chưa --> USER_CONFIRM{User bấm<br/>"Tôi đã thanh toán"?}
+    USER_CONFIRM -- Không --> POLL_STATUS[Tiếp tục polling trạng thái payment]
+    POLL_STATUS --> TIMEOUT{Payment<br/>hết hạn?}
+    TIMEOUT -- Chưa --> WAIT_PAY
+    USER_CONFIRM -- Có --> SUBMIT_CHECK[Đồng bộ thủ công với SePay]
+    SUBMIT_CHECK --> WAIT_PAY
+
+    WAIT_PAY -- Đã ghi nhận --> APPLY_SUB[Khởi tạo hoặc gia hạn subscription]
+    APPLY_SUB --> APPLY_OK{Kích hoạt gói<br/>thành công?}
+    APPLY_OK -- Không --> ERR_APPLY[Hiển thị lỗi cập nhật gói]
+    APPLY_OK -- Có --> RETURN_CONTENT[Quay lại nội dung hoặc màn trước đó]
+    RETURN_CONTENT --> END_OK(( ◉ ))
+
+    TIMEOUT -- Có --> EXPIRED[Hiển thị trạng thái rejected hoặc hết hạn]
+
+    ERR_CREATE --> END_FAIL(( ◉ ))
+    ERR_APPLY --> END_FAIL
+    EXPIRED --> END_FAIL
+
+    style START fill:#000,color:#fff,stroke:#000
+    style END_OK fill:#000,color:#fff,stroke:#fff,stroke-width:3px
+    style END_FAIL fill:#000,color:#fff,stroke:#fff,stroke-width:3px
+    style SHOW_QR fill:#2563EB,color:#fff
+    style EXPIRED fill:#EF4444,color:#fff
+```
+
+### 12.9. Activity Admin Duyệt POI
+
+```mermaid
+flowchart TD
+    START(( ● )) --> OPEN_QUEUE[Admin mở danh sách POI]
+    OPEN_QUEUE --> FILTER_PENDING[Lọc các POI đang pending]
+    FILTER_PENDING --> HAS_POI{Có POI cần<br/>duyệt?}
+
+    HAS_POI -- Không --> END_EMPTY(( ◉ ))
+    HAS_POI -- Có --> REVIEW[Chọn POI và xem mô tả, ảnh, audio]
+    REVIEW --> DECIDE{Quyết định<br/>của admin}
+
+    DECIDE -- Duyệt --> APPROVE[Đặt POI = approved]
+    APPROVE --> APPROVE_AUDIO[Đặt audio liên quan = approved]
+    APPROVE_AUDIO --> RETURN_LIST[Quay lại hàng chờ duyệt]
+    RETURN_LIST --> FILTER_PENDING
+
+    DECIDE -- Từ chối --> INPUT_REASON[Nhập lý do từ chối]
+    INPUT_REASON --> REJECT[Đặt POI = rejected]
+    REJECT --> RETURN_LIST
+
+    DECIDE -- Bỏ qua --> FILTER_PENDING
+
+    style START fill:#000,color:#fff,stroke:#000
+    style END_EMPTY fill:#000,color:#fff,stroke:#fff,stroke-width:3px
+    style APPROVE fill:#2563EB,color:#fff
+    style REJECT fill:#EF4444,color:#fff
+```
+
+### 12.10. Activity Admin Xử Lý QR Bị Tạm Ngưng
+
+```mermaid
+flowchart TD
+    START(( ● )) --> ADMIN_OPEN[Admin mở danh sách QR]
+    ADMIN_OPEN --> ACTION{Tình huống bắt đầu}
+
+    ACTION -- Admin chủ động tạm ngưng QR --> PICK_QR[Chọn QR đang hoạt động]
+    PICK_QR --> INPUT_SUSPEND[Nhập lý do tạm ngưng]
+    INPUT_SUSPEND --> SUSPEND[Đặt status = admin_suspended]
+    SUSPEND --> WAIT_REQUEST[Chờ seller phản hồi]
+
+    ACTION -- Seller gửi yêu cầu kích hoạt lại --> CHECK_REQUEST{QR có đang<br/>admin_suspended?}
+    CHECK_REQUEST -- Không --> REJECT_REQ[Không thể gửi yêu cầu]
+    CHECK_REQUEST -- Có --> SAVE_REQUEST[Lưu activationRequestedAt và ghi chú]
+    SAVE_REQUEST --> ADMIN_REVIEW[Admin xem yêu cầu kích hoạt lại]
+
+    WAIT_REQUEST --> ADMIN_REVIEW
+    ADMIN_REVIEW --> DECIDE{Admin quyết định}
+    DECIDE -- Chấp thuận --> ACTIVATE[Đặt status = active<br/>và xóa thông tin request]
+    DECIDE -- Từ chối --> INPUT_REJECT[Nhập lý do từ chối]
+    INPUT_REJECT --> KEEP_SUSPEND[Giữ status = admin_suspended<br/>và cập nhật lý do]
+
+    ACTIVATE --> END_OK(( ◉ ))
+    KEEP_SUSPEND --> END_OK
+    REJECT_REQ --> END_FAIL(( ◉ ))
+
+    style START fill:#000,color:#fff,stroke:#000
+    style END_OK fill:#000,color:#fff,stroke:#fff,stroke-width:3px
+    style END_FAIL fill:#000,color:#fff,stroke:#fff,stroke-width:3px
+    style SUSPEND fill:#F59E0B,color:#fff
+    style ACTIVATE fill:#2563EB,color:#fff
+    style KEEP_SUSPEND fill:#EF4444,color:#fff
+```
+
+### 12.11. Activity Admin Quản Trị Hệ Thống
+
+```mermaid
+flowchart TD
+    START(( ● )) --> LOGIN{Admin đã<br/>đăng nhập?}
+    LOGIN -- Chưa --> AUTH[Nhập tài khoản admin]
+    AUTH --> VERIFY{Xác thực<br/>thành công?}
+    VERIFY -- Không --> AUTH
+    VERIFY -- Có --> DASHBOARD[Truy cập dashboard admin]
+    LOGIN -- Đã rồi --> DASHBOARD
+
+    DASHBOARD --> CHOOSE{Chọn phân hệ}
+
+    CHOOSE -- Tài khoản --> USER_FLOW[Xem chi tiết, cập nhật trạng thái hoặc hủy tài khoản]
+    USER_FLOW --> DASHBOARD
+
+    CHOOSE -- POI --> POI_FLOW[Duyệt, từ chối hoặc xóa POI]
+    POI_FLOW --> DASHBOARD
+
+    CHOOSE -- QR --> QR_FLOW[Tạm ngưng, mở lại hoặc từ chối yêu cầu kích hoạt]
+    QR_FLOW --> DASHBOARD
+
+    CHOOSE -- Thiết bị --> DEVICE_FLOW[Cập nhật active, inactive, banned hoặc user_deleted]
+    DEVICE_FLOW --> DASHBOARD
+
+    CHOOSE -- Gói sử dụng --> PLAN_FLOW[Tạo, sửa hoặc xóa plan]
+    PLAN_FLOW --> DASHBOARD
+
+    CHOOSE -- Thanh toán / Analytics --> ANALYTICS_FLOW[Xem payments, số liệu vận hành và thống kê]
+    ANALYTICS_FLOW --> DASHBOARD
+
+    CHOOSE -- Đăng xuất --> END_NODE(( ◉ ))
+
+    style START fill:#000,color:#fff,stroke:#000
+    style END_NODE fill:#000,color:#fff,stroke:#fff,stroke-width:3px
+    style DASHBOARD fill:#2563EB,color:#fff
+```
+
+---
+
+## 13. Phụ Lục: Cấu Trúc Thư Mục Dự Án
+
+> Cây thư mục dưới đây được trình bày ở mức tổng quan để phục vụ việc định vị các thành phần chính của hệ thống, không liệt kê toàn bộ file chi tiết trong từng ứng dụng.
+
+```text
+smart-guide-system/
+├── README.md
+├── global.json
+├── apps/
+│   ├── pwa/
+│   │   ├── public/
+│   │   └── src/
+│   ├── seller-web/
+│   │   ├── public/
+│   │   └── src/
+│   └── admin-web/
+│       ├── public/
+│       └── src/
+├── services/
+│   └── api/
+│       ├── Controllers/
+│       ├── Data/
+│       ├── Models/
+│       ├── database/
+│       ├── wwwroot/
+│       ├── Program.cs
+│       └── SmartGuideAPI.csproj
+└── docs/
+    ├── PRD.md
+    └── images/
+```
