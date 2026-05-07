@@ -444,15 +444,19 @@ Khi khoảng cách ≤ radius (mặc định 50m, có thể tùy chỉnh):
 
 # 16. Deployment
 
-- **Nền tảng**: iOS (phát triển bằng .NET MAUI - cross-platform)
+- **Nền tảng hiện tại**:
+  - User app: PWA (Next.js)
+  - Seller app: Web dashboard (Next.js)
+  - Admin app: Web dashboard (Next.js)
 - **Phát hành**:
-  - Apple App Store
-  - Google Play Store
-- **Backend (hiện tại)**:
-  - Sử dụng MockDataService (local data)
-- **Backend (tương lai)**:
+  - PWA triển khai trên Vercel
+  - Backend API triển khai trên Render hoặc hạ tầng tương đương
+- **Backend hiện tại**:
   - REST API (ASP.NET Core)
-  - Database (PostgreSQL / Firebase)
+  - Database PostgreSQL
+- **Mở rộng tương lai**:
+  - Tối ưu offline cho PWA
+  - Bổ sung CDN/media pipeline cho audio và ảnh POI
 
 # 17. Conclusion
 
