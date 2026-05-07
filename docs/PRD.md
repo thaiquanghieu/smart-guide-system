@@ -1,463 +1,729 @@
-# SMART GUIDE – PRODUCT REQUIREMENT DOCUMENT (PRD)
+# Smart Guide System — Product Requirements Document (PRD)
 
-# 1. Product Overview
+## Mục lục
 
-## 1.1 Introduction
+1. [Giới Thiệu Chung](#1-giới-thiệu-chung)
+2. [Phân Quyền Và Đối Tượng Người Dùng](#2-phân-quyền-và-đối-tượng-người-dùng)
+3. [User Stories Và Yêu Cầu Chức Năng](#3-user-stories-và-yêu-cầu-chức-năng)
+4. [Yêu Cầu Phi Chức Năng](#4-yêu-cầu-phi-chức-năng)
+5. [Technology Stack Và Kiến Trúc Hệ Thống](#5-technology-stack-và-kiến-trúc-hệ-thống)
+6. [Cơ Sở Dữ Liệu](#6-cơ-sở-dữ-liệu)
+7. [Danh Mục API Routes](#7-danh-mục-api-routes)
+8. [Cấu Trúc Ứng Dụng Web](#8-cấu-trúc-ứng-dụng-web)
+9. [Sơ Đồ Use Case](#9-sơ-đồ-use-case)
+10. [Sơ Đồ Trình Tự](#10-sơ-đồ-trình-tự-sequence-diagram)
+11. [Sơ Đồ Lớp](#11-sơ-đồ-lớp-class-diagram)
+12. [Sơ Đồ Hoạt Động](#12-sơ-đồ-hoạt-động-activity-diagram)
 
-**Smart Guide** là ứng dụng di động thông minh chuyên cung cấp trải nghiệm hướng dẫn du lịch tự động, kết hợp công nghệ định vị GPS thời gian thực và công nghệ âm thanh. Ứng dụng giúp người dùng khám phá các điểm đến một cách liền mạch mà không cần phải thao tác thủ công nhiều.
+---
 
-<p align="center">
-  <img src="images/logo.png" width="230"/>
-</p>
+## 1. Giới Thiệu Chung
 
-<p align="center"><i>Smart Guide</i></p>
-Các tính năng chính bao gồm:
-- Tự động nhận diện vị trí người dùng qua GPS và các công nghệ định vị bổ trợ (như Wi-Fi/Bluetooth beacon khi có).
-- Xác định và gợi ý các **Point of Interest (POI)** gần nhất dựa trên khoảng cách và ngữ cảnh.
-- Tự động phát audio giới thiệu chi tiết về POI (hỗ trợ Text-to-Speech hoặc audio ghi âm sẵn).
+**Smart Guide System** là hệ thống hỗ trợ trải nghiệm tham quan thông minh, cho phép user/guest truy cập nội dung hướng dẫn tại điểm đến thông qua **PWA**, quét **QR** để kích hoạt lượt nghe miễn phí hoặc mở khóa quyền truy cập, đồng thời cung cấp hai cổng quản trị riêng cho **seller (owner)** và **admin**.
 
-**Định vị sản phẩm (Product Positioning):**
+Hệ thống được tổ chức theo kiến trúc web gồm:
 
-> “A smart, automated audio tour guide powered by location awareness – biến mọi chuyến đi thành hành trình cá nhân hóa, không cần hướng dẫn viên truyền thống.”
+| Thành phần      | Vai trò                                            | Công nghệ                                       |
+| :-------------- | :------------------------------------------------- | :---------------------------------------------- |
+| **PWA**         | Ứng dụng cho user/guest                            | Next.js, TypeScript, TailwindCSS                |
+| **Seller Web**  | Cổng quản lý cho seller/owner                      | Next.js, TypeScript, TailwindCSS                |
+| **Admin Web**   | Cổng điều hành và kiểm duyệt hệ thống              | Next.js, TypeScript, TailwindCSS                |
+| **Backend API** | Xử lý nghiệp vụ, dữ liệu, thanh toán, QR, thiết bị | ASP.NET Core, Entity Framework Core, PostgreSQL |
 
-Smart Guide nhắm đến việc mang lại cảm giác như đang được một hướng dẫn viên cá nhân “dẫn dắt” theo thời gian thực, phù hợp cho cả du lịch cá nhân và nhóm nhỏ.
+### 1.1. Mục tiêu hệ thống
 
-## 1.2 Problem Statement
+- Cung cấp trải nghiệm nghe thuyết minh và khám phá POI trực tiếp trên web app.
+- Quản lý quyền truy cập theo thiết bị, QR và gói thanh toán.
+- Cho seller/owner tự quản lý POI, nội dung, audio, QR và giao dịch liên quan.
+- Cho admin quản lý tài khoản, POI, thiết bị, QR, gói dịch vụ và thanh toán toàn hệ thống.
 
-Hiện nay, du khách thường gặp phải những hạn chế sau:
+### 1.2. Mục tiêu tài liệu
 
-- Phải chủ động đọc thông tin từ sách hướng dẫn, bảng chỉ dẫn hoặc ứng dụng du lịch thông thường → thiếu tính tương tác và dễ gây mệt mỏi.
-- Tour guide truyền thống đòi hỏi chi phí cao, lịch trình cố định và không linh hoạt theo sở thích cá nhân.
-- Trải nghiệm thiếu tính tự động và thời gian thực: người dùng phải liên tục kiểm tra bản đồ hoặc tìm kiếm thủ công.
+Tài liệu PRD này dùng để:
 
-**Vấn đề cốt lõi:**
+- Thống nhất phạm vi sản phẩm.
+- Mô tả rõ actor, chức năng, dữ liệu và luồng xử lý chính.
+- Làm nền cho việc vẽ UML, ERD, use case và các sơ đồ phân tích sau này.
 
-- Không tiện lợi và tốn thời gian.
-- Thiếu cá nhân hóa (ngôn ngữ, độ dài audio, mức độ chi tiết).
-- Không tận dụng được vị trí thời gian thực để tạo ra trải nghiệm liền mạch và hấp dẫn.
+---
 
-Kết quả là nhiều du khách bỏ lỡ thông tin thú vị hoặc cảm thấy chuyến đi thiếu chiều sâu.
+## 2. Phân Quyền Và Đối Tượng Người Dùng
 
-## 1.3 Solution
+| Vai trò            | Nền tảng sử dụng | Mục tiêu chính                                              | Quyền hạn chính                                                       |
+| :----------------- | :--------------- | :---------------------------------------------------------- | :-------------------------------------------------------------------- |
+| **User / Guest**   | PWA              | Quét QR, xem bản đồ, nghe nội dung, lưu yêu thích, đánh giá | Truy cập nội dung POI, thanh toán gói sử dụng, quản lý hồ sơ thiết bị |
+| **Seller / Owner** | Seller Web       | Tạo và quản lý POI, audio, QR, thanh toán nâng cấp          | CRUD POI của mình, quản lý QR, theo dõi giao dịch                     |
+| **Admin**          | Admin Web        | Quản trị vận hành toàn hệ thống                             | Quản lý user, POI, QR, plans, devices, payments                       |
 
-Smart Guide giải quyết triệt để các vấn đề trên bằng cách tạo ra một trải nghiệm **hands-free** (không cần dùng tay) thực sự:
+### 2.1. Mô hình nhận diện người dùng
 
-<p align="center">
-  <img src="images/1.3.1.png" width="200"/>
-  <img src="images/1.3.2.png" width="200"/>
-</p>
+- **PWA** nhận diện theo **device** thay vì tài khoản đăng nhập truyền thống.
+- Khi user/guest truy cập lần đầu, hệ thống **tự động khởi tạo và đăng ký thiết bị ở nền**, không yêu cầu người dùng thao tác đăng ký thủ công.
+- **Seller** đăng ký và đăng nhập bằng tài khoản owner.
+- **Admin** đăng nhập bằng tài khoản admin.
 
-- **Tracking vị trí thời gian thực** liên tục và chính xác.
-- **Tự động trigger POI** khi người dùng tiếp cận trong bán kính nhất định.
-- **Tự động phát audio** giới thiệu mà không cần người dùng click hay chọn.
+### 2.2. Mô hình cấp quyền truy cập nội dung
 
-Người dùng chỉ cần mở ứng dụng, cấp quyền vị trí và bắt đầu di chuyển – ứng dụng sẽ “dẫn tour” một cách mượt mà, giống như đang có một hướng dẫn viên ảo luôn bên cạnh. Ngoài ra, ứng dụng vẫn hỗ trợ tương tác thủ công để tăng tính linh hoạt.
+User/guest có thể nghe nội dung theo ba trạng thái:
 
-## 1.4 Product Goals
+- Được cấp **lượt nghe miễn phí** sau khi quét QR hợp lệ.
+- Đang có **gói sử dụng còn hạn** trên thiết bị.
+- Không có quyền truy cập và cần chuyển sang màn hình **paywall / payment**.
 
-- Cung cấp trải nghiệm **hands-free** tối ưu, giúp người dùng tập trung hoàn toàn vào việc khám phá thay vì thao tác thiết bị.
-- Tăng mức độ tương tác (engagement) và sự hài lòng khi tham quan thông qua nội dung audio cá nhân hóa.
-- Xây dựng nền tảng có khả năng mở rộng thành hệ sinh thái du lịch thông minh (tích hợp đặt vé, khuyến nghị, cộng đồng...).
-- Đạt được sự cân bằng giữa tự động hóa cao và khả năng kiểm soát thủ công từ người dùng.
+---
 
-**Success Metrics (Chỉ số đo lường thành công – mới bổ sung):**
+## 3. User Stories Và Yêu Cầu Chức Năng
 
-- Tỷ lệ người dùng kích hoạt chế độ Auto-Tracking ≥ 70% trong phiên đầu tiên.
-- Thời lượng nghe audio trung bình mỗi chuyến thăm quan ≥ 15 phút.
-- Điểm hài lòng (NPS hoặc rating) ≥ 4.5/5.
-- Tỷ lệ giữ chân người dùng (retention) sau 7 ngày ≥ 40%.
-- Số lượng POI được trigger tự động trung bình mỗi phiên ≥ 5.
+### Epic 1: Trải Nghiệm Người Dùng Trên PWA
 
-# 2. User Personas
+**US 1.1 — Tự động nhận diện thiết bị**
 
-## 2.1 Tourist (Du khách thông thường)
+> Là một user/guest, tôi muốn hệ thống tự nhận diện thiết bị của tôi để lưu lịch sử, yêu thích và quyền truy cập.
 
-- Độ tuổi: 25-45, du lịch cá nhân hoặc gia đình.
-- Mục tiêu: Khám phá nhanh các điểm nổi bật, muốn tiết kiệm thời gian và chi phí.
-- Đặc điểm: Không muốn đọc nhiều chữ, thích trải nghiệm tự động, dễ bị phân tâm bởi thao tác phức tạp.
-- Nhu cầu: Audio ngắn gọn, tự động phát khi đến nơi, hỗ trợ ngôn ngữ cơ bản (Việt Nam + Anh).
+- **Functional Requirements**
+  - Khi user truy cập PWA lần đầu, ứng dụng tự gửi thông tin thiết bị đến `POST /api/devices/register`.
+  - Hệ thống sinh `deviceId`, `deviceUuid` và lưu metadata thiết bị.
+  - Thiết bị bị khóa hoặc bị xóa sẽ không được tiếp tục sử dụng.
+- **Acceptance Criteria**
+  - Thiết bị mới được tạo tự động và lưu lại cho các lần dùng sau.
+  - Thiết bị không hợp lệ không thể tiếp tục truy cập.
 
-## 2.2 Explorer (Người khám phá sâu)
+**US 1.2 — Quét QR để nhận lượt nghe miễn phí**
 
-- Độ tuổi: 18-40, du lịch một mình hoặc nhóm nhỏ yêu thích văn hóa/lịch sử.
-- Mục tiêu: Tìm hiểu chi tiết về POI, nghe thêm thông tin bổ sung (lịch sử, câu chuyện, mẹo du lịch).
-- Đặc điểm: Muốn tùy chỉnh độ dài audio, hỗ trợ đa ngôn ngữ (Anh, Pháp, Hàn, Nhật...), đánh dấu yêu thích và lưu lại hành trình.
-- Nhu cầu: Audio chi tiết, tùy chọn nghe lại, tích hợp bản đồ chi tiết và gợi ý tuyến đường.
+> Là một user/guest, tôi muốn quét QR tại điểm đến để nhận quyền nghe thử hoặc mở nội dung liên quan.
 
-# 3. User Stories
+- **Functional Requirements**
+  - PWA truy cập route `/qr/[entryCode]`.
+  - Backend xử lý qua `POST /api/access/entry`.
+  - Mỗi QR có số lượt quét giới hạn, trạng thái hoạt động, thời hạn và log quét.
+  - Một thiết bị hoặc cùng fingerprint thiết bị chỉ được hưởng lượt nghe miễn phí theo luật hiện tại của hệ thống.
+- **Acceptance Criteria**
+  - QR hợp lệ cấp quyền thành công.
+  - QR hết lượt hoặc bị khóa trả trạng thái phù hợp.
+  - Log quét được ghi nhận để seller và admin theo dõi.
+
+**US 1.3 — Kiểm tra trạng thái quyền truy cập**
+
+> Là một user/guest, tôi muốn biết hiện tại mình có được nghe nội dung hay không.
+
+- **Functional Requirements**
+  - Hệ thống kiểm tra qua `GET /api/access/free-listen`.
+  - Nếu thiết bị đang có gói sử dụng còn hạn, quyền truy cập được mở.
+  - Nếu còn free play thì được phép nghe nội dung tương ứng.
+- **Acceptance Criteria**
+  - User thấy đúng trạng thái được nghe hoặc bị chặn.
+  - Hệ thống phản hồi số lượt nghe miễn phí còn lại.
+
+**US 1.4 — Thanh toán để mở gói nghe**
+
+> Là một user/guest, tôi muốn thanh toán trực tuyến để mở quyền truy cập nội dung lâu hơn.
 
-Dưới đây là các user story chính, được mở rộng với acceptance criteria cơ bản:
+- **Functional Requirements**
+  - PWA hiển thị paywall và trang thanh toán.
+  - Backend quản lý checkout, trạng thái giao dịch và webhook qua `PaymentsController`.
+  - Hệ thống tạo QR chuyển khoản Sepay, đối soát giao dịch và kích hoạt gói sử dụng cho thiết bị.
+- **Acceptance Criteria**
+  - User tạo được giao dịch mới.
+  - Giao dịch thành công sẽ kích hoạt hoặc gia hạn gói sử dụng.
+  - Giao dịch quá hạn được chuyển sang trạng thái từ chối hoặc hết hạn.
 
-- As a user, I want to **automatically hear audio** when approaching a POI so that I can enjoy the information without manual action.  
-  _(AC: Trigger trong bán kính 50m, audio phát liền mạch, có thông báo nhẹ nếu cần)._
+**US 1.5 — Xem danh sách và chi tiết POI**
 
-- As a user, I want to **view all nearby POIs on an interactive map** so that I can plan route dễ dàng.
+> Là một user/guest, tôi muốn duyệt các điểm tham quan và xem nội dung chi tiết của từng điểm.
 
-- As a user, I want to **manually play/pause/stop audio** for any POI so that I have full control.
+- **Functional Requirements**
+  - `GET /api/pois` trả danh sách POI đã được duyệt.
+  - `GET /api/pois/{id}` trả chi tiết POI.
+  - Hệ thống hỗ trợ ngôn ngữ `vi`, `en`, `ja`, `ko`, `zh`.
+  - Chỉ hiển thị POI đã được duyệt và thuộc owner còn hoạt động.
+- **Acceptance Criteria**
+  - Danh sách POI hiển thị đúng dữ liệu.
+  - Chi tiết POI hiển thị mô tả, ảnh, audio và trạng thái yêu thích.
+
+**US 1.6 — Xem bản đồ và điều hướng khám phá**
 
-- As a user, I want to **save favorite locations and routes** so that I can revisit or share later.
+> Là một user/guest, tôi muốn xem POI trên bản đồ để tiện khám phá khu vực.
 
-- As a user, I want to **scan QR code** to instantly open a specific POI and play its audio.
-
-- As a user, I want to **switch languages** seamlessly during the tour.
-
-# 4. Use Case Diagram
-
-<p align="center"> <img src="images/use_case.png" width="300"/> </p> <p align="center"><i>Smart Guide</i></p>
-
-## 4.1 Use Case Specification
-
-### Use Case: Nghe audio
-
-- **Actor:** User
-- **Description:** Người dùng nghe audio giới thiệu của một POI
-- **Preconditions:**
-  - User đã mở chi tiết POI
-
-- **Postconditions:**
-  - Audio được phát thành công
-
-#### Main Flow:
-
-1. User chọn một POI
-2. Hệ thống hiển thị chi tiết POI
-3. User nhấn nút “Nghe audio”
-4. Hệ thống phát audio
-
-#### Alternative Flow:
-
-- A1: Không có audio → hiển thị thông báo
-- A2: Lỗi phát audio → hiển thị lỗi
-
-### Use Case: Tự động nghe audio
-
-- **Actor:** System (trigger bởi User)
-- **Description:** Hệ thống tự động phát audio khi user đến gần POI
-- **Preconditions:**
-  - User bật tracking
-  - User bật auto play
-
-- **Postconditions:**
-  - Audio được phát tự động
-
-#### Main Flow:
-
-1. Hệ thống lấy vị trí user
-2. Phát hiện POI gần
-3. Tự động mở chi tiết POI
-4. Tự động phát audio
-
-#### Alternative Flow:
-
-- A1: Không có POI gần → không làm gì
-- A2: Audio đang phát → đưa vào queue
-
-### Use Case: Xem bản đồ
-
-- **Actor:** User
-- **Description:** Xem các POI trên bản đồ
-- **Preconditions:** Không có
-- **Postconditions:** Hiển thị map
-
-#### Main Flow:
-
-1. User mở tab bản đồ
-2. Hệ thống load POI
-3. Hiển thị marker trên map
-
-### Use Case: Xem chi tiết POI
-
-- **Actor:** User
-- **Description:** Xem thông tin chi tiết của POI
-- **Preconditions:** POI tồn tại
-- **Postconditions:** Hiển thị detail
-
-#### Main Flow:
-
-1. User chọn POI
-2. Hệ thống load dữ liệu
-3. Hiển thị thông tin
-
-### Use Case: Quét QR mở POI
-
-- **Actor:** User
-- **Description:** Mở POI bằng QR code
-- **Preconditions:** QR hợp lệ
-- **Postconditions:** Mở detail POI
-
-#### Main Flow:
-
-1. User quét QR
-2. Hệ thống đọc id POI
-3. Điều hướng đến trang chi tiết
-
-#### Alternative Flow:
-
-- A1: QR không hợp lệ → báo lỗi
-
-### Use Case: Thêm vào yêu thích
-
-- **Actor:** User
-- **Description:** Lưu POI vào danh sách yêu thích
-- **Preconditions:**
-  - User đã đăng nhập
-
-- **Postconditions:** POI được lưu
-
-#### Main Flow:
-
-1. User nhấn “Yêu thích”
-2. Hệ thống kiểm tra đăng nhập
-3. Lưu vào danh sách
-
-#### Alternative Flow:
-
-- A1: Chưa đăng nhập → chuyển sang login
-
-### Use Case: Đăng nhập
-
-- **Actor:** User
-- **Description:** Xác thực người dùng
-- **Preconditions:** Không có
-- **Postconditions:** User đăng nhập thành công
-
-#### Main Flow:
-
-1. User nhập thông tin
-2. Hệ thống xác thực
-3. Đăng nhập thành công
-
-#### Alternative Flow:
-
-- A1: Sai thông tin → báo lỗi
-
-### Use Case: Quản lý cài đặt
-
-- **Actor:** User
-- **Description:** Thay đổi cấu hình app
-- **Preconditions:** User đã đăng nhập
-- **Postconditions:** Cài đặt được lưu
-
-#### Main Flow:
-
-1. User mở settings
-2. Thay đổi tùy chọn
-3. Hệ thống lưu
-
-### Use Case: Share POI
-
-- **Actor:** User
-- **Description:** Chia sẻ POI
-- **Preconditions:** User đã đăng nhập
-- **Postconditions:** Link được chia sẻ
-
-#### Main Flow:
-
-1. User chọn share
-2. Hệ thống tạo link
-3. Hiển thị options chia sẻ
-
-# 5. System Flows
-
-## 5.1 Tracking Flow
-
-```text
-User enables location services → App continuously tracks GPS/Wi-Fi → Detect nearby POI (within radius) → Add to smart queue (avoid duplicate) → Open POI detail (optional) → Auto-play audio
+- **Functional Requirements**
+  - PWA có trang `map`.
+  - Bản đồ hiển thị vị trí POI, bán kính và thông tin cơ bản.
+  - User có thể chuyển từ bản đồ sang chi tiết POI.
+- **Acceptance Criteria**
+  - POI hiển thị đúng trên bản đồ.
+  - User có thể chọn POI và xem thông tin liên quan.
+
+**US 1.7 — Lưu yêu thích và ghi nhận lịch sử nghe**
+
+> Là một user/guest, tôi muốn lưu lại các địa điểm yêu thích và xem lại lịch sử đã nghe.
+
+- **Functional Requirements**
+  - Toggle favorite qua `POST /api/pois/favorite/{poiId}`.
+  - Ghi nhận lượt nghe qua `POST /api/pois/listened/{poiId}`.
+  - Hồ sơ cá nhân lấy qua `GET /api/profiles/{deviceId}`.
+  - Danh sách yêu thích và lịch sử lấy qua `GET /api/profiles/{deviceId}/favorites` và `GET /api/profiles/{deviceId}/history`.
+- **Acceptance Criteria**
+  - Favorite được thêm/xóa đúng theo thao tác.
+  - Lịch sử nghe được lưu và hiển thị lại đúng theo thiết bị.
+
+**US 1.8 — Đánh giá POI**
+
+> Là một user/guest, tôi muốn đánh giá chất lượng trải nghiệm của một POI.
+
+- **Functional Requirements**
+  - User gửi đánh giá qua `POST /api/ratings`.
+  - Điểm trung bình và số lượt đánh giá được cập nhật ở POI.
+- **Acceptance Criteria**
+  - Đánh giá được lưu thành công.
+  - Điểm trung bình hiển thị lại chính xác ở danh sách và chi tiết POI.
+
+### Epic 2: Seller Quản Lý Nội Dung Và Tài Nguyên
+
+**US 2.1 — Đăng ký và đăng nhập seller**
+
+> Là một seller/owner, tôi muốn tạo tài khoản và đăng nhập để quản lý nội dung của mình.
+
+- **Functional Requirements**
+  - Đăng ký qua `POST /api/auth/register`.
+  - Đăng nhập qua `POST /api/auth/login`.
+  - Seller chỉ truy cập được vào portal của role owner.
+- **Acceptance Criteria**
+  - Seller tạo tài khoản được.
+  - Seller đăng nhập thành công và vào dashboard.
+
+**US 2.2 — Tạo và quản lý POI**
+
+> Là một seller/owner, tôi muốn tạo điểm tham quan hoặc địa điểm của mình để đưa lên hệ thống.
+
+- **Functional Requirements**
+  - `GET /api/owner/pois`
+  - `GET /api/owner/pois/{id}`
+  - `POST /api/owner/pois`
+  - POI có trạng thái duyệt như `pending`, `approved`, `rejected`.
+  - Seller có thể khai báo thông tin chính, ảnh, vị trí, bán kính, ưu tiên, nội dung mô tả.
+- **Acceptance Criteria**
+  - Seller tạo được POI mới.
+  - Seller chỉ xem và chỉnh dữ liệu của chính mình.
+
+**US 2.3 — Dịch nội dung POI**
+
+> Là một seller/owner, tôi muốn hỗ trợ dịch nhanh nội dung POI sang ngôn ngữ khác để phục vụ du khách.
+
+- **Functional Requirements**
+  - Gọi `POST /api/owner/pois/translate`.
+  - Hệ thống hỗ trợ dịch nội dung đầu vào và trả text đã dịch.
+- **Acceptance Criteria**
+  - Dịch thành công khi dịch vụ phản hồi bình thường.
+  - Có fallback khi dịch vụ dịch thất bại.
+
+**US 2.4 — Upload ảnh POI**
+
+> Là một seller/owner, tôi muốn tải ảnh lên để làm nội dung minh họa cho POI.
+
+- **Functional Requirements**
+  - Upload ảnh qua route upload trong `OwnerPoisController`.
+  - Ảnh được lưu và gắn với POI theo thứ tự hiển thị.
+- **Acceptance Criteria**
+  - Seller upload được nhiều ảnh.
+  - Ảnh xuất hiện đúng trong chi tiết POI.
+
+**US 2.5 — Quản lý audio**
+
+> Là một seller/owner, tôi muốn tạo, chỉnh sửa và xóa audio guide cho POI của mình.
+
+- **Functional Requirements**
+  - `GET /api/owner/audio/{poiId}`
+  - `POST /api/owner/audio/tts`
+  - `PUT /api/owner/audio/{audioId}`
+  - `DELETE /api/owner/audio/{audioId}`
+- **Acceptance Criteria**
+  - Seller xem được các audio theo từng POI.
+  - Audio được tạo, cập nhật và xóa đúng.
+
+**US 2.6 — Tạo và quản lý QR**
+
+> Là một seller/owner, tôi muốn tạo QR cho từng POI để phát cho khách quét truy cập.
+
+- **Functional Requirements**
+  - `GET /api/owner/qr`
+  - `GET /api/owner/qr/logs`
+  - `POST /api/owner/qr`
+  - `PUT /api/owner/qr/{id}/topup`
+  - `PUT /api/owner/qr/{id}/status`
+  - `DELETE /api/owner/qr/{id}`
+  - `POST /api/owner/qr/{id}/activation-request`
+- **Acceptance Criteria**
+  - Seller tạo được QR theo từng POI.
+  - Seller theo dõi được số lượt quét và log quét.
+  - Seller gửi được yêu cầu mở lại QR bị admin tạm ngưng.
+
+**US 2.7 — Thanh toán nâng cấp POI**
+
+> Là một seller/owner, tôi muốn thanh toán các gói nâng cấp liên quan đến POI để mở rộng khả năng hiển thị hoặc sử dụng.
+
+- **Functional Requirements**
+  - Hệ thống hỗ trợ payment type `poi_upgrade`.
+  - Giao dịch thành công có thể hoàn tất việc tạo hoặc nâng cấp POI.
+  - Seller có trang thanh toán và trang nâng cấp POI trong portal.
+- **Acceptance Criteria**
+  - Seller tạo được giao dịch nâng cấp.
+  - POI được cập nhật đúng sau khi thanh toán thành công.
+
+### Epic 3: Admin Điều Hành Toàn Hệ Thống
+
+**US 3.1 — Quản lý tài khoản**
+
+> Là admin, tôi muốn quản lý toàn bộ người dùng hệ thống.
+
+- **Functional Requirements**
+  - `GET /api/admin/users`
+  - `GET /api/admin/users/{userId}/detail`
+  - `PUT /api/admin/users/{userId}/toggle-active`
+  - `PUT /api/admin/users/{userId}/status`
+  - `DELETE /api/admin/users/{userId}`
+- **Acceptance Criteria**
+  - Admin xem được danh sách user theo role.
+  - Admin khóa, tạm dừng hoặc hủy tài khoản được.
+
+**US 3.2 — Kiểm duyệt và quản lý POI**
+
+> Là admin, tôi muốn xem và xử lý POI do seller tạo lên.
+
+- **Functional Requirements**
+  - `GET /api/admin/pois`
+  - Admin có thể lọc theo trạng thái, owner và từ khóa.
+  - Admin xem được nội dung, ảnh, audio, lý do từ chối của từng POI.
+- **Acceptance Criteria**
+  - Admin xem được toàn bộ POI hệ thống.
+  - Admin có thể phục vụ quy trình duyệt nội dung.
+
+**US 3.3 — Quản lý QR toàn hệ thống**
+
+> Là admin, tôi muốn giám sát và can thiệp vào QR của seller khi cần.
+
+- **Functional Requirements**
+  - `GET /api/admin/qr`
+  - `GET /api/admin/qr/logs`
+  - `GET /api/admin/qr/{id}/logs`
+  - `PUT /api/admin/qr/{id}/status`
+  - `POST /api/admin/qr/{id}/activation-request/reject`
+  - `DELETE /api/admin/qr/{id}/hard`
+- **Acceptance Criteria**
+  - Admin xem được log quét theo QR.
+  - Admin tạm ngưng hoặc xử lý yêu cầu kích hoạt lại QR được.
+
+**US 3.4 — Quản lý thiết bị**
+
+> Là admin, tôi muốn giám sát các thiết bị đã đăng ký và trạng thái hoạt động của chúng.
+
+- **Functional Requirements**
+  - Hệ thống có `DevicesController` để đăng ký, heartbeat và xóa thiết bị.
+  - Admin portal có trang `devices`.
+- **Acceptance Criteria**
+  - Thiết bị hoạt động được cập nhật heartbeat.
+  - Thiết bị vi phạm có thể bị vô hiệu hóa khỏi hệ thống.
+
+**US 3.5 — Quản lý gói dịch vụ**
+
+> Là admin, tôi muốn tạo và điều chỉnh các gói người dùng có thể mua.
+
+- **Functional Requirements**
+  - `GET /api/plans`
+  - `GET /api/plans/admin`
+  - `POST /api/plans`
+  - `PUT /api/plans/{id}`
+  - `DELETE /api/plans/{id}`
+- **Acceptance Criteria**
+  - Gói được tạo, cập nhật và xóa thành công.
+  - PWA lấy được danh sách gói đang bán.
+
+**US 3.6 — Giám sát thanh toán và vận hành**
+
+> Là admin, tôi muốn theo dõi giao dịch thanh toán để xử lý sự cố và đối soát.
+
+- **Functional Requirements**
+  - Hệ thống lưu payment status, provider, transaction id, paid amount, paid at.
+  - Admin portal có trang `payments`.
+- **Acceptance Criteria**
+  - Admin xem được trạng thái thanh toán theo thời gian thực tế đã ghi nhận.
+  - Giao dịch `pending`, `used`, `rejected` được phân biệt rõ.
+
+---
+
+## 4. Yêu Cầu Phi Chức Năng
+
+| Tiêu chí              | Mô tả                                                                                                                                |
+| :-------------------- | :----------------------------------------------------------------------------------------------------------------------------------- |
+| **Bảo mật**           | Seller và admin được phân quyền theo role. Thiết bị không hợp lệ hoặc bị khóa sẽ bị chặn ở backend.                                  |
+| **Hiệu năng**         | Các màn danh sách chính phải phản hồi đủ nhanh để dùng thực tế trên web.                                                             |
+| **Khả dụng**          | PWA phải hoạt động tốt trên mobile browser và có thể dùng như web app cài lên màn hình chính.                                        |
+| **Khả năng mở rộng**  | Cấu trúc backend tách theo controller nghiệp vụ: auth, devices, payments, owner, admin, profiles, pois.                              |
+| **Đa ngôn ngữ**       | Hệ thống hiện hỗ trợ các mã ngôn ngữ `vi`, `en`, `ja`, `ko`, `zh`.                                                                   |
+| **Khả năng theo dõi** | QR logs, listen logs, payment states và subscription states cần được lưu để phục vụ phân tích và vận hành.                           |
+| **Triển khai**        | `services/api` và PostgreSQL hiện triển khai trên Railway. `apps/pwa`, `apps/seller-web` và `apps/admin-web` triển khai trên Vercel. |
+
+---
+
+## 5. Technology Stack Và Kiến Trúc Hệ Thống
+
+### 5.1. Technology Stack
+
+| Thành phần      | Công nghệ chính                                               |
+| :-------------- | :------------------------------------------------------------ |
+| **Backend API** | ASP.NET Core, Entity Framework Core                           |
+| **Database**    | PostgreSQL (Railway)                                          |
+| **PWA**         | Next.js 14, React 18, TypeScript, TailwindCSS, Zustand, Axios |
+| **Seller Web**  | Next.js 14, React 18, TypeScript, TailwindCSS, Zustand, Axios |
+| **Admin Web**   | Next.js 14, React 18, TypeScript, TailwindCSS, Zustand, Axios |
+| **Thanh toán**  | Chuyển khoản qua Sepay QR                                     |
+
+### 5.2. Kiến trúc hệ thống tổng quan
+
+- **Frontend layer**
+  - `apps/pwa`
+  - `apps/seller-web`
+  - `apps/admin-web`
+- **Backend layer**
+  - `services/api`
+- **Database layer**
+  - PostgreSQL thông qua `AppDbContext`
+
+### 5.3. Hạ tầng triển khai
+
+| Thành phần      | Nơi triển khai |
+| :-------------- | :------------- |
+| **Backend API** | Railway        |
+| **PostgreSQL**  | Railway        |
+| **PWA**         | Vercel         |
+| **Seller Web**  | Vercel         |
+| **Admin Web**   | Vercel         |
+
+### 5.4. Luồng tổng quát
+
+1. User truy cập PWA.
+2. PWA tự động đăng ký thiết bị với backend ở nền.
+3. User quét QR hoặc truy cập danh sách POI.
+4. Backend kiểm tra quyền theo QR, free listen hoặc gói sử dụng.
+5. Seller và admin thao tác trên các portal riêng để cập nhật dữ liệu hệ thống.
+
+---
+
+## 6. Cơ Sở Dữ Liệu
+
+### 6.1. Các thực thể chính
+
+Theo `AppDbContext`, hệ thống hiện có các nhóm dữ liệu chính sau:
+
+| Nhóm                          | Bảng / Entity                                            |
+| :---------------------------- | :------------------------------------------------------- |
+| **Người dùng và phân quyền**  | `users`                                                  |
+| **Thiết bị và truy cập**      | `devices`, `device_entry_grants`, `subscriptions`        |
+| **Nội dung POI**              | `pois`, `poi_images`, `poi_translations`, `audio_guides` |
+| **Tương tác người dùng**      | `favorites`, `listen_logs`, `ratings`                    |
+| **QR và nhật ký quét**        | `qr_entries`, `qr_logs`                                  |
+| **Thương mại và gói dịch vụ** | `plans`, `payments`                                      |
+
+### 6.2. Ghi chú dữ liệu nghiệp vụ
+
+- Một **owner** có thể sở hữu nhiều **POI**.
+- Một **POI** có thể có nhiều **ảnh**, **bản dịch** và **audio guide**.
+- Một **device** có thể có nhiều **favorite**, **listen log**, **payment** và **subscription** liên quan.
+- Một **QR entry** gắn với một **POI** và phát sinh nhiều **QR log**.
+- Một **payment** có thể dùng để kích hoạt **user plan** hoặc **POI upgrade**.
+
+### 6.3. Ràng buộc đáng chú ý
+
+- `favorites` có unique index theo cặp `(DeviceId, PoiId)` để tránh trùng favorite.
+- POI trên PWA chỉ hiển thị nếu đã được duyệt và owner còn hoạt động.
+- QR có trạng thái nghiệp vụ như `active`, `inactive`, `expired`, `admin_suspended`, `seller_deleted`.
+
+---
+
+## 7. Danh Mục API Routes
+
+### 7.1. Nhóm Auth
+
+- `POST /api/auth/register`
+- `POST /api/auth/login`
+- `POST /api/auth/admin-login`
+- `GET /api/auth/user/{userId}`
+- `PUT /api/auth/user/{userId}`
+- `PUT /api/auth/user/{userId}/status`
+
+### 7.2. Nhóm Devices
+
+- `POST /api/devices/register`
+- `DELETE /api/devices/{deviceId}`
+- `POST /api/devices/{deviceId}/heartbeat`
+
+### 7.3. Nhóm Access
+
+- `POST /api/access/entry`
+- `GET /api/access/free-listen`
+- `POST /api/access/free-listen/consume`
+
+### 7.4. Nhóm PWA Content
+
+- `GET /api/pois`
+- `GET /api/pois/{id}`
+- `POST /api/pois/favorite/{poiId}`
+- `POST /api/pois/listened/{poiId}`
+- `POST /api/ratings`
+- `GET /api/profiles/{deviceId}`
+- `GET /api/profiles/{deviceId}/favorites`
+- `GET /api/profiles/{deviceId}/history`
+
+### 7.5. Nhóm Seller
+
+- `GET /api/owner/pois`
+- `GET /api/owner/pois/{id}`
+- `POST /api/owner/pois`
+- `POST /api/owner/pois/translate`
+- `GET /api/owner/audio/{poiId}`
+- `POST /api/owner/audio/tts`
+- `PUT /api/owner/audio/{audioId}`
+- `DELETE /api/owner/audio/{audioId}`
+- `GET /api/owner/qr`
+- `GET /api/owner/qr/logs`
+- `POST /api/owner/qr`
+- `PUT /api/owner/qr/{id}/topup`
+- `PUT /api/owner/qr/{id}/status`
+- `DELETE /api/owner/qr/{id}`
+- `POST /api/owner/qr/{id}/activation-request`
+
+### 7.6. Nhóm Admin
+
+- `GET /api/admin/users`
+- `GET /api/admin/users/{userId}/detail`
+- `PUT /api/admin/users/{userId}/toggle-active`
+- `PUT /api/admin/users/{userId}/status`
+- `DELETE /api/admin/users/{userId}`
+- `GET /api/admin/pois`
+- `GET /api/admin/qr`
+- `GET /api/admin/qr/logs`
+- `GET /api/admin/qr/{id}/logs`
+- `PUT /api/admin/qr/{id}/status`
+- `POST /api/admin/qr/{id}/activation-request/reject`
+- `DELETE /api/admin/qr/{id}/hard`
+
+### 7.7. Nhóm Plans Và Payments
+
+- `GET /api/plans`
+- `GET /api/plans/admin`
+- `POST /api/plans`
+- `PUT /api/plans/{id}`
+- `DELETE /api/plans/{id}`
+- Các route trong `PaymentsController` phục vụ:
+  - tạo giao dịch
+  - lấy trạng thái giao dịch
+  - webhook cập nhật thanh toán
+  - kích hoạt gói hoặc nâng cấp POI sau thanh toán
+
+---
+
+## 8. Cấu Trúc Ứng Dụng Web
+
+### 8.1. PWA
+
+| Nhóm màn hình      | Route chính                                        | Mục đích                                                  |
+| :----------------- | :------------------------------------------------- | :-------------------------------------------------------- |
+| **Trang khám phá** | `/`, `/map`, `/detail`                             | Duyệt POI, xem bản đồ, xem chi tiết                       |
+| **Quyền truy cập** | `/qr/[entryCode]`, `/scan`, `/paywall`, `/payment` | Quét QR, nhận quyền nghe, chuyển sang thanh toán khi cần  |
+| **Hồ sơ cá nhân**  | `/profile`                                         | Xem thông tin thiết bị, lịch sử nghe, danh sách yêu thích |
+
+### 8.2. Seller Web
+
+| Nhóm màn hình         | Route chính                                 | Mục đích                                    |
+| :-------------------- | :------------------------------------------ | :------------------------------------------ |
+| **Xác thực**          | `/auth/login`, `/auth/register`             | Đăng nhập và đăng ký seller/owner           |
+| **Tổng quan**         | `/dashboard`, `/analytics`                  | Xem số liệu quản lý và thống kê             |
+| **Quản lý POI**       | `/pois`, `/pois/create`, `/pois/[id]`       | Tạo, xem và chỉnh sửa POI                   |
+| **Nội dung âm thanh** | `/audio`                                    | Quản lý audio guide cho POI                 |
+| **QR và thanh toán**  | `/qr`, `/payments`, `/payments/poi-upgrade` | Quản lý QR, theo dõi và thực hiện giao dịch |
+| **Tài khoản**         | `/profile`                                  | Quản lý hồ sơ seller/owner                  |
+
+### 8.3. Admin Web
+
+| Nhóm màn hình                     | Route chính                | Mục đích                               |
+| :-------------------------------- | :------------------------- | :------------------------------------- |
+| **Xác thực**                      | `/auth/login`              | Đăng nhập admin                        |
+| **Điều hành tổng quan**           | `/dashboard`, `/analytics` | Theo dõi số liệu vận hành              |
+| **Quản lý tài khoản và thiết bị** | `/users`, `/devices`       | Quản lý user, seller/owner và thiết bị |
+| **Quản lý nội dung và QR**        | `/pois`, `/qr`             | Kiểm duyệt POI, giám sát QR            |
+| **Gói và giao dịch**              | `/plans`, `/payments`      | Quản lý gói sử dụng và thanh toán      |
+
+---
+
+## 9. Sơ Đồ Use Case
+
+### 9.1. Use Case Tổng Quan Hệ Thống
+
+![Use Case Tổng Quan Hệ Thống](images/usecase-tong-quan-smart-guide.png)
+
+### 9.2. Use Case User / Guest
+
+![Use Case User / Guest](images/usecase-user-guest-smart-guide.png)
+
+### 9.3. Use Case Seller / Owner
+
+![Use Case Seller / Owner](images/usecase-seller-owner-smart-guide.png)
+
+### 9.4. Use Case Admin
+
+![Use Case Admin](images/usecase-admin-smart-guide.png)
+
+### 9.5. Use Case Thanh Toán Và Kích Hoạt Quyền Truy Cập
+
+![Use Case Thanh Toán Và Kích Hoạt Quyền Truy Cập](images/usecase-thanh-toan-kich-hoat-quyen-truy-cap-smart-guide.png)
+
+---
+
+## 10. Sơ Đồ Trình Tự (Sequence Diagram)
+
+### 10.1. Sequence Tự Động Đăng Ký Thiết Bị
+
+> Bao gồm các trường hợp: tạo `deviceUuid` lần đầu, tái sử dụng thiết bị theo `deviceUuid`, nhận diện lại theo `fingerprint`, tái liên kết thiết bị đang còn gói sử dụng, tạo thiết bị mới và chặn truy cập nếu thiết bị bị khóa.
+
+```mermaid
+%%{init: {
+  "theme": "base",
+  "themeVariables": {
+    "primaryColor": "#EAF4FF",
+    "primaryBorderColor": "#2563EB",
+    "primaryTextColor": "#0F172A",
+    "lineColor": "#2563EB",
+    "secondaryColor": "#DBEAFE",
+    "tertiaryColor": "#F8FBFF",
+    "noteBkgColor": "#EFF6FF",
+    "noteBorderColor": "#3B82F6",
+    "activationBorderColor": "#2563EB",
+    "activationBkgColor": "#DBEAFE",
+    "sequenceNumberColor": "#0F172A"
+  }
+}}%%
+sequenceDiagram
+    participant User as User
+    participant PWA as PWA Page
+    participant DeviceLib as device.ts
+    participant Storage as LocalStorage
+    participant API as ApiClient
+    participant DevicesCtl as DevicesController
+    participant DB as PostgreSQL
+
+    User ->> PWA: Truy cập ứng dụng / màn hình cần dữ liệu
+    PWA ->> DeviceLib: ensureDeviceReady()
+    DeviceLib ->> DeviceLib: initializeSettingsDefaults()
+
+    alt Chưa có deviceUuid trong localStorage
+        DeviceLib ->> DeviceLib: generateUuid()
+        DeviceLib ->> Storage: Lưu pwa_device_uuid
+    else Đã có deviceUuid
+        DeviceLib ->> Storage: Đọc pwa_device_uuid
+    end
+
+    DeviceLib ->> DeviceLib: getReadableDeviceName()
+    DeviceLib ->> DeviceLib: getReadableDeviceModel()
+    DeviceLib ->> DeviceLib: getBrowserFingerprint()
+    DeviceLib ->> API: POST /api/devices/register(deviceUuid, name, platform, model, appVersion, fingerprint, metadata)
+    API ->> DevicesCtl: Register(request)
+
+    alt deviceUuid không hợp lệ
+        DevicesCtl -->> API: 400 Bad Request
+        API -->> DeviceLib: Lỗi đăng ký thiết bị
+        DeviceLib -->> PWA: Throw error
+    else deviceUuid hợp lệ
+        DevicesCtl ->> DB: Tìm Device theo deviceUuid
+
+        alt Tìm thấy theo deviceUuid
+            DB -->> DevicesCtl: Trả về device hiện có
+        else Không thấy theo deviceUuid
+            opt Có fingerprint
+                DevicesCtl ->> DB: Tìm device active cùng platform
+                DB -->> DevicesCtl: Danh sách candidate devices
+                DevicesCtl ->> DevicesCtl: So khớp fingerprint trong metadata
+            end
+
+            alt Không khớp fingerprint
+                DevicesCtl ->> DB: Tìm device active còn subscription cùng platform + name
+                DB -->> DevicesCtl: Device phù hợp hoặc rỗng
+            end
+
+            alt Vẫn chưa tìm thấy device phù hợp
+                DevicesCtl ->> DB: Tạo Device mới
+                DB -->> DevicesCtl: Device mới
+            else Tìm thấy device phù hợp
+                DevicesCtl ->> DevicesCtl: Gán lại deviceUuid mới cho device đã nhận diện
+            end
+        end
+
+        alt Device có trạng thái banned
+            DevicesCtl -->> API: 403 Forbidden
+            API -->> DeviceLib: message + reason
+            DeviceLib -->> PWA: Throw blocked error
+            PWA -->> User: Hiển thị thiết bị bị khóa
+        else Device hợp lệ
+            DevicesCtl ->> DevicesCtl: Cập nhật name, platform, model, appVersion, pushToken, qrCode, metadata
+            DevicesCtl ->> DevicesCtl: Set isActive = true, status = active, deletedAt = null, lastSeen = now
+            DevicesCtl ->> DB: SaveChanges()
+            DB -->> DevicesCtl: Thành công
+            DevicesCtl -->> API: 200 OK(deviceId, deviceUuid, isActive)
+            API -->> DeviceLib: deviceId
+            DeviceLib ->> Storage: Lưu pwa_device_id
+            DeviceLib -->> PWA: Device sẵn sàng
+            PWA -->> User: Tiếp tục tải dữ liệu màn hình
+        end
+    end
 ```
 
-## 5.2 Audio Flow
+### 10.2. Sequence Quét QR Và Cấp Lượt Nghe Miễn Phí
 
-```text
-Audio trigger (auto or manual) → Check state → TTS or pre-recorded audio → Play with fade-in → On finish → Dequeue next POI → Play next (if any) → Return to idle
-```
+Nội dung sơ đồ sẽ bổ sung sau.
 
-## 5.3 Navigation Flow
+### 10.3. Sequence Thanh Toán Gói Người Dùng
 
-```text
-Open Map Screen → Click POI marker → Navigate to Detail Screen → View information + images → Tap Play button
-```
+Nội dung sơ đồ sẽ bổ sung sau.
 
-## 5.4 Deep Link / QR Flow
+### 10.4. Sequence Webhook Xác Nhận Thanh Toán
 
-```text
-Scan QR → Extract POI ID → Deep link navigation → Load POI data (offline-first if possible) → Auto-play audio
-```
+Nội dung sơ đồ sẽ bổ sung sau.
 
-# 6. Core Logic (QUAN TRỌNG)
+### 10.5. Sequence Seller Tạo POI
 
-## 6.1 Tracking Logic
+Nội dung sơ đồ sẽ bổ sung sau.
 
-Ứng dụng sẽ liên tục lấy vị trí người dùng (mỗi 5-10 giây, tùy tối ưu pin).  
-So sánh khoảng cách Euclidean hoặc sử dụng Geofencing với danh sách POI.  
-Khi khoảng cách ≤ radius (mặc định 50m, có thể tùy chỉnh):
+### 10.6. Sequence Admin Xử Lý QR Bị Tạm Ngưng
 
-- Thêm POI vào queue nếu chưa visit trong phiên hiện tại.
-- Đánh dấu “visited” để tránh trigger lặp lại.
-- Hỗ trợ debounce để tránh spam trigger khi người dùng đứng yên hoặc di chuyển chậm.
+Nội dung sơ đồ sẽ bổ sung sau.
 
-## 6.2 Queue Logic (Fix bug audio skip/overlap)
+---
 
-- Queue hoạt động theo nguyên tắc FIFO (First In First Out).
-- Nếu đang phát audio: POI mới → enqueue (thêm vào cuối hàng đợi).
-- Khi audio hiện tại kết thúc: dequeue POI tiếp theo và phát ngay.
-- Hỗ trợ ưu tiên (priority queue) cho POI quan trọng hoặc theo tuyến đường người dùng đang đi.
-- Đảm bảo: **Không skip POI**, **Không overlap audio**, và có thể bỏ qua queue nếu người dùng muốn.
+## 11. Sơ Đồ Lớp (Class Diagram)
 
-## 6.3 Audio Logic
+![Class Diagram Tổng Quan](images/class-diagram-smart-guide.png)
 
-- Sử dụng **Text-to-Speech (TTS)** kết hợp audio ghi âm sẵn (pre-recorded) để tăng chất lượng.
-- Trạng thái audio rõ ràng: **Idle** | **Playing** | **Paused** | **Finished**.
-- Hỗ trợ fade-in/fade-out, điều chỉnh tốc độ và âm lượng.
-- Multi-language: Người dùng chọn ngôn ngữ mặc định, ứng dụng tự chuyển đổi nội dung.
+---
 
-# 7. System Architecture
+## 12. Sơ Đồ Hoạt Động (Activity Diagram)
 
-## 7.1 Layers
+### 12.1. Activity User Truy Cập Nội Dung Trên PWA
 
-- **View Layer**: UI/UX (Jetpack Compose cho Android, SwiftUI cho iOS).
-- **ViewModel Layer**: MVVM pattern để xử lý logic và trạng thái.
-- **Service Layer**: Các service độc lập (Tracking, Audio, POI, Network).
-- **Model & Data Layer**: Local database + Backend sync.
+Nội dung sơ đồ sẽ bổ sung sau.
 
-## 7.2 Services
+### 12.2. Activity User Quét QR Và Nhận Quyền Nghe
 
-- **TrackingService**: Quản lý vị trí, geofencing.
-- **AudioService**: Xử lý playback, queue, TTS.
-- **POIService**: Lấy dữ liệu POI (API + cache local).
-- **AuthService**: Xác thực người dùng và đồng bộ favorite.
+Nội dung sơ đồ sẽ bổ sung sau.
 
-# 8. Class Diagram
+### 12.3. Activity Seller Tạo Và Xuất Bản POI
 
-<p align="center"> <img src="images/class_diagram.png" width="600"/> </p> <p align="center"><i></i></p>
+Nội dung sơ đồ sẽ bổ sung sau.
 
-# 9. ERD
+### 12.4. Activity Seller Quản Lý QR
 
-<p align="center"> <img src="images/erd.png" width="600"/> </p> <p align="center"><i></i></p>
+Nội dung sơ đồ sẽ bổ sung sau.
 
-# 10. UI / UX Design
+### 12.5. Activity Thanh Toán Và Kích Hoạt Gói
 
-## 10.1 Home Screen
+Nội dung sơ đồ sẽ bổ sung sau.
 
-<p align="center">
-  <img src="images/home1.png" width="200"/>
-  <img src="images/home2.png" width="200"/>
-</p>
+### 12.6. Activity Admin Quản Trị Hệ Thống
 
-- Hiển thị danh sách POI gần nhất + mini map.
-- Nút nhanh bật/tắt Auto-Tracking và ngôn ngữ.
-
-## 10.2 Map Screen
-
-<p align="center">
-  <img src="images/map1.png" width="200"/>
-  <img src="images/map2.png" width="200"/>
-</p>
-
-- Marker POI với hiệu ứng phân biệt POI được chọn/không được chọn.
-- Vị trí người dùng realtime với vòng tròn bán kính.
-
-## 10.3 Detail Screen
-
-<p align="center">
-  <img src="images/detail1.png" width="200"/>
-  <img src="images/detail2.png" width="200"/>
-</p>
-
-- Thông tin chi tiết và hình ảnh.
-- Nút Play/Pause lớn, thời lượng audio, tùy chọn nghe lại.
-
-## 10.4 Settings Screen
-
-<p align="center">
-  <img src="images/setting.png" width="200"/>
-  <img src="images/tracking_button.jpg" width="200"/>
-</p>
-
-- Toggle Auto-Play, Tracking precision.
-
-# 11. Functional Requirements
-
-## 11.1 Tracking & Location
-
-- Phát hiện vị trí realtime với độ chính xác cao.
-- Trigger POI tự động + queue thông minh.
-- Hỗ trợ background tracking (với tối ưu pin).
-
-## 11.2 Audio Management
-
-- Play / Stop.
-- Auto-play khi trigger.
-- Hỗ trợ đa ngôn ngữ.
-
-## 11.3 POI Management
-
-- Xem danh sách, bản đồ, chi tiết.
-- Tìm kiếm, lọc theo loại (lịch sử, ẩm thực, thiên nhiên...).
-
-## 11.4 User Features
-
-- Đăng nhập / Đăng ký (Google/Apple/Facebook).
-- Lưu favorite, tạo tuyến đường cá nhân.
-- Chia sẻ POI qua link hoặc mạng xã hội.
-
-# 12. Edge Cases
-
-- **Không có mạng**: Sử dụng dữ liệu POI và audio đã cache local (Room Database hoặc SQLite).
-- **GPS không chính xác hoặc tắt**: Hiển thị cảnh báo rõ ràng, fallback sang chế độ thủ công, không trigger audio tự động.
-- **Audio lỗi hoặc TTS thất bại**: Fallback sang hiển thị text chi tiết + nút đọc to.
-- **Người dùng di chuyển nhanh**: Tự động skip hoặc ưu tiên POI quan trọng nhất trên tuyến đường.
-- **Spam trigger (đứng yên lâu)**: Áp dụng debounce time (ít nhất 2-3 phút giữa các trigger cùng POI).
-- **Pin yếu hoặc thiết bị nóng**: Tự động giảm tần suất tracking và cảnh báo người dùng.
-- **Nhiều POI cùng lúc**: Sắp xếp queue theo khoảng cách hoặc độ ưu tiên.
-
-# 13. Non-functional Requirements
-
-- **Performance**: Thời gian load POI < 2 giây, tracking mượt mà.
-- **Reliability**: Ứng dụng không crash khi chạy tracking nền; xử lý exception gracefully.
-- **Battery Optimization**: Sử dụng fused location provider, giảm tần suất khi app ở background.
-- **Security**: Bảo vệ dữ liệu vị trí, mã hóa thông tin người dùng, tuân thủ GDPR/CCPA.
-- **Scalability**: Backend hỗ trợ hàng nghìn POI và người dùng đồng thời.
-- **Accessibility**: Hỗ trợ VoiceOver/TalkBack, font lớn, chế độ tối.
-
-**Assumptions & Dependencies (mới bổ sung):**
-
-- Người dùng cấp quyền vị trí và thông báo.
-- POI data được cung cấp từ backend hoặc admin dashboard.
-- Thiết bị hỗ trợ GPS và TTS (Android/iOS tiêu chuẩn).
-
-# 14. Risks & Mitigations (mới bổ sung)
-
-- **Rủi ro pin hao nhanh**: Mitigation – Tối ưu tracking, cung cấp chế độ tiết kiệm.
-- **Rủi ro dữ liệu POI không chính xác**: Mitigation – Cho phép người dùng báo lỗi POI.
-- **Rủi ro audio chất lượng thấp**: Mitigation – Kết hợp pre-recorded + AI voice cải tiến sau.
-- **Rủi ro pháp lý (quyền riêng tư vị trí)**: Mitigation – Minh bạch chính sách và xin phép rõ ràng.
-
-# 15. Future Enhancements
-
-- Hỗ trợ **offline audio đầy đủ** (tải trước toàn bộ tour).
-- Tích hợp **AI voice** tự nhiên, cá nhân hóa theo giọng nói (nam/nữ, accent).
-- **Recommendation system** dựa trên sở thích và lịch sử.
-- **Push notification** khi gần POI quan trọng.
-- Tích hợp AR (thử nghiệm hiển thị thông tin chồng lên thực tế).
-- Cộng đồng: Người dùng đóng góp audio/đánh giá POI.
-- Tích hợp đặt vé, đặt chỗ nhà hàng gần POI.
-
-# 16. Deployment
-
-- **Nền tảng hiện tại**:
-  - User app: PWA (Next.js)
-  - Seller app: Web dashboard (Next.js)
-  - Admin app: Web dashboard (Next.js)
-- **Phát hành**:
-  - PWA triển khai trên Vercel
-  - Backend API triển khai trên Render hoặc hạ tầng tương đương
-- **Backend hiện tại**:
-  - REST API (ASP.NET Core)
-  - Database PostgreSQL
-- **Mở rộng tương lai**:
-  - Tối ưu offline cho PWA
-  - Bổ sung CDN/media pipeline cho audio và ảnh POI
-
-# 17. Conclusion
-
-Smart Guide không chỉ là một ứng dụng hướng dẫn du lịch, mà còn là người bạn đồng hành thông minh giúp biến mọi chuyến đi thành trải nghiệm đáng nhớ, cá nhân hóa và không tốn công sức. Với khả năng tự động hóa cao, giao diện thân thiện và nền tảng mở rộng linh hoạt, Smart Guide có tiềm năng trở thành giải pháp du lịch thông minh hàng đầu, mang lại giá trị thực sự cho du khách và các điểm đến.
+Nội dung sơ đồ sẽ bổ sung sau.

@@ -2,13 +2,16 @@
 
 ## Deploy khuyen nghi
 
-- `services/api` -> Render
+- `services/api` -> Railway
+- `database postgres` -> Railway
 - `apps/pwa` -> Vercel
+- `apps/seller-web` -> Vercel
+- `apps/admin-web` -> Vercel
 
-## Render cho API
+## Railway cho API va Database
 
-- `render.yaml` hien chi giu service `smartguide-api`
-- Tao Postgres tren Render
+- Deploy `services/api` len Railway
+- Tao Postgres tren Railway
 - Gan env `DATABASE_URL`
 
 ## Vercel cho PWA
@@ -18,8 +21,14 @@
 - Dat env:
 
 ```text
-NEXT_PUBLIC_API_URL=https://TEN-API-RENDER/api
+NEXT_PUBLIC_API_URL=https://TEN-API-RAILWAY/api
 ```
+
+## Vercel cho Seller va Admin
+
+- `apps/seller-web` deploy tren Vercel
+- `apps/admin-web` deploy tren Vercel
+- Dat `NEXT_PUBLIC_API_URL` tro ve API Railway
 
 ## QR tren seller
 
