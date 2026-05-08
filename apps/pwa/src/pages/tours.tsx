@@ -83,14 +83,14 @@ export default function ToursPage() {
           </section>
         ) : null}
 
-        <section className="space-y-4 pb-24">
+        <section className="space-y-5 pb-24">
           {tours.map((tour) => {
             const previewImage = assetUrl(tour.cover_image_url || tour.pois[0]?.image) || "/assets/appiconfg.png";
             const firstPoiId = tour.pois[0]?.id;
 
             return (
-              <article key={tour.id} className="ios-card overflow-hidden rounded-[22px]">
-                <div className="relative h-[210px]">
+              <article key={tour.id} className="ios-card overflow-hidden rounded-[26px] border border-[#D7E5FF] shadow-[0_18px_36px_rgba(15,23,42,0.08)]">
+                <div className="relative h-[220px]">
                   <img src={previewImage} alt={tour.name} className="h-full w-full object-cover" />
                   <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-[#111827]/85 via-[#111827]/30 to-transparent px-5 pb-5 pt-12">
                     <p className="text-[12px] font-bold uppercase tracking-[0.24em] text-white/75" suppressHydrationWarning>
@@ -100,12 +100,12 @@ export default function ToursPage() {
                   </div>
                 </div>
 
-                <div className="space-y-4 px-5 py-5">
+                <div className="space-y-5 px-5 py-5">
                   <p className="text-[14px] leading-6 text-[#5B6474]">{tour.description || t("tours.subtitle")}</p>
 
-                  <div className="space-y-2">
-                    {tour.pois.slice(0, 4).map((poi, index) => (
-                      <div key={poi.id} className="flex items-start gap-3 rounded-[16px] bg-[#F8FAFC] px-4 py-3">
+                  <div className="space-y-3">
+                    {tour.pois.map((poi, index) => (
+                      <div key={poi.id} className="flex items-start gap-3 rounded-[18px] border border-[#E6EEF8] bg-[#F8FBFF] px-4 py-3">
                         <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#0F5BD7] text-[12px] font-bold text-white">
                           {index + 1}
                         </div>
@@ -121,7 +121,7 @@ export default function ToursPage() {
                     <button
                       type="button"
                       onClick={() => router.push(`/map?tourId=${encodeURIComponent(String(tour.id))}&poiId=${encodeURIComponent(firstPoiId)}`)}
-                      className="w-full rounded-[16px] bg-[#0F5BD7] px-4 py-4 text-[15px] font-bold text-white shadow-[0_14px_30px_rgba(15,91,215,0.22)]"
+                      className="w-full rounded-[18px] bg-[#0F5BD7] px-4 py-4 text-[15px] font-bold text-white shadow-[0_16px_34px_rgba(15,91,215,0.22)]"
                       suppressHydrationWarning
                     >
                       {t("tours.view")}

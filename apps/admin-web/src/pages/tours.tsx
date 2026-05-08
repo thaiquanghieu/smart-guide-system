@@ -54,7 +54,7 @@ type FieldErrors = {
 }
 
 const API_ORIGIN = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5022/api').replace(/\/api\/?$/, '')
-const PWA_ORIGIN = (process.env.NEXT_PUBLIC_PWA_URL || 'http://localhost:3002').replace(/\/$/, '')
+const PWA_ORIGIN = (process.env.NEXT_PUBLIC_PWA_URL || 'https://smart-guide-system.vercel.app').replace(/\/$/, '')
 
 const emptyForm: FormState = {
   id: null,
@@ -299,38 +299,49 @@ export default function ToursPage() {
               ) : filteredTours.length === 0 ? (
                 <p className="text-gray-400">Chưa có tour nào.</p>
               ) : (
-                <div className="grid gap-4 xl:grid-cols-2">
+                <div className="space-y-5">
                   {filteredTours.map((tour) => (
-                    <article key={tour.id} className="overflow-hidden rounded-2xl border border-gray-700 bg-dark">
-                      <div className="grid gap-0 md:grid-cols-[220px_1fr]">
-                        <div className="h-[180px] md:h-full">
+                    <article key={tour.id} className="overflow-hidden rounded-[28px] border border-gray-700 bg-gradient-to-r from-[#121a2b] via-[#121a2b] to-[#172033] shadow-[0_20px_40px_rgba(0,0,0,0.18)]">
+                      <div className="grid gap-0 xl:grid-cols-[320px_1fr]">
+                        <div className="h-[240px] xl:h-full">
                           <img
                             src={mediaUrl(tour.cover_image_url) || '/assets/appiconfg.png'}
                             alt={tour.name}
                             className="h-full w-full object-cover"
                           />
                         </div>
-                        <div className="p-5">
-                          <div className="flex items-start justify-between gap-3">
+                        <div className="p-6">
+                          <div className="flex flex-wrap items-start justify-between gap-4">
                             <div>
-                              <p className="text-xl font-semibold text-white">{tour.name}</p>
-                              <p className="mt-1 text-sm text-gray-400 line-clamp-2">{tour.description || 'Chưa có mô tả'}</p>
+                              <p className="text-3xl font-bold text-white">{tour.name}</p>
+                              <p className="mt-2 max-w-3xl text-base leading-7 text-gray-400">{tour.description || 'Chưa có mô tả cho tour này.'}</p>
                             </div>
                             <span className={`rounded-full px-3 py-1 text-xs font-semibold ${tour.is_published ? 'bg-emerald-500/15 text-emerald-300' : 'bg-yellow-500/15 text-yellow-300'}`}>
                               {tour.is_published ? 'Published' : 'Draft'}
                             </span>
                           </div>
 
-                          <div className="mt-4 flex flex-wrap gap-2">
-                            {tour.pois.slice(0, 4).map((poi, index) => (
-                              <div key={poi.poi_id} className="rounded-full bg-secondary px-3 py-1 text-xs text-gray-300">
-                                {index + 1}. {poi.poi_name}
+                          <div className="mt-5 grid gap-3 md:grid-cols-2">
+                            {tour.pois.map((poi, index) => (
+                              <div key={poi.poi_id} className="rounded-2xl border border-gray-700 bg-white/5 px-4 py-3">
+                                <div className="flex items-start gap-3">
+                                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-bold text-white">
+                                    {index + 1}
+                                  </div>
+                                  <div className="min-w-0">
+                                    <p className="truncate font-semibold text-white">{poi.poi_name}</p>
+                                    <p className="mt-1 text-sm text-gray-400">{poi.poi_address || poi.poi_category || poi.poi_id}</p>
+                                  </div>
+                                </div>
                               </div>
                             ))}
                           </div>
 
-                          <div className="mt-5 flex items-center justify-between gap-3">
-                            <p className="text-sm text-gray-500">{tour.poi_count} POI trong tour</p>
+                          <div className="mt-6 flex flex-wrap items-center justify-between gap-4">
+                            <div className="flex items-center gap-6 text-sm text-gray-400">
+                              <span>{tour.poi_count} POI trong tour</span>
+                              <span>Cập nhật: {new Date(tour.updated_at).toLocaleString('vi-VN')}</span>
+                            </div>
                             <div className="flex gap-2">
                               <button
                                 type="button"
