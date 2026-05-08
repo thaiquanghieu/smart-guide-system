@@ -54,6 +54,9 @@ public class AdminToursController : ControllerBase
         }
         catch (Exception exception)
         {
+            if (IsMissingToursSchema(exception))
+                return Ok(Array.Empty<object>());
+
             return StatusCode(500, new
             {
                 message = "Không tải được danh sách tour. Kiểm tra migration bảng tours/tour_pois trên Railway.",
@@ -271,6 +274,13 @@ public class AdminToursController : ControllerBase
             .Where(x => !string.IsNullOrWhiteSpace(x))
             .Distinct()
             .ToList();
+    }
+
+    private static bool IsMissingToursSchema(Exception exception)
+    {
+        var detail = exception.InnerException?.Message ?? exception.Message;
+        return detail.Contains("relation \"tours\" does not exist", StringComparison.OrdinalIgnoreCase) ||
+               detail.Contains("relation \"tour_pois\" does not exist", StringComparison.OrdinalIgnoreCase);
     }
 
     private static object BuildAdminTourResponse(Tour tour, List<TourPoi> tourPois, List<Poi> pois, List<PoiImage> poiImages)

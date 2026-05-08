@@ -91,12 +91,7 @@ export default function ToursPage() {
     setLoading(true)
     setErrorMessage('')
     try {
-      const [tourResponse, poiResponse] = await Promise.all([
-        apiClient.get('/admin/tours'),
-        apiClient.get('/admin/pois'),
-      ])
-
-      const nextTours = (tourResponse.data || []) as Tour[]
+      const poiResponse = await apiClient.get('/admin/pois')
       const nextPoiOptions = ((poiResponse.data || []) as any[])
         .filter((poi) => poi.status === 'approved')
         .map((poi) => ({
@@ -112,10 +107,22 @@ export default function ToursPage() {
         }))
         .sort((left, right) => left.name.localeCompare(right.name))
 
-      setTours(nextTours)
       setPoiOptions(nextPoiOptions)
+
+      try {
+        const tourResponse = await apiClient.get('/admin/tours')
+        const nextTours = (tourResponse.data || []) as Tour[]
+        setTours(nextTours)
+      } catch (error: any) {
+        const message = error?.response?.data?.message || ''
+        const isMissingMigration = message.toLowerCase().includes('migration') || message.toLowerCase().includes('tours/tour_pois')
+        setTours([])
+        if (!isMissingMigration) {
+          setErrorMessage(message || 'Không tải được danh sách tour')
+        }
+      }
     } catch (error: any) {
-      setErrorMessage(error?.response?.data?.message || 'Không tải được danh sách tour')
+      setErrorMessage(error?.response?.data?.message || 'Không tải được danh sách POI')
     } finally {
       setLoading(false)
     }
@@ -501,7 +508,11 @@ export default function ToursPage() {
                 </div>
 
                 <div className="grid gap-4 lg:grid-cols-2">
-                  {filteredPois.map((poi) => {
+                  {filteredPois.length === 0 ? (
+                    <div className="rounded-2xl border border-dashed border-gray-700 bg-dark px-5 py-8 text-sm text-gray-400">
+                      Chưa có POI hoạt động để chọn hoặc không có POI khớp với từ khóa tìm kiếm.
+                    </div>
+                  ) : filteredPois.map((poi) => {
                     const selectedIndex = form.poiIds.indexOf(poi.id)
                     const isSelected = selectedIndex >= 0
                     return (

@@ -96,6 +96,9 @@ public class ToursController : ControllerBase
         }
         catch (Exception exception)
         {
+            if (IsMissingToursSchema(exception))
+                return Ok(Array.Empty<object>());
+
             return StatusCode(500, new
             {
                 message = "Không tải được tour. Kiểm tra backend Railway và migration tours/tour_pois.",
@@ -115,5 +118,12 @@ public class ToursController : ControllerBase
         public double longitude { get; set; }
         public string? image { get; set; }
         public int sort_order { get; set; }
+    }
+
+    private static bool IsMissingToursSchema(Exception exception)
+    {
+        var detail = exception.InnerException?.Message ?? exception.Message;
+        return detail.Contains("relation \"tours\" does not exist", StringComparison.OrdinalIgnoreCase) ||
+               detail.Contains("relation \"tour_pois\" does not exist", StringComparison.OrdinalIgnoreCase);
     }
 }
