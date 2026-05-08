@@ -175,7 +175,7 @@ export default function MapSurface({
       map.remove();
       leafletMapRef.current = null;
     };
-  }, [leafletReady, center.latitude, center.longitude]);
+  }, [leafletReady]);
 
   useEffect(() => {
     if (!leafletReady) return;
