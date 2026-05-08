@@ -299,6 +299,8 @@ public class AdminToursController : ControllerBase
                     poi_status = poi?.Status ?? "unknown",
                     poi_category = poi?.Category ?? "",
                     poi_address = poi?.Address ?? "",
+                    latitude = poi?.Latitude ?? 0,
+                    longitude = poi?.Longitude ?? 0,
                     image = poiImages.FirstOrDefault(x => x.PoiId == link.PoiId)?.ImageUrl
                 };
             })

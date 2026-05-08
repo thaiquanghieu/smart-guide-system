@@ -73,6 +73,7 @@ function shouldForceRefreshMap(query: Record<string, any>) {
 export default function MapPage() {
   const router = useRouter();
   const { t, lang } = useAppI18n();
+  const isTourMode = typeof router.query.tourId === "string" && router.query.tourId.length > 0;
   const [pois, setPois] = useState<Poi[]>([]);
   const [selectedPoiId, setSelectedPoiId] = useState("");
   const [searchText, setSearchText] = useState("");
@@ -144,7 +145,9 @@ export default function MapPage() {
                   : null)
             );
 
-            if (queryPoiId) {
+            if (queryTourId) {
+              setSelectedPoiId("");
+            } else if (queryPoiId) {
               const cachedSelectedPoi = mapCache.pois.find((item) => item.id === queryPoiId);
               setSelectedPoiId(queryPoiId);
               if (cachedSelectedPoi) {
@@ -193,7 +196,9 @@ export default function MapPage() {
           setActiveTour(null);
         }
 
-        const targetPoiId = queryPoiId || targetPoiIdFromStorage || grantPoiId || activeTourResponse?.pois?.[0]?.id || "";
+        const targetPoiId = queryTourId
+          ? ""
+          : queryPoiId || targetPoiIdFromStorage || grantPoiId || activeTourResponse?.pois?.[0]?.id || "";
         qrTargetPoiRef.current = targetPoiId;
 
         if (!hasActiveSubscription && remainingFreePlays <= 0) {
@@ -211,7 +216,10 @@ export default function MapPage() {
         const poiId = targetPoiId;
         const selectedPoi = poiId ? items.find((item: Poi) => item.id === poiId) : null;
 
-        if (selectedPoi) {
+        if (queryTourId) {
+          setSelectedPoiId("");
+          setMapCenter(items[0] ? { latitude: items[0].latitude, longitude: items[0].longitude } : null);
+        } else if (selectedPoi) {
           setSelectedPoiId(selectedPoi.id);
           setMapCenter({ latitude: selectedPoi.latitude, longitude: selectedPoi.longitude });
         } else {
@@ -579,24 +587,26 @@ export default function MapPage() {
           </div>
         ) : null}
 
-        <div className="absolute inset-x-5 z-20" style={{ top: "calc(env(safe-area-inset-top) + 92px)" }}>
-          <SearchBar
-            value={searchText}
-            placeholder={t("home.search")}
-            active
-            onChange={(value) => {
-              setSearchText(value);
-              setShowSuggestions(!!value);
-            }}
-            onCancel={() => {
-              setSearchText("");
-              setShowSuggestions(false);
-              clearSelectedPoi();
-            }}
-          />
-        </div>
+        {!isTourMode ? (
+          <div className="absolute inset-x-5 z-20" style={{ top: "calc(env(safe-area-inset-top) + 92px)" }}>
+            <SearchBar
+              value={searchText}
+              placeholder={t("home.search")}
+              active
+              onChange={(value) => {
+                setSearchText(value);
+                setShowSuggestions(!!value);
+              }}
+              onCancel={() => {
+                setSearchText("");
+                setShowSuggestions(false);
+                clearSelectedPoi();
+              }}
+            />
+          </div>
+        ) : null}
 
-        {showSuggestions && suggestions.length > 0 ? (
+        {!isTourMode && showSuggestions && suggestions.length > 0 ? (
           <div className="absolute inset-x-4 top-[146px] z-20 overflow-hidden rounded-b-[18px] rounded-t-[8px] border border-[#E5E7EB] bg-white">
             {suggestions.slice(0, 5).map((poi) => (
               <button

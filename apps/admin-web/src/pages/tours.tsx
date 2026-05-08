@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import ProtectedRoute from '@/components/ProtectedRoute'
 import Sidebar from '@/components/Sidebar'
 import apiClient from '@/lib/api'
-import { Eye, EyeOff, Map, Pencil, Plus, Save, Trash2, Upload, X } from 'lucide-react'
+import { ChevronDown, ChevronUp, Eye, EyeOff, Map, Pencil, Plus, Save, Trash2, Upload, X } from 'lucide-react'
 
 type PoiOption = {
   id: string
@@ -23,6 +23,8 @@ type TourPoi = {
   poi_status: string
   poi_category?: string
   poi_address?: string
+  latitude?: number
+  longitude?: number
   image?: string
 }
 
@@ -54,7 +56,6 @@ type FieldErrors = {
 }
 
 const API_ORIGIN = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5022/api').replace(/\/api\/?$/, '')
-const PWA_ORIGIN = (process.env.NEXT_PUBLIC_PWA_URL || 'https://smart-guide-system.vercel.app').replace(/\/$/, '')
 
 const emptyForm: FormState = {
   id: null,
@@ -83,6 +84,8 @@ export default function ToursPage() {
   const [form, setForm] = useState<FormState>(emptyForm)
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
   const [errorMessage, setErrorMessage] = useState('')
+  const [expandedTourId, setExpandedTourId] = useState<number | null>(null)
+  const [selectedMapTour, setSelectedMapTour] = useState<Tour | null>(null)
 
   useEffect(() => {
     void loadData()
@@ -254,9 +257,8 @@ export default function ToursPage() {
   }
 
   const openTourMap = (tour: Tour) => {
-    const firstPoiId = tour.pois?.[0]?.poi_id
-    if (!firstPoiId) return
-    window.open(`${PWA_ORIGIN}/map?tourId=${encodeURIComponent(String(tour.id))}&poiId=${encodeURIComponent(firstPoiId)}`, '_blank', 'noopener,noreferrer')
+    if (!tour.pois?.length) return
+    setSelectedMapTour(tour)
   }
 
   return (
@@ -322,7 +324,7 @@ export default function ToursPage() {
                           </div>
 
                           <div className="mt-5 grid gap-3 md:grid-cols-2">
-                            {tour.pois.map((poi, index) => (
+                            {tour.pois.slice(0, 3).map((poi, index) => (
                               <div key={poi.poi_id} className="rounded-2xl border border-gray-700 bg-white/5 px-4 py-3">
                                 <div className="flex items-start gap-3">
                                   <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-bold text-white">
@@ -336,6 +338,35 @@ export default function ToursPage() {
                               </div>
                             ))}
                           </div>
+
+                          {tour.pois.length > 3 ? (
+                            <div className="mt-3">
+                              <button
+                                type="button"
+                                onClick={() => setExpandedTourId((current) => current === tour.id ? null : tour.id)}
+                                className="inline-flex items-center gap-2 rounded-full bg-white/5 px-4 py-2 text-sm font-semibold text-sky-300 hover:bg-white/10"
+                              >
+                                {expandedTourId === tour.id ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                                {expandedTourId === tour.id ? 'Thu gọn danh sách điểm' : `... Xem tất cả ${tour.poi_count} điểm`}
+                              </button>
+                            </div>
+                          ) : null}
+
+                          {expandedTourId === tour.id ? (
+                            <div className="mt-4 space-y-3 rounded-[24px] border border-gray-700 bg-black/10 p-4">
+                              {tour.pois.map((poi, index) => (
+                                <div key={poi.poi_id} className="flex items-start gap-3 rounded-2xl border border-gray-700 bg-white/5 px-4 py-3">
+                                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-bold text-white">
+                                    {index + 1}
+                                  </div>
+                                  <div className="min-w-0">
+                                    <p className="truncate font-semibold text-white">{poi.poi_name}</p>
+                                    <p className="mt-1 text-sm text-gray-400">{poi.poi_address || poi.poi_category || poi.poi_id}</p>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          ) : null}
 
                           <div className="mt-6 flex flex-wrap items-center justify-between gap-4">
                             <div className="flex items-center gap-6 text-sm text-gray-400">
@@ -594,6 +625,142 @@ export default function ToursPage() {
           </div>
         </div>
       ) : null}
+
+      {selectedMapTour ? (
+        <AdminTourMapModal tour={selectedMapTour} onClose={() => setSelectedMapTour(null)} />
+      ) : null}
     </ProtectedRoute>
+  )
+}
+
+function AdminTourMapModal({ tour, onClose }: { tour: Tour; onClose: () => void }) {
+  const mapRef = useRef<HTMLDivElement | null>(null)
+  const leafletMapRef = useRef<any>(null)
+  const markersRef = useRef<any[]>([])
+  const [leafletReady, setLeafletReady] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    const styleId = 'smartguide-admin-leaflet-style'
+    const scriptId = 'smartguide-admin-leaflet-script'
+
+    if (!document.getElementById(styleId)) {
+      const link = document.createElement('link')
+      link.id = styleId
+      link.rel = 'stylesheet'
+      link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'
+      document.head.appendChild(link)
+    }
+
+    const ready = () => {
+      if (!cancelled && typeof window !== 'undefined' && (window as any).L?.map) {
+        setLeafletReady(true)
+      }
+    }
+
+    let script = document.getElementById(scriptId) as HTMLScriptElement | null
+    if (!script) {
+      script = document.createElement('script')
+      script.id = scriptId
+      script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'
+      script.async = true
+      script.crossOrigin = ''
+      document.body.appendChild(script)
+    }
+
+    script.addEventListener('load', ready)
+    ready()
+
+    return () => {
+      cancelled = true
+      script?.removeEventListener('load', ready)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!leafletReady || !mapRef.current || leafletMapRef.current || !tour.pois.length) return
+    const L = (window as any).L
+    const firstPoi = tour.pois[0]
+    const map = L.map(mapRef.current, {
+      zoomControl: true,
+      attributionControl: true,
+    }).setView([firstPoi.latitude || 0, firstPoi.longitude || 0], 14)
+
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; OpenStreetMap contributors',
+    }).addTo(map)
+
+    leafletMapRef.current = map
+    setTimeout(() => map.invalidateSize(), 60)
+
+    return () => {
+      map.remove()
+      leafletMapRef.current = null
+    }
+  }, [leafletReady, tour])
+
+  useEffect(() => {
+    if (!leafletReady || !leafletMapRef.current) return
+    const L = (window as any).L
+    markersRef.current.forEach((marker) => marker.remove())
+    markersRef.current = []
+
+    const bounds: any[] = []
+    tour.pois.forEach((poi, index) => {
+      if (!poi.latitude || !poi.longitude) return
+      const icon = L.divIcon({
+        className: '',
+        html: `<div style="width:32px;height:32px;border-radius:999px;background:#0F5BD7;color:white;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;border:3px solid white;box-shadow:0 10px 24px rgba(15,91,215,0.28);">${index + 1}</div>`,
+        iconSize: [32, 32],
+        iconAnchor: [16, 16],
+      })
+      const marker = L.marker([poi.latitude, poi.longitude], { icon }).addTo(leafletMapRef.current)
+      marker.bindPopup(`<strong>${index + 1}. ${poi.poi_name}</strong><br/>${poi.poi_address || poi.poi_category || poi.poi_id}`)
+      markersRef.current.push(marker)
+      bounds.push([poi.latitude, poi.longitude])
+    })
+
+    if (bounds.length) {
+      leafletMapRef.current.fitBounds(bounds, { padding: [36, 36] })
+    }
+  }, [leafletReady, tour])
+
+  return (
+    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/75 p-4">
+      <div className="w-full max-w-6xl overflow-hidden rounded-[28px] border border-gray-700 bg-secondary shadow-2xl">
+        <div className="flex items-start justify-between gap-4 border-b border-gray-700 px-6 py-5">
+          <div>
+            <h3 className="text-2xl font-bold text-white">{tour.name}</h3>
+            <p className="mt-1 text-sm text-gray-400">Leaflet + OpenStreetMap, chỉ hiển thị các điểm thuộc tour theo thứ tự admin đã tạo.</p>
+          </div>
+          <button type="button" onClick={onClose} className="rounded-full bg-dark p-2 text-gray-300 hover:text-white" aria-label="Đóng popup map">
+            <X size={18} />
+          </button>
+        </div>
+        <div className="grid gap-0 xl:grid-cols-[1fr_360px]">
+          <div className="h-[68vh] min-h-[420px] bg-slate-200">
+            <div ref={mapRef} className="h-full w-full" />
+          </div>
+          <div className="max-h-[68vh] overflow-y-auto border-l border-gray-700 bg-[#121a2b] p-5">
+            <div className="space-y-3">
+              {tour.pois.map((poi, index) => (
+                <div key={poi.poi_id} className="rounded-2xl border border-gray-700 bg-white/5 px-4 py-3">
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-bold text-white">
+                      {index + 1}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="truncate font-semibold text-white">{poi.poi_name}</p>
+                      <p className="mt-1 text-sm text-gray-400">{poi.poi_address || poi.poi_category || poi.poi_id}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   )
 }

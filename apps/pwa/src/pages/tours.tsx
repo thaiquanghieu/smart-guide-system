@@ -31,6 +31,7 @@ export default function ToursPage() {
   const [tours, setTours] = useState<Tour[]>([]);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
+  const [expandedTour, setExpandedTour] = useState<Tour | null>(null);
 
   useEffect(() => {
     const load = async () => {
@@ -57,13 +58,13 @@ export default function ToursPage() {
       <ToastBanner message={errorMessage} />
 
       <main className="app-shell space-y-[18px]">
-        <AppHeader title={t("tours.title")} />
+        <AppHeader />
 
         <section className="space-y-1">
           <p className="text-[12px] font-bold text-[#0F5BD7]" suppressHydrationWarning>
             {t("nav.tours")}
           </p>
-          <h2 className="max-w-[320px] text-[27px] font-bold leading-[1.18] text-[#111827]" suppressHydrationWarning>
+          <h2 className="max-w-[320px] text-[27px] font-bold leading-[1.18] text-[#0F5BD7]" suppressHydrationWarning>
             {t("tours.title")}
           </h2>
           <p className="max-w-[360px] text-[14px] leading-6 text-[#6B7280]" suppressHydrationWarning>
@@ -104,7 +105,7 @@ export default function ToursPage() {
                   <p className="text-[14px] leading-6 text-[#5B6474]">{tour.description || t("tours.subtitle")}</p>
 
                   <div className="space-y-3">
-                    {tour.pois.map((poi, index) => (
+                    {tour.pois.slice(0, 3).map((poi, index) => (
                       <div key={poi.id} className="flex items-start gap-3 rounded-[18px] border border-[#E6EEF8] bg-[#F8FBFF] px-4 py-3">
                         <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#0F5BD7] text-[12px] font-bold text-white">
                           {index + 1}
@@ -117,10 +118,21 @@ export default function ToursPage() {
                     ))}
                   </div>
 
+                  {tour.pois.length > 3 ? (
+                    <button
+                      type="button"
+                      onClick={() => setExpandedTour(tour)}
+                      className="text-[14px] font-bold text-[#0F5BD7]"
+                      suppressHydrationWarning
+                    >
+                      Xem tất cả {tour.poi_count} điểm
+                    </button>
+                  ) : null}
+
                   {firstPoiId ? (
                     <button
                       type="button"
-                      onClick={() => router.push(`/map?tourId=${encodeURIComponent(String(tour.id))}&poiId=${encodeURIComponent(firstPoiId)}`)}
+                      onClick={() => router.push(`/map?tourId=${encodeURIComponent(String(tour.id))}`)}
                       className="w-full rounded-[18px] bg-[#0F5BD7] px-4 py-4 text-[15px] font-bold text-white shadow-[0_16px_34px_rgba(15,91,215,0.22)]"
                       suppressHydrationWarning
                     >
@@ -133,6 +145,35 @@ export default function ToursPage() {
           })}
         </section>
       </main>
+
+      {expandedTour ? (
+        <div className="fixed inset-0 z-40 bg-black/40 animate-fade-in" onClick={() => setExpandedTour(null)}>
+          <div className="absolute bottom-0 left-0 right-0 mx-auto max-h-[78vh] max-w-[540px] rounded-t-[28px] bg-white p-5 animate-sheet-up" onClick={(event) => event.stopPropagation()}>
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-[12px] font-bold uppercase tracking-[0.22em] text-[#0F5BD7]">{t("nav.tours")}</p>
+                <h3 className="mt-2 text-[22px] font-bold text-[#111827]">{expandedTour.name}</h3>
+              </div>
+              <button type="button" onClick={() => setExpandedTour(null)} className="flex h-10 w-10 items-center justify-center rounded-full bg-[#F3F7FF] text-[#0F5BD7]">
+                ×
+              </button>
+            </div>
+            <div className="mt-4 max-h-[58vh] space-y-3 overflow-y-auto pr-1">
+              {expandedTour.pois.map((poi, index) => (
+                <div key={poi.id} className="flex items-start gap-3 rounded-[18px] border border-[#E6EEF8] bg-[#F8FBFF] px-4 py-3">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#0F5BD7] text-[12px] font-bold text-white">
+                    {index + 1}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="truncate text-[15px] font-bold text-[#111827]">{poi.name}</p>
+                    <p className="mt-1 text-[13px] text-[#6B7280]">{poi.address || poi.category || poi.id}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       <BottomNav />
     </>
