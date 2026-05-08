@@ -792,12 +792,13 @@ function AdminTourMapModal({ tour, onClose }: { tour: Tour; onClose: () => void 
         if (cancelled || !roadCoordinates.length || !leafletMapRef.current) return
 
         routeLineRef.current = L.polyline(
-          roadCoordinates.map((point: [number, number]) => [point[1], point[0]]),
+          roadCoordinates.map((point: { latitude: number; longitude: number }) => [point.latitude, point.longitude]),
           {
             color: '#22C55E',
             weight: 5,
             opacity: 0.88,
             lineJoin: 'round',
+            smoothFactor: 1.5,
           }
         ).addTo(leafletMapRef.current)
       })

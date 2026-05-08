@@ -309,6 +309,7 @@ export default function MapSurface({
         opacity: 0.88,
         lineCap: "round",
         lineJoin: "round",
+        smoothFactor: 1.5,
       }
     ).addTo(map);
   }, [leafletReady, routePath]);
