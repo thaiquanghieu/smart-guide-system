@@ -18,24 +18,6 @@ public class AccessController : ControllerBase
         _db = db;
     }
 
-    private static string? ExtractFingerprint(string? metadata)
-    {
-        if (string.IsNullOrWhiteSpace(metadata))
-            return null;
-
-        try
-        {
-            using var document = System.Text.Json.JsonDocument.Parse(metadata);
-            if (document.RootElement.TryGetProperty("fingerprint", out var fingerprint))
-                return fingerprint.GetString();
-        }
-        catch
-        {
-        }
-
-        return null;
-    }
-
     private async Task<Device?> GetActiveDeviceAsync(int deviceId)
     {
         if (deviceId <= 0)
@@ -49,25 +31,10 @@ public class AccessController : ControllerBase
         return await _db.Subscriptions.AnyAsync(x => x.DeviceId == deviceId && x.ExpireAt > now);
     }
 
-    private async Task<List<int>> GetSameFingerprintDeviceIdsAsync(Device device)
-    {
-        var currentFingerprint = ExtractFingerprint(device.Metadata);
-        if (string.IsNullOrWhiteSpace(currentFingerprint))
-            return new List<int> { device.Id };
-
-        var matchingDeviceIds = await _db.Devices
-            .Where(x => x.Platform == device.Platform)
-            .ToListAsync();
-
-        return matchingDeviceIds
-            .Where(x => ExtractFingerprint(x.Metadata) == currentFingerprint)
-            .Select(x => x.Id)
-            .ToList();
-    }
-
     [HttpPost("entry")]
     public async Task<IActionResult> RegisterEntry([FromBody] EntryAccessRequest request)
     {
+        // Xử lý quét QR và quyết định thiết bị có được cấp quyền nghe hay không.
         if (request.DeviceId <= 0)
             return BadRequest(new { message = "Thiếu deviceId" });
 
@@ -93,8 +60,7 @@ public class AccessController : ControllerBase
             return BadRequest(new { message = "QR hiện không khả dụng" });
 
         var poiId = !string.IsNullOrWhiteSpace(request.PoiId) ? request.PoiId.Trim() : qrEntry.PoiId;
-        var sameFingerprintDeviceIds = await GetSameFingerprintDeviceIdsAsync(device);
-
+        // QR hết lượt miễn phí sẽ không cấp DeviceEntryGrant mới, kể cả với người mới.
         var qrOutOfFreeQuota = qrEntry.Status == "expired" || qrEntry.UsedScans >= qrEntry.TotalScans;
 
         if (qrOutOfFreeQuota)
@@ -131,6 +97,7 @@ public class AccessController : ControllerBase
         if (qrEntry.UsedScans >= qrEntry.TotalScans)
             qrEntry.Status = "expired";
 
+        // Thiết bị đã có subscription vẫn được vào nội dung, nhưng không cần cấp free listen.
         if (hasActiveSubscription)
         {
             _db.QrLogs.Add(new QrLog
@@ -154,9 +121,9 @@ public class AccessController : ControllerBase
             });
         }
 
-        var hasUsedFreeListenBefore = await _db.DeviceEntryGrants.AnyAsync(x =>
-            sameFingerprintDeviceIds.Contains(x.DeviceId));
+        var hasUsedFreeListenBefore = await _db.DeviceEntryGrants.AnyAsync(x => x.DeviceId == request.DeviceId);
 
+        // Free listen chỉ được cấp một lần cho chính thiết bị hiện tại.
         if (hasUsedFreeListenBefore)
         {
             _db.QrLogs.Add(new QrLog
@@ -180,6 +147,7 @@ public class AccessController : ControllerBase
             });
         }
 
+        // Tạo quyền nghe miễn phí đầu tiên cho thiết bị đủ điều kiện sau khi quét QR hợp lệ.
         var grant = new DeviceEntryGrant
         {
             QrEntryId = qrEntry.Id,
@@ -217,6 +185,7 @@ public class AccessController : ControllerBase
     [HttpGet("free-listen")]
     public async Task<IActionResult> GetFreeListenStatus(int deviceId)
     {
+        // Kiểm tra nhanh thiết bị còn quyền nghe qua subscription hoặc lượt miễn phí hay không.
         var device = await GetActiveDeviceAsync(deviceId);
         if (device == null)
             return Ok(new { isAllowed = false, freePlaysRemaining = 0 });
@@ -253,6 +222,7 @@ public class AccessController : ControllerBase
     [HttpPost("free-listen/consume")]
     public async Task<IActionResult> ConsumeFreeListen([FromBody] ConsumeFreeListenRequest request)
     {
+        // Tiêu thụ một lượt nghe miễn phí khi user bắt đầu phát nội dung audio.
         var device = await GetActiveDeviceAsync(request.DeviceId);
         if (device == null)
             return BadRequest(new { message = "Thiết bị không hợp lệ hoặc đã bị khóa" });

@@ -21,6 +21,7 @@ public class DevicesController : ControllerBase
     [HttpPost("register")]
     public async Task<IActionResult> Register([FromBody] DeviceRegisterRequest request)
     {
+        // Đăng ký hoặc nhận diện lại thiết bị khi PWA khởi tạo lần đầu hoặc quay lại sử dụng.
         if (request.DeviceUuid == Guid.Empty)
             return BadRequest(new { message = "Thiếu deviceUuid" });
 
@@ -28,36 +29,7 @@ public class DevicesController : ControllerBase
         var normalizedPlatform = request.Platform?.Trim()?.ToLowerInvariant();
         var normalizedName = request.Name?.Trim();
         var normalizedModel = request.Model?.Trim();
-        var fingerprint = request.Fingerprint?.Trim();
-
         var device = await _db.Devices.FirstOrDefaultAsync(x => x.DeviceUuid == request.DeviceUuid);
-
-        if (device == null && !string.IsNullOrWhiteSpace(fingerprint))
-        {
-            var samePlatformDevices = await _db.Devices
-                .Where(x => x.IsActive && x.Platform == normalizedPlatform)
-                .OrderByDescending(x => x.LastSeen ?? x.RegisteredAt)
-                .ToListAsync();
-
-            device = samePlatformDevices.FirstOrDefault(x => ExtractFingerprint(x.Metadata) == fingerprint);
-        }
-
-        if (device == null)
-        {
-            var subscribedDeviceIds = await _db.Subscriptions
-                .Where(x => x.ExpireAt > now)
-                .Select(x => x.DeviceId)
-                .ToListAsync();
-
-            device = await _db.Devices
-                .Where(x =>
-                    x.IsActive &&
-                    subscribedDeviceIds.Contains(x.Id) &&
-                    x.Platform == normalizedPlatform &&
-                    x.Name == normalizedName)
-                .OrderByDescending(x => x.LastSeen ?? x.RegisteredAt)
-                .FirstOrDefaultAsync();
-        }
 
         if (device == null)
         {
@@ -101,27 +73,10 @@ public class DevicesController : ControllerBase
         });
     }
 
-    private static string? ExtractFingerprint(string? metadata)
-    {
-        if (string.IsNullOrWhiteSpace(metadata))
-            return null;
-
-        try
-        {
-            using var document = JsonDocument.Parse(metadata);
-            if (document.RootElement.TryGetProperty("fingerprint", out var fingerprint))
-                return fingerprint.GetString();
-        }
-        catch
-        {
-        }
-
-        return null;
-    }
-
     [HttpDelete("{deviceId}")]
     public async Task<IActionResult> Delete(int deviceId)
     {
+        // User xóa thiết bị sẽ đồng thời làm hết hạn gói đang hoạt động trên thiết bị đó.
         var device = await _db.Devices.FirstOrDefaultAsync(x => x.Id == deviceId);
         if (device == null)
             return NotFound(new { message = "Không tìm thấy thiết bị" });
@@ -150,6 +105,7 @@ public class DevicesController : ControllerBase
     [HttpPost("{deviceId}/heartbeat")]
     public async Task<IActionResult> Heartbeat(int deviceId)
     {
+        // Heartbeat dùng để cập nhật lastSeen và phản ánh thiết bị vẫn đang hoạt động.
         var device = await _db.Devices.FirstOrDefaultAsync(x => x.Id == deviceId);
         if (device == null)
             return NotFound(new { message = "Không tìm thấy thiết bị" });
