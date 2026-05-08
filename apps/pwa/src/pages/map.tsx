@@ -20,7 +20,7 @@ import {
   setPendingPoiId,
   setReturnTo,
 } from "@/lib/device";
-import { calculateDistanceKm, type GeoPoint } from "@/lib/location";
+import { calculateDistanceKm, fetchRoadRoute, type GeoPoint } from "@/lib/location";
 
 type Poi = {
   id: string;
@@ -88,8 +88,10 @@ export default function MapPage() {
   const [subscriptionActive, setSubscriptionActive] = useState(false);
   const [freePlaysRemaining, setFreePlaysRemaining] = useState(0);
   const [activeTour, setActiveTour] = useState<TourSummary | null>(null);
+  const [tourRoutePath, setTourRoutePath] = useState<GeoPoint[]>([]);
   const [showDirections, setShowDirections] = useState(false);
   const [mapCenter, setMapCenter] = useState<GeoPoint | null>(null);
+  const [mapCenterSignal, setMapCenterSignal] = useState(0);
   const [hasLoadedMap, setHasLoadedMap] = useState(false);
   const [toast, setToast] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
@@ -142,6 +144,7 @@ export default function MapPage() {
             setSubscriptionActive(mapCache.subscriptionActive);
             setFreePlaysRemaining(mapCache.freePlaysRemaining);
             setActiveTour(mapCache.activeTour);
+            setTourRoutePath([]);
             setMapCenter(
               mapCache.userLocation ||
                 mapCache.mapCenter ||
@@ -199,6 +202,7 @@ export default function MapPage() {
           setActiveTour(activeTourResponse);
         } else {
           setActiveTour(null);
+          setTourRoutePath([]);
         }
 
         const targetPoiId = queryTourId
@@ -238,6 +242,7 @@ export default function MapPage() {
         setHasLoadedMap(true);
       } catch (error: any) {
         setActiveTour(null);
+        setTourRoutePath([]);
         setErrorMessage(error?.response?.data?.message || t("map.loadError"));
       }
     };
@@ -304,9 +309,49 @@ export default function MapPage() {
   const clearSelectedPoi = () => {
     setSelectedPoiId("");
     if (userLocation) {
-      setMapCenter(userLocation);
+      setMapCenter({ ...userLocation });
+      setMapCenterSignal((value) => value + 1);
     }
   };
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadTourRoute = async () => {
+      if (!activeTour || !pois.length) {
+        setTourRoutePath([]);
+        return;
+      }
+
+      const orderedTourPoints = pois.map((poi) => ({
+        latitude: poi.latitude,
+        longitude: poi.longitude,
+      }));
+      const routePoints = userLocation ? [{ ...userLocation }, ...orderedTourPoints] : orderedTourPoints;
+
+      if (routePoints.length < 2) {
+        setTourRoutePath([]);
+        return;
+      }
+
+      try {
+        const route = await fetchRoadRoute(routePoints);
+        if (!cancelled) {
+          setTourRoutePath(route);
+        }
+      } catch {
+        if (!cancelled) {
+          setTourRoutePath([]);
+        }
+      }
+    };
+
+    void loadTourRoute();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeTour, pois, userLocation]);
 
   const updatePoi = (poiId: string, updater: (poi: Poi) => Poi) => {
     setPois((current) => current.map((poi) => (poi.id === poiId ? updater(poi) : poi)));
@@ -351,6 +396,21 @@ export default function MapPage() {
         return accumulator;
       }, {});
   }, [activeTour]);
+
+  const tourFitPoints = useMemo(() => {
+    if (!activeTour) return [];
+
+    const points = pois.map((poi) => ({
+      latitude: poi.latitude,
+      longitude: poi.longitude,
+    }));
+
+    if (userLocation) {
+      return [{ ...userLocation }, ...points];
+    }
+
+    return points;
+  }, [activeTour, pois, userLocation]);
 
   const getTrackingCandidatePoi = (currentLocation: GeoPoint, now: number) => {
     const poiCooldownMs = 4 * 60 * 1000;
@@ -579,6 +639,9 @@ export default function MapPage() {
               userLocation={userLocation}
               heightClassName="h-full"
               markerLabels={tourMarkerLabels}
+              routePath={tourRoutePath}
+              fitPoints={tourFitPoints}
+              centerSignal={mapCenterSignal}
               onMapTap={() => {
                 if (!selectedPoiIdRef.current) return;
                 clearSelectedPoi();
@@ -595,10 +658,15 @@ export default function MapPage() {
         ) : null}
 
         {activeTour ? (
-          <div className="absolute left-4 right-4 z-20 rounded-[18px] border border-[#DBEAFE] bg-white/95 px-4 py-3 shadow-[0_10px_24px_rgba(15,91,215,0.12)] backdrop-blur-sm" style={{ top: "calc(env(safe-area-inset-top) + 88px)" }}>
+          <button
+            type="button"
+            onClick={() => router.push("/tours")}
+            className="absolute left-4 right-4 z-20 rounded-[18px] border border-[#DBEAFE] bg-white/95 px-4 py-3 text-left shadow-[0_10px_24px_rgba(15,91,215,0.12)] backdrop-blur-sm"
+            style={{ top: "calc(env(safe-area-inset-top) + 88px)" }}
+          >
             <p className="text-[16px] font-bold text-[#111827]">{activeTour.name}</p>
             <p className="mt-1 text-[12px] text-[#64748B]">{activeTour.poi_count} điểm theo thứ tự 1 đến {activeTour.poi_count}</p>
-          </div>
+          </button>
         ) : null}
 
         {!isTourMode ? (
@@ -652,7 +720,9 @@ export default function MapPage() {
           style={{ top: activeTour ? "calc(env(safe-area-inset-top) + 160px)" : "calc(env(safe-area-inset-top) + 190px)" }}
           onClick={() => {
             if (userLocation) {
-              clearSelectedPoi();
+              setSelectedPoiId("");
+              setMapCenter({ ...userLocation });
+              setMapCenterSignal((value) => value + 1);
             }
           }}
         >

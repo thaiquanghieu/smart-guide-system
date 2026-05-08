@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import ProtectedRoute from '@/components/ProtectedRoute'
 import Sidebar from '@/components/Sidebar'
 import apiClient from '@/lib/api'
-import { ChevronDown, ChevronUp, Eye, EyeOff, Map, Pencil, Plus, Save, Trash2, Upload, X } from 'lucide-react'
+import { Eye, EyeOff, Map, Pencil, Plus, Save, Trash2, Upload, X } from 'lucide-react'
 
 type PoiOption = {
   id: string
@@ -92,6 +92,29 @@ function calculateDistanceKm(
   return earthRadiusKm * c
 }
 
+async function fetchRoadRoute(points: { latitude?: number; longitude?: number }[]) {
+  const normalizedPoints = points.filter((point) => point.latitude && point.longitude)
+  if (normalizedPoints.length < 2) return []
+
+  const coordinates = normalizedPoints
+    .map((point) => `${point.longitude},${point.latitude}`)
+    .join(';')
+
+  const response = await fetch(
+    `https://router.project-osrm.org/route/v1/driving/${coordinates}?overview=full&geometries=geojson&steps=false`
+  )
+
+  if (!response.ok) {
+    throw new Error(`Route service failed with status ${response.status}`)
+  }
+
+  const data = await response.json()
+  const routeCoordinates = data?.routes?.[0]?.geometry?.coordinates
+  if (!Array.isArray(routeCoordinates)) return []
+
+  return routeCoordinates
+}
+
 export default function ToursPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -104,7 +127,7 @@ export default function ToursPage() {
   const [form, setForm] = useState<FormState>(emptyForm)
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
   const [errorMessage, setErrorMessage] = useState('')
-  const [expandedTourId, setExpandedTourId] = useState<number | null>(null)
+  const [listTour, setListTour] = useState<Tour | null>(null)
   const [selectedMapTour, setSelectedMapTour] = useState<Tour | null>(null)
 
   useEffect(() => {
@@ -348,29 +371,12 @@ export default function ToursPage() {
                           <div className="mt-5">
                             <button
                               type="button"
-                              onClick={() => setExpandedTourId((current) => current === tour.id ? null : tour.id)}
+                              onClick={() => setListTour(tour)}
                               className="inline-flex items-center gap-2 rounded-full bg-white/5 px-4 py-2 text-sm font-semibold text-sky-300 hover:bg-white/10"
                             >
-                              {expandedTourId === tour.id ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                              {expandedTourId === tour.id ? 'Thu gọn danh sách điểm' : `Hiện tất cả ${tour.poi_count} điểm`}
+                              Hiện tất cả {tour.poi_count} điểm
                             </button>
                           </div>
-
-                          {expandedTourId === tour.id ? (
-                            <div className="mt-4 space-y-3 rounded-[24px] border border-gray-700 bg-black/10 p-4">
-                              {tour.pois.map((poi, index) => (
-                                <div key={poi.poi_id} className="flex items-start gap-3 rounded-2xl border border-gray-700 bg-white/5 px-4 py-3">
-                                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-bold text-white">
-                                    {index + 1}
-                                  </div>
-                                  <div className="min-w-0">
-                                    <p className="truncate font-semibold text-white">{poi.poi_name}</p>
-                                    <p className="mt-1 text-sm text-gray-400">{poi.poi_address || poi.poi_category || poi.poi_id}</p>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          ) : null}
 
                           <div className="mt-6 flex flex-wrap items-center justify-between gap-4">
                             <div className="flex items-center gap-6 text-sm text-gray-400">
@@ -665,6 +671,10 @@ export default function ToursPage() {
       {selectedMapTour ? (
         <AdminTourMapModal tour={selectedMapTour} onClose={() => setSelectedMapTour(null)} />
       ) : null}
+
+      {listTour ? (
+        <AdminTourPoisModal tour={listTour} onClose={() => setListTour(null)} />
+      ) : null}
     </ProtectedRoute>
   )
 }
@@ -676,6 +686,7 @@ function AdminTourMapModal({ tour, onClose }: { tour: Tour; onClose: () => void 
   const routeLineRef = useRef<any>(null)
   const [leafletReady, setLeafletReady] = useState(false)
   const [showRoute, setShowRoute] = useState(false)
+  const [routeError, setRouteError] = useState('')
 
   useEffect(() => {
     let cancelled = false
@@ -747,9 +758,13 @@ function AdminTourMapModal({ tour, onClose }: { tour: Tour; onClose: () => void 
     markersRef.current = []
     routeLineRef.current?.remove?.()
     routeLineRef.current = null
+    setRouteError('')
 
     const bounds: any[] = []
-    const routePoints: [number, number][] = []
+    const routePoints = tour.pois
+      .filter((poi) => poi.latitude && poi.longitude)
+      .map((poi) => ({ latitude: poi.latitude, longitude: poi.longitude }))
+
     tour.pois.forEach((poi, index) => {
       if (!poi.latitude || !poi.longitude) return
       const icon = L.divIcon({
@@ -762,20 +777,38 @@ function AdminTourMapModal({ tour, onClose }: { tour: Tour; onClose: () => void 
       marker.bindPopup(`<strong>${index + 1}. ${poi.poi_name}</strong><br/>${poi.poi_address || poi.poi_category || poi.poi_id}`)
       markersRef.current.push(marker)
       bounds.push([poi.latitude, poi.longitude])
-      routePoints.push([poi.latitude, poi.longitude])
     })
-
-    if (showRoute && routePoints.length > 1) {
-      routeLineRef.current = L.polyline(routePoints, {
-        color: '#22C55E',
-        weight: 5,
-        opacity: 0.88,
-        lineJoin: 'round',
-      }).addTo(leafletMapRef.current)
-    }
 
     if (bounds.length) {
       leafletMapRef.current.fitBounds(bounds, { padding: [36, 36] })
+    }
+
+    if (!showRoute || routePoints.length < 2) return
+
+    let cancelled = false
+
+    void fetchRoadRoute(routePoints)
+      .then((roadCoordinates) => {
+        if (cancelled || !roadCoordinates.length || !leafletMapRef.current) return
+
+        routeLineRef.current = L.polyline(
+          roadCoordinates.map((point: [number, number]) => [point[1], point[0]]),
+          {
+            color: '#22C55E',
+            weight: 5,
+            opacity: 0.88,
+            lineJoin: 'round',
+          }
+        ).addTo(leafletMapRef.current)
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setRouteError('Không tải được đường bộ lúc này.')
+        }
+      })
+
+    return () => {
+      cancelled = true
     }
   }, [leafletReady, showRoute, tour])
 
@@ -786,6 +819,7 @@ function AdminTourMapModal({ tour, onClose }: { tour: Tour; onClose: () => void 
           <div>
             <h3 className="text-2xl font-bold text-white">{tour.name}</h3>
             <p className="mt-1 text-sm text-gray-400">Leaflet + OpenStreetMap, chỉ hiển thị các điểm thuộc tour theo thứ tự admin đã tạo.</p>
+            {routeError ? <p className="mt-2 text-sm text-amber-300">{routeError}</p> : null}
           </div>
           <div className="flex items-center gap-3">
             <button
@@ -820,6 +854,41 @@ function AdminTourMapModal({ tour, onClose }: { tour: Tour; onClose: () => void 
                 </div>
               ))}
             </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function AdminTourPoisModal({ tour, onClose }: { tour: Tour; onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/75 p-4">
+      <div className="w-full max-w-2xl overflow-hidden rounded-[28px] border border-gray-700 bg-secondary shadow-2xl">
+        <div className="flex items-start justify-between gap-4 border-b border-gray-700 px-6 py-5">
+          <div>
+            <h3 className="text-2xl font-bold text-white">{tour.name}</h3>
+            <p className="mt-1 text-sm text-gray-400">{tour.poi_count} điểm theo đúng thứ tự tour.</p>
+          </div>
+          <button type="button" onClick={onClose} className="rounded-full bg-dark p-2 text-gray-300 hover:text-white" aria-label="Đóng popup danh sách điểm">
+            <X size={18} />
+          </button>
+        </div>
+        <div className="max-h-[70vh] overflow-y-auto p-5">
+          <div className="space-y-3">
+            {tour.pois.map((poi, index) => (
+              <div key={poi.poi_id} className="rounded-2xl border border-gray-700 bg-white/5 px-4 py-3">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-bold text-white">
+                    {index + 1}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="truncate font-semibold text-white">{poi.poi_name}</p>
+                    <p className="mt-1 text-sm text-gray-400">{poi.poi_address || poi.poi_category || poi.poi_id}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </div>

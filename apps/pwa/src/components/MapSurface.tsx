@@ -19,6 +19,9 @@ type MapSurfaceProps = {
   userLocation?: GeoPoint | null;
   heightClassName?: string;
   markerLabels?: Record<string, string>;
+  routePath?: GeoPoint[];
+  fitPoints?: GeoPoint[];
+  centerSignal?: number;
   onSelectPoi?: (poiId: string) => void;
   onMapTap?: () => void;
 };
@@ -36,6 +39,9 @@ export default function MapSurface({
   userLocation,
   heightClassName = "h-full",
   markerLabels,
+  routePath = [],
+  fitPoints = [],
+  centerSignal = 0,
   onSelectPoi,
   onMapTap,
 }: MapSurfaceProps) {
@@ -43,8 +49,10 @@ export default function MapSurface({
   const leafletMapRef = useRef<any>(null);
   const markersRef = useRef<any[]>([]);
   const userMarkerRef = useRef<any>(null);
+  const routeLayerRef = useRef<any>(null);
   const lastSelectedPoiIdRef = useRef("");
   const lastCenterRef = useRef<GeoPoint | null>(null);
+  const lastCenterSignalRef = useRef(0);
   const [leafletReady, setLeafletReady] = useState(false);
   const [useFallbackMap, setUseFallbackMap] = useState(false);
   const [mapLoaded, setMapLoaded] = useState(false);
@@ -158,6 +166,12 @@ export default function MapSurface({
     }, 80);
 
     return () => {
+      routeLayerRef.current?.remove?.();
+      routeLayerRef.current = null;
+      if (userMarkerRef.current) {
+        userMarkerRef.current.remove();
+        userMarkerRef.current = null;
+      }
       map.remove();
       leafletMapRef.current = null;
     };
@@ -172,11 +186,37 @@ export default function MapSurface({
 
     const lastCenter = lastCenterRef.current;
     const movedMeters = lastCenter ? getDistanceMeters(lastCenter, center) : Infinity;
-    if (movedMeters < 12) return;
+    const forceCenter = centerSignal !== lastCenterSignalRef.current;
+    lastCenterSignalRef.current = centerSignal;
+    if (!forceCenter && movedMeters < 12) return;
 
     lastCenterRef.current = center;
-    map.panTo([center.latitude, center.longitude], { animate: movedMeters > 30 });
-  }, [center, leafletReady, selectedPoiId]);
+    map.flyTo([center.latitude, center.longitude], Math.max(map.getZoom() || 15, 15), {
+      animate: true,
+      duration: forceCenter ? 0.45 : movedMeters > 30 ? 0.45 : 0.25,
+    });
+  }, [center, centerSignal, leafletReady, selectedPoiId]);
+
+  useEffect(() => {
+    if (!leafletReady) return;
+
+    const map = leafletMapRef.current;
+    if (!map || !fitPoints.length) return;
+
+    if (fitPoints.length === 1) {
+      const point = fitPoints[0];
+      map.flyTo([point.latitude, point.longitude], Math.max(map.getZoom() || 15, 15), {
+        animate: true,
+        duration: 0.4,
+      });
+      return;
+    }
+
+    const bounds = window.L.latLngBounds(
+      fitPoints.map((point) => [point.latitude, point.longitude])
+    );
+    map.fitBounds(bounds, { padding: [44, 44] });
+  }, [fitPoints, leafletReady]);
 
   useEffect(() => {
     if (!leafletReady) return;
@@ -249,6 +289,29 @@ export default function MapSurface({
 
     userMarkerRef.current = window.L.marker([userLocation.latitude, userLocation.longitude], { icon }).addTo(map);
   }, [leafletReady, userLocation]);
+
+  useEffect(() => {
+    if (!leafletReady) return;
+
+    const map = leafletMapRef.current;
+    if (!map) return;
+
+    routeLayerRef.current?.remove?.();
+    routeLayerRef.current = null;
+
+    if (routePath.length < 2) return;
+
+    routeLayerRef.current = window.L.polyline(
+      routePath.map((point) => [point.latitude, point.longitude]),
+      {
+        color: "#16A34A",
+        weight: 5,
+        opacity: 0.88,
+        lineCap: "round",
+        lineJoin: "round",
+      }
+    ).addTo(map);
+  }, [leafletReady, routePath]);
 
   if (useFallbackMap) {
     return (

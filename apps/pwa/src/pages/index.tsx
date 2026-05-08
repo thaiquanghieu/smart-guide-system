@@ -69,6 +69,7 @@ export default function HomePage() {
   const [freePlaysRemaining, setFreePlaysRemaining] = useState(0);
   const [playingPoiId, setPlayingPoiId] = useState("");
   const [miniMapCenter, setMiniMapCenter] = useState<GeoPoint | null>(null);
+  const [miniMapCenterSignal, setMiniMapCenterSignal] = useState(0);
 
   useEffect(() => {
     const load = async () => {
@@ -389,6 +390,7 @@ export default function HomePage() {
                   pois={filteredPois}
                   userLocation={userLocation}
                   heightClassName="h-full"
+                  centerSignal={miniMapCenterSignal}
                   onMapTap={() => router.push("/map")}
                   onSelectPoi={(poiId) => router.push(`/map?poiId=${poiId}`)}
                 />
@@ -397,7 +399,8 @@ export default function HomePage() {
                   className="absolute right-3 top-3 z-20 flex h-[54px] w-[54px] items-center justify-center rounded-[18px] bg-white shadow-[0_10px_18px_rgba(0,0,0,0.08)]"
                   onClick={() => {
                     if (userLocation) {
-                      setMiniMapCenter(userLocation);
+                      setMiniMapCenter({ ...userLocation });
+                      setMiniMapCenterSignal((value) => value + 1);
                     }
                   }}
                 >
