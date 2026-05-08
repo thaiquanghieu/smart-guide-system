@@ -19,78 +19,89 @@ public class ToursController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetTours()
     {
-        var activeOwnerIds = await _db.Users
-            .Where(x => x.Role == "owner" && x.IsActive && x.AccountStatus == "active")
-            .Select(x => x.Id)
-            .ToListAsync();
-
-        var tours = await _db.Tours
-            .Where(x => x.IsPublished)
-            .OrderByDescending(x => x.UpdatedAt)
-            .ToListAsync();
-        var tourIds = tours.Select(x => x.Id).ToList();
-        var tourPois = tourIds.Count == 0
-            ? new List<TourPoi>()
-            : await _db.TourPois
-                .Where(x => tourIds.Contains(x.TourId))
-                .OrderBy(x => x.SortOrder)
-                .ToListAsync();
-        var poiIds = tourPois.Select(x => x.PoiId).Distinct().ToList();
-        var pois = poiIds.Count == 0
-            ? new List<Poi>()
-            : await _db.Pois
-                .Where(x => poiIds.Contains(x.Id) && x.Status == "approved" && (!x.OwnerId.HasValue || activeOwnerIds.Contains(x.OwnerId.Value)))
-                .ToListAsync();
-        var poiImages = poiIds.Count == 0
-            ? new List<PoiImage>()
-            : await _db.PoiImages
-                .Where(x => poiIds.Contains(x.PoiId))
-                .OrderBy(x => x.SortOrder)
+        try
+        {
+            var activeOwnerIds = await _db.Users
+                .Where(x => x.Role == "owner" && x.IsActive && x.AccountStatus == "active")
+                .Select(x => x.Id)
                 .ToListAsync();
 
-        var response = tours
-            .Select(tour =>
-            {
-                var items = tourPois
-                    .Where(x => x.TourId == tour.Id)
+            var tours = await _db.Tours
+                .Where(x => x.IsPublished)
+                .OrderByDescending(x => x.UpdatedAt)
+                .ToListAsync();
+            var tourIds = tours.Select(x => x.Id).ToList();
+            var tourPois = tourIds.Count == 0
+                ? new List<TourPoi>()
+                : await _db.TourPois
+                    .Where(x => tourIds.Contains(x.TourId))
                     .OrderBy(x => x.SortOrder)
-                    .Select(link =>
-                    {
-                        var poi = pois.FirstOrDefault(x => x.Id == link.PoiId);
-                        if (poi == null)
-                            return null;
+                    .ToListAsync();
+            var poiIds = tourPois.Select(x => x.PoiId).Distinct().ToList();
+            var pois = poiIds.Count == 0
+                ? new List<Poi>()
+                : await _db.Pois
+                    .Where(x => poiIds.Contains(x.Id) && x.Status == "approved" && (!x.OwnerId.HasValue || activeOwnerIds.Contains(x.OwnerId.Value)))
+                    .ToListAsync();
+            var poiImages = poiIds.Count == 0
+                ? new List<PoiImage>()
+                : await _db.PoiImages
+                    .Where(x => poiIds.Contains(x.PoiId))
+                    .OrderBy(x => x.SortOrder)
+                    .ToListAsync();
 
-                        return new TourPoiSummary
-                        {
-                            id = poi.Id,
-                            name = poi.Name,
-                            category = poi.Category,
-                            short_description = poi.ShortDescription,
-                            address = poi.Address,
-                            latitude = poi.Latitude,
-                            longitude = poi.Longitude,
-                            image = poiImages.FirstOrDefault(x => x.PoiId == poi.Id)?.ImageUrl,
-                            sort_order = link.SortOrder
-                        };
-                    })
-                    .Where(x => x != null)
-                    .Cast<TourPoiSummary>()
-                    .ToList();
-
-                return new
+            var response = tours
+                .Select(tour =>
                 {
-                    tour.Id,
-                    tour.Name,
-                    tour.Description,
-                    cover_image_url = tour.CoverImageUrl,
-                    poi_count = items.Count,
-                    pois = items
-                };
-            })
-            .Where(x => x.poi_count > 0)
-            .ToList();
+                    var items = tourPois
+                        .Where(x => x.TourId == tour.Id)
+                        .OrderBy(x => x.SortOrder)
+                        .Select(link =>
+                        {
+                            var poi = pois.FirstOrDefault(x => x.Id == link.PoiId);
+                            if (poi == null)
+                                return null;
 
-        return Ok(response);
+                            return new TourPoiSummary
+                            {
+                                id = poi.Id,
+                                name = poi.Name,
+                                category = poi.Category,
+                                short_description = poi.ShortDescription,
+                                address = poi.Address,
+                                latitude = poi.Latitude,
+                                longitude = poi.Longitude,
+                                image = poiImages.FirstOrDefault(x => x.PoiId == poi.Id)?.ImageUrl,
+                                sort_order = link.SortOrder
+                            };
+                        })
+                        .Where(x => x != null)
+                        .Cast<TourPoiSummary>()
+                        .ToList();
+
+                    return new
+                    {
+                        tour.Id,
+                        tour.Name,
+                        tour.Description,
+                        cover_image_url = tour.CoverImageUrl,
+                        poi_count = items.Count,
+                        pois = items
+                    };
+                })
+                .Where(x => x.poi_count > 0)
+                .ToList();
+
+            return Ok(response);
+        }
+        catch (Exception exception)
+        {
+            return StatusCode(500, new
+            {
+                message = "Không tải được tour. Kiểm tra backend Railway và migration tours/tour_pois.",
+                detail = exception.InnerException?.Message ?? exception.Message
+            });
+        }
     }
 
     private class TourPoiSummary

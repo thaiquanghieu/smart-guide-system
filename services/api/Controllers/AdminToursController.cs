@@ -10,10 +10,12 @@ namespace SmartGuideAPI.Controllers;
 public class AdminToursController : ControllerBase
 {
     private readonly AppDbContext _db;
+    private readonly IWebHostEnvironment _env;
 
-    public AdminToursController(AppDbContext db)
+    public AdminToursController(AppDbContext db, IWebHostEnvironment env)
     {
         _db = db;
+        _env = env;
     }
 
     [HttpGet]
@@ -23,30 +25,76 @@ public class AdminToursController : ControllerBase
         if (admin == null || admin.Role != "admin")
             return Forbid("Chỉ admin mới có quyền");
 
-        var tours = await _db.Tours
-            .OrderByDescending(x => x.UpdatedAt)
-            .ToListAsync();
-        var tourIds = tours.Select(x => x.Id).ToList();
-        var tourPois = tourIds.Count == 0
-            ? new List<TourPoi>()
-            : await _db.TourPois
-                .Where(x => tourIds.Contains(x.TourId))
-                .OrderBy(x => x.SortOrder)
+        try
+        {
+            var tours = await _db.Tours
+                .OrderByDescending(x => x.UpdatedAt)
                 .ToListAsync();
-        var poiIds = tourPois.Select(x => x.PoiId).Distinct().ToList();
-        var pois = poiIds.Count == 0
-            ? new List<Poi>()
-            : await _db.Pois
-                .Where(x => poiIds.Contains(x.Id))
-                .ToListAsync();
-        var poiImages = poiIds.Count == 0
-            ? new List<PoiImage>()
-            : await _db.PoiImages
-                .Where(x => poiIds.Contains(x.PoiId))
-                .OrderBy(x => x.SortOrder)
-                .ToListAsync();
+            var tourIds = tours.Select(x => x.Id).ToList();
+            var tourPois = tourIds.Count == 0
+                ? new List<TourPoi>()
+                : await _db.TourPois
+                    .Where(x => tourIds.Contains(x.TourId))
+                    .OrderBy(x => x.SortOrder)
+                    .ToListAsync();
+            var poiIds = tourPois.Select(x => x.PoiId).Distinct().ToList();
+            var pois = poiIds.Count == 0
+                ? new List<Poi>()
+                : await _db.Pois
+                    .Where(x => poiIds.Contains(x.Id))
+                    .ToListAsync();
+            var poiImages = poiIds.Count == 0
+                ? new List<PoiImage>()
+                : await _db.PoiImages
+                    .Where(x => poiIds.Contains(x.PoiId))
+                    .OrderBy(x => x.SortOrder)
+                    .ToListAsync();
 
-        return Ok(tours.Select(tour => BuildAdminTourResponse(tour, tourPois, pois, poiImages)));
+            return Ok(tours.Select(tour => BuildAdminTourResponse(tour, tourPois, pois, poiImages)));
+        }
+        catch (Exception exception)
+        {
+            return StatusCode(500, new
+            {
+                message = "Không tải được danh sách tour. Kiểm tra migration bảng tours/tour_pois trên Railway.",
+                detail = exception.InnerException?.Message ?? exception.Message
+            });
+        }
+    }
+
+    [HttpPost("uploads/cover")]
+    [RequestSizeLimit(10_000_000)]
+    public async Task<IActionResult> UploadCoverImage([FromForm] IFormFile? file, [FromQuery] int adminId)
+    {
+        var admin = await _db.Users.FindAsync(adminId);
+        if (admin == null || admin.Role != "admin")
+            return Forbid("Chỉ admin mới có thể upload ảnh");
+
+        if (file == null || file.Length <= 0)
+            return BadRequest(new { message = "Chưa chọn ảnh cover" });
+
+        if (file.Length > 5_000_000)
+            return BadRequest(new { message = "Ảnh cover vượt quá 5MB" });
+
+        var allowedExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ".jpg", ".jpeg", ".png", ".webp"
+        };
+
+        var extension = Path.GetExtension(file.FileName);
+        if (!allowedExtensions.Contains(extension))
+            return BadRequest(new { message = "Chỉ hỗ trợ JPG, PNG, WEBP" });
+
+        var uploadRoot = Path.Combine(_env.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot"), "images", "tours");
+        Directory.CreateDirectory(uploadRoot);
+
+        var fileName = $"{Guid.NewGuid():N}{extension.ToLowerInvariant()}";
+        var filePath = Path.Combine(uploadRoot, fileName);
+
+        await using var stream = System.IO.File.Create(filePath);
+        await file.CopyToAsync(stream);
+
+        return Ok(new { url = $"/images/tours/{fileName}" });
     }
 
     [HttpPost]
@@ -59,6 +107,8 @@ public class AdminToursController : ControllerBase
         var normalizedName = request.Name?.Trim();
         if (string.IsNullOrWhiteSpace(normalizedName))
             return BadRequest(new { message = "Tên tour là bắt buộc" });
+        if (string.IsNullOrWhiteSpace(request.CoverImageUrl))
+            return BadRequest(new { message = "Ảnh cover là bắt buộc" });
 
         var normalizedPoiIds = NormalizePoiIds(request.PoiIds);
         if (normalizedPoiIds.Count == 0)
@@ -77,23 +127,35 @@ public class AdminToursController : ControllerBase
         {
             Name = normalizedName,
             Description = request.Description?.Trim() ?? "",
-            CoverImageUrl = string.IsNullOrWhiteSpace(request.CoverImageUrl) ? null : request.CoverImageUrl.Trim(),
+            CoverImageUrl = request.CoverImageUrl!.Trim(),
             IsPublished = request.IsPublished,
             CreatedAt = now,
             UpdatedAt = now
         };
 
-        _db.Tours.Add(tour);
-        await _db.SaveChangesAsync();
-
-        _db.TourPois.AddRange(normalizedPoiIds.Select((poiId, index) => new TourPoi
+        try
         {
-            TourId = tour.Id,
-            PoiId = poiId,
-            SortOrder = index
-        }));
+            _db.Tours.Add(tour);
+            await _db.SaveChangesAsync();
 
-        await _db.SaveChangesAsync();
+            _db.TourPois.AddRange(normalizedPoiIds.Select((poiId, index) => new TourPoi
+            {
+                TourId = tour.Id,
+                PoiId = poiId,
+                SortOrder = index
+            }));
+
+            await _db.SaveChangesAsync();
+        }
+        catch (DbUpdateException exception)
+        {
+            return StatusCode(500, new
+            {
+                message = "Không lưu được tour vào DB. Kiểm tra migration/schema tours trên Railway.",
+                detail = exception.InnerException?.Message ?? exception.Message
+            });
+        }
+
         return await GetTourDetailInternalAsync(tour.Id);
     }
 
@@ -111,6 +173,8 @@ public class AdminToursController : ControllerBase
         var normalizedName = request.Name?.Trim();
         if (string.IsNullOrWhiteSpace(normalizedName))
             return BadRequest(new { message = "Tên tour là bắt buộc" });
+        if (string.IsNullOrWhiteSpace(request.CoverImageUrl))
+            return BadRequest(new { message = "Ảnh cover là bắt buộc" });
 
         var normalizedPoiIds = NormalizePoiIds(request.PoiIds);
         if (normalizedPoiIds.Count == 0)
@@ -126,22 +190,34 @@ public class AdminToursController : ControllerBase
 
         tour.Name = normalizedName;
         tour.Description = request.Description?.Trim() ?? "";
-        tour.CoverImageUrl = string.IsNullOrWhiteSpace(request.CoverImageUrl) ? null : request.CoverImageUrl.Trim();
+        tour.CoverImageUrl = request.CoverImageUrl!.Trim();
         tour.IsPublished = request.IsPublished;
         tour.UpdatedAt = DateTime.UtcNow;
 
-        var existingTourPois = await _db.TourPois.Where(x => x.TourId == tourId).ToListAsync();
-        _db.TourPois.RemoveRange(existingTourPois);
-        await _db.SaveChangesAsync();
-
-        _db.TourPois.AddRange(normalizedPoiIds.Select((poiId, index) => new TourPoi
+        try
         {
-            TourId = tourId,
-            PoiId = poiId,
-            SortOrder = index
-        }));
+            var existingTourPois = await _db.TourPois.Where(x => x.TourId == tourId).ToListAsync();
+            _db.TourPois.RemoveRange(existingTourPois);
+            await _db.SaveChangesAsync();
 
-        await _db.SaveChangesAsync();
+            _db.TourPois.AddRange(normalizedPoiIds.Select((poiId, index) => new TourPoi
+            {
+                TourId = tourId,
+                PoiId = poiId,
+                SortOrder = index
+            }));
+
+            await _db.SaveChangesAsync();
+        }
+        catch (DbUpdateException exception)
+        {
+            return StatusCode(500, new
+            {
+                message = "Không cập nhật được tour trong DB. Kiểm tra migration/schema tours trên Railway.",
+                detail = exception.InnerException?.Message ?? exception.Message
+            });
+        }
+
         return await GetTourDetailInternalAsync(tourId);
     }
 
@@ -211,6 +287,8 @@ public class AdminToursController : ControllerBase
                     sort_order = link.SortOrder,
                     poi_name = poi?.Name ?? link.PoiId,
                     poi_status = poi?.Status ?? "unknown",
+                    poi_category = poi?.Category ?? "",
+                    poi_address = poi?.Address ?? "",
                     image = poiImages.FirstOrDefault(x => x.PoiId == link.PoiId)?.ImageUrl
                 };
             })

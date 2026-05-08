@@ -4,7 +4,7 @@ CREATE TABLE IF NOT EXISTS tours (
   id serial PRIMARY KEY,
   name text NOT NULL,
   description text DEFAULT '',
-  cover_image_url text,
+  cover_image_url text NOT NULL,
   is_published boolean DEFAULT false,
   created_at timestamptz DEFAULT now(),
   updated_at timestamptz DEFAULT now()

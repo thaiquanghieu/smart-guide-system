@@ -39,7 +39,7 @@ export default function ToursPage() {
         const response = await apiClient.get("/tours");
         setTours(Array.isArray(response.data) ? response.data : []);
       } catch (error: any) {
-        setErrorMessage(error?.response?.data?.message || "Server connection failed.");
+        setErrorMessage(error?.response?.data?.message || error?.message || "Không tải được tour.");
       } finally {
         setLoading(false);
       }
