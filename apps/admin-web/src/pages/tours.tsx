@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import ProtectedRoute from '@/components/ProtectedRoute'
 import Sidebar from '@/components/Sidebar'
 import apiClient from '@/lib/api'
-import { Eye, EyeOff, Pencil, Plus, Save, Trash2, Upload, X } from 'lucide-react'
+import { Eye, EyeOff, Map, Pencil, Plus, Save, Trash2, Upload, X } from 'lucide-react'
 
 type PoiOption = {
   id: string
@@ -54,6 +54,7 @@ type FieldErrors = {
 }
 
 const API_ORIGIN = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5022/api').replace(/\/api\/?$/, '')
+const PWA_ORIGIN = (process.env.NEXT_PUBLIC_PWA_URL || 'http://localhost:3002').replace(/\/$/, '')
 
 const emptyForm: FormState = {
   id: null,
@@ -252,6 +253,12 @@ export default function ToursPage() {
     await loadData()
   }
 
+  const openTourMap = (tour: Tour) => {
+    const firstPoiId = tour.pois?.[0]?.poi_id
+    if (!firstPoiId) return
+    window.open(`${PWA_ORIGIN}/map?tourId=${encodeURIComponent(String(tour.id))}&poiId=${encodeURIComponent(firstPoiId)}`, '_blank', 'noopener,noreferrer')
+  }
+
   return (
     <ProtectedRoute>
       <div className="flex min-h-screen bg-dark">
@@ -325,6 +332,14 @@ export default function ToursPage() {
                           <div className="mt-5 flex items-center justify-between gap-3">
                             <p className="text-sm text-gray-500">{tour.poi_count} POI trong tour</p>
                             <div className="flex gap-2">
+                              <button
+                                type="button"
+                                onClick={() => openTourMap(tour)}
+                                className="inline-flex items-center gap-2 rounded-lg bg-emerald-500/15 px-4 py-2 font-semibold text-emerald-300 hover:bg-emerald-500/25"
+                              >
+                                <Map size={16} />
+                                Xem tour
+                              </button>
                               <button
                                 type="button"
                                 onClick={() => openEditModal(tour)}

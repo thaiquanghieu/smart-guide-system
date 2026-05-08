@@ -336,6 +336,17 @@ a {
   border: 2px solid rgba(255, 255, 255, 0.94);
 }
 
+.poi-marker-numbered::before {
+  display: none;
+}
+
+.poi-marker-numbered span {
+  transform: rotate(45deg);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+}
+
 .user-marker {
   width: 18px;
   height: 18px;

@@ -18,6 +18,7 @@ type MapSurfaceProps = {
   selectedPoiId?: string;
   userLocation?: GeoPoint | null;
   heightClassName?: string;
+  markerLabels?: Record<string, string>;
   onSelectPoi?: (poiId: string) => void;
   onMapTap?: () => void;
 };
@@ -34,6 +35,7 @@ export default function MapSurface({
   selectedPoiId,
   userLocation,
   heightClassName = "h-full",
+  markerLabels,
   onSelectPoi,
   onMapTap,
 }: MapSurfaceProps) {
@@ -187,11 +189,14 @@ export default function MapSurface({
 
     pois.forEach((poi) => {
       const isActive = poi.id === selectedPoiId;
+      const markerLabel = markerLabels?.[poi.id];
       const icon = window.L.divIcon({
         className: "",
-        html: `<div class="${isActive ? "poi-marker-active" : "poi-marker"}"></div>`,
-        iconSize: isActive ? [28, 28] : [16, 16],
-        iconAnchor: isActive ? [14, 26] : [8, 14],
+        html: markerLabel
+          ? `<div class="${isActive ? "poi-marker-active" : "poi-marker"} poi-marker-numbered"><span>${markerLabel}</span></div>`
+          : `<div class="${isActive ? "poi-marker-active" : "poi-marker"}"></div>`,
+        iconSize: markerLabel ? (isActive ? [34, 34] : [28, 28]) : isActive ? [28, 28] : [16, 16],
+        iconAnchor: markerLabel ? (isActive ? [17, 31] : [14, 26]) : isActive ? [14, 26] : [8, 14],
       });
 
       const marker = window.L.marker([poi.latitude, poi.longitude], { icon }).addTo(map);
@@ -203,7 +208,7 @@ export default function MapSurface({
       });
       markersRef.current.push(marker);
     });
-  }, [leafletReady, onSelectPoi, pois, selectedPoiId]);
+  }, [leafletReady, markerLabels, onSelectPoi, pois, selectedPoiId]);
 
   useEffect(() => {
     if (!leafletReady || !selectedPoiId) {

@@ -40,6 +40,20 @@ type Poi = {
   audios: { languageCode: string; languageName: string; scriptText: string }[];
 };
 
+type TourPoi = {
+  id: string;
+  name: string;
+  sort_order: number;
+};
+
+type TourSummary = {
+  id: number;
+  name: string;
+  description: string;
+  poi_count: number;
+  pois: TourPoi[];
+};
+
 let mapCache:
   | {
       hasLoaded: boolean;
@@ -68,6 +82,7 @@ export default function MapPage() {
   const [playingPoiId, setPlayingPoiId] = useState("");
   const [subscriptionActive, setSubscriptionActive] = useState(false);
   const [freePlaysRemaining, setFreePlaysRemaining] = useState(0);
+  const [activeTour, setActiveTour] = useState<TourSummary | null>(null);
   const [showDirections, setShowDirections] = useState(false);
   const [mapCenter, setMapCenter] = useState<GeoPoint | null>(null);
   const [hasLoadedMap, setHasLoadedMap] = useState(false);
@@ -103,6 +118,7 @@ export default function MapPage() {
     const load = async () => {
       try {
         const queryPoiId = typeof router.query.poiId === "string" ? router.query.poiId : "";
+        const queryTourId = typeof router.query.tourId === "string" ? router.query.tourId : "";
         const forceRefresh = shouldForceRefreshMap(router.query);
 
         if (forceRefresh) {
@@ -119,6 +135,7 @@ export default function MapPage() {
             setTrackingEnabled(false);
             setSubscriptionActive(mapCache.subscriptionActive);
             setFreePlaysRemaining(mapCache.freePlaysRemaining);
+            setActiveTour(null);
             setMapCenter(
               mapCache.userLocation ||
                 mapCache.mapCenter ||
@@ -145,22 +162,45 @@ export default function MapPage() {
         await ensureDeviceReady();
 
         const deviceId = getDeviceId();
-        const [poiResponse, accessResponse] = await Promise.all([
+        const requests: Promise<any>[] = [
           apiClient.get(`/pois?deviceId=${deviceId}&lang=${lang}`),
           apiClient.get(`/access/free-listen?deviceId=${deviceId}`),
-        ]);
+        ];
 
-        const items = translatePois<Poi>(poiResponse.data || [], lang);
+        if (queryTourId) {
+          requests.push(apiClient.get(`/tours/${queryTourId}`));
+        }
+
+        const [poiResponse, accessResponse, tourResponse] = await Promise.all(requests);
+
+        let items = translatePois<Poi>(poiResponse.data || [], lang);
         const hasActiveSubscription = !!accessResponse.data?.hasActiveSubscription;
         const remainingFreePlays = Number(accessResponse.data?.freePlaysRemaining || 0);
         const grantPoiId = String(accessResponse.data?.poiId || "");
         const targetPoiIdFromStorage = getTrackingTargetPoiId();
-        const targetPoiId = queryPoiId || targetPoiIdFromStorage || grantPoiId;
+        const activeTourResponse = tourResponse?.data as TourSummary | undefined;
+
+        if (activeTourResponse?.pois?.length) {
+          const orderedIds = activeTourResponse.pois
+            .slice()
+            .sort((left, right) => left.sort_order - right.sort_order)
+            .map((poi) => poi.id);
+          items = orderedIds
+            .map((poiId) => items.find((item) => item.id === poiId))
+            .filter(Boolean) as Poi[];
+          setActiveTour(activeTourResponse);
+        } else {
+          setActiveTour(null);
+        }
+
+        const targetPoiId = queryPoiId || targetPoiIdFromStorage || grantPoiId || activeTourResponse?.pois?.[0]?.id || "";
         qrTargetPoiRef.current = targetPoiId;
 
         if (!hasActiveSubscription && remainingFreePlays <= 0) {
           const poiId = targetPoiId;
-          const returnTo = poiId ? `/map?poiId=${encodeURIComponent(poiId)}` : "/map";
+          const returnTo = queryTourId
+            ? `/map?tourId=${encodeURIComponent(queryTourId)}${poiId ? `&poiId=${encodeURIComponent(poiId)}` : ""}`
+            : poiId ? `/map?poiId=${encodeURIComponent(poiId)}` : "/map";
           setReturnTo(returnTo);
           router.replace(`/paywall?returnTo=${encodeURIComponent(returnTo)}`);
           return;
@@ -184,12 +224,13 @@ export default function MapPage() {
         setTrackingEnabled(false);
         setHasLoadedMap(true);
       } catch (error: any) {
+        setActiveTour(null);
         setErrorMessage(error?.response?.data?.message || t("map.loadError"));
       }
     };
 
     load();
-  }, [lang, router, router.query.poiId, t]);
+  }, [lang, router, router.query.poiId, router.query.tourId, t]);
 
   useEffect(() => {
     if (!navigator.geolocation) return;
@@ -276,6 +317,26 @@ export default function MapPage() {
     return `${selectedPoi.distanceKm.toFixed(1).replace(".", ",")} km`;
   }, [selectedPoi]);
 
+  const buildMapReturnUrl = (poiId?: string) => {
+    const queryTourId = typeof router.query.tourId === "string" ? router.query.tourId : "";
+    if (queryTourId) {
+      return `/map?tourId=${encodeURIComponent(queryTourId)}${poiId ? `&poiId=${encodeURIComponent(poiId)}` : ""}`;
+    }
+    return poiId ? `/map?poiId=${encodeURIComponent(poiId)}` : "/map";
+  };
+
+  const tourMarkerLabels = useMemo(() => {
+    if (!activeTour?.pois?.length) return {};
+
+    return activeTour.pois
+      .slice()
+      .sort((left, right) => left.sort_order - right.sort_order)
+      .reduce<Record<string, string>>((accumulator, poi, index) => {
+        accumulator[poi.id] = String(index + 1);
+        return accumulator;
+      }, {});
+  }, [activeTour]);
+
   const getTrackingCandidatePoi = (currentLocation: GeoPoint, now: number) => {
     const poiCooldownMs = 4 * 60 * 1000;
 
@@ -319,8 +380,9 @@ export default function MapPage() {
     let playbackSucceeded = false;
 
     if (!subscriptionActive && freePlaysRemaining <= 0) {
-      setReturnTo(`/map?poiId=${targetPoi.id}`);
-      router.push(`/paywall?returnTo=${encodeURIComponent(`/map?poiId=${targetPoi.id}`)}`);
+      const returnTo = buildMapReturnUrl(targetPoi.id);
+      setReturnTo(returnTo);
+      router.push(`/paywall?returnTo=${encodeURIComponent(returnTo)}`);
       return false;
     }
 
@@ -364,8 +426,9 @@ export default function MapPage() {
       setFreePlaysRemaining((value) => Math.max(0, value - 1));
       if (shouldRedirectToPaywallAfterFree) {
         clearPendingPoiId();
-        setReturnTo(`/map?poiId=${targetPoi.id}`);
-        router.push(`/paywall?returnTo=${encodeURIComponent(`/map?poiId=${targetPoi.id}`)}`);
+        const returnTo = buildMapReturnUrl(targetPoi.id);
+        setReturnTo(returnTo);
+        router.push(`/paywall?returnTo=${encodeURIComponent(returnTo)}`);
       }
     }
 
@@ -500,6 +563,7 @@ export default function MapPage() {
               selectedPoiId={selectedPoiId}
               userLocation={userLocation}
               heightClassName="h-full"
+              markerLabels={tourMarkerLabels}
               onMapTap={() => {
                 if (!selectedPoiIdRef.current) return;
                 clearSelectedPoi();
@@ -705,8 +769,9 @@ export default function MapPage() {
                   }
 
                   if (!subscriptionActive && freePlaysRemaining <= 0) {
-                    setReturnTo(`/map?poiId=${selectedPoi.id}`);
-                    router.push(`/paywall?returnTo=${encodeURIComponent(`/map?poiId=${selectedPoi.id}`)}`);
+                    const returnTo = buildMapReturnUrl(selectedPoi.id);
+                    setReturnTo(returnTo);
+                    router.push(`/paywall?returnTo=${encodeURIComponent(returnTo)}`);
                     return;
                   }
 
@@ -732,6 +797,14 @@ export default function MapPage() {
                 {t("map.detail")}
               </button>
             </div>
+          </div>
+        ) : null}
+
+        {activeTour ? (
+          <div className="absolute left-4 right-4 top-[calc(env(safe-area-inset-top)+150px)] z-20 rounded-[18px] border border-[#DBEAFE] bg-white/95 px-4 py-3 shadow-[0_10px_24px_rgba(15,91,215,0.12)] backdrop-blur-sm">
+            <p className="text-[12px] font-bold uppercase tracking-[0.2em] text-[#0F5BD7]">Tour</p>
+            <p className="mt-1 text-[16px] font-bold text-[#111827]">{activeTour.name}</p>
+            <p className="mt-1 text-[12px] text-[#64748B]">{activeTour.poi_count} điểm theo thứ tự 1 đến {activeTour.poi_count}</p>
           </div>
         ) : null}
 

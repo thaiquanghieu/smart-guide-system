@@ -120,7 +120,7 @@ export default function ToursPage() {
                   {firstPoiId ? (
                     <button
                       type="button"
-                      onClick={() => router.push(`/detail?poiId=${encodeURIComponent(firstPoiId)}`)}
+                      onClick={() => router.push(`/map?tourId=${encodeURIComponent(String(tour.id))}&poiId=${encodeURIComponent(firstPoiId)}`)}
                       className="w-full rounded-[16px] bg-[#0F5BD7] px-4 py-4 text-[15px] font-bold text-white shadow-[0_14px_30px_rgba(15,91,215,0.22)]"
                       suppressHydrationWarning
                     >
