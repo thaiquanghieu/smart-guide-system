@@ -7,6 +7,8 @@ CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 -- =========================
 DROP TABLE IF EXISTS listen_logs CASCADE;
 DROP TABLE IF EXISTS favorites CASCADE;
+DROP TABLE IF EXISTS tour_pois CASCADE;
+DROP TABLE IF EXISTS tours CASCADE;
 DROP TABLE IF EXISTS qr_logs CASCADE;
 DROP TABLE IF EXISTS qr_entries CASCADE;
 DROP TABLE IF EXISTS device_entry_grants CASCADE;
@@ -91,6 +93,27 @@ CREATE TABLE pois (
   longitude double precision NOT NULL,
   created_at timestamptz DEFAULT now(),
   updated_at timestamptz DEFAULT now()
+);
+
+-- =========================
+-- TOURS
+-- =========================
+CREATE TABLE tours (
+  id serial PRIMARY KEY,
+  name text NOT NULL,
+  description text DEFAULT '',
+  cover_image_url text,
+  is_published boolean DEFAULT false,
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+
+CREATE TABLE tour_pois (
+  id serial PRIMARY KEY,
+  tour_id integer NOT NULL REFERENCES tours(id) ON DELETE CASCADE,
+  poi_id text NOT NULL REFERENCES pois(id) ON DELETE CASCADE,
+  sort_order integer DEFAULT 0,
+  UNIQUE (tour_id, poi_id)
 );
 
 -- =========================
@@ -309,6 +332,8 @@ CREATE INDEX IF NOT EXISTS idx_pois_lat_lon ON pois (latitude, longitude);
 CREATE INDEX IF NOT EXISTS idx_devices_last_seen ON devices (last_seen);
 CREATE INDEX IF NOT EXISTS idx_devices_is_active ON devices (is_active);
 CREATE INDEX IF NOT EXISTS idx_devices_uuid ON devices (device_uuid);
+CREATE INDEX IF NOT EXISTS idx_tour_pois_tour_id ON tour_pois (tour_id);
+CREATE INDEX IF NOT EXISTS idx_tour_pois_poi_id ON tour_pois (poi_id);
 CREATE INDEX IF NOT EXISTS idx_qr_entries_owner_id ON qr_entries (owner_id);
 CREATE INDEX IF NOT EXISTS idx_qr_entries_poi_id ON qr_entries (poi_id);
 CREATE INDEX IF NOT EXISTS idx_qr_entries_status ON qr_entries (status);

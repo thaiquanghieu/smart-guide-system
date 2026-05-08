@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { useAppI18n } from "@/lib/i18n";
+import { Route } from "lucide-react";
 
 const items = [
   { href: "/", labelKey: "nav.home", icon: "home.png", activeIcon: "home_active.png" },
+  { href: "/tours", labelKey: "nav.tours", lucideIcon: Route },
   { href: "/map", labelKey: "nav.map", icon: "map.png", activeIcon: "map_active.png" },
   { href: "/profile", labelKey: "nav.profile", icon: "account.png", activeIcon: "account_active.png" },
 ];
@@ -17,14 +19,21 @@ export default function BottomNav() {
       <div className="mx-auto flex w-full max-w-[540px] items-center justify-around px-6">
         {items.map((item) => {
           const active = router.pathname === item.href;
+          const LucideIcon = item.lucideIcon;
 
           return (
             <Link key={item.href} href={item.href} scroll={false} className="flex min-w-[72px] flex-col items-center gap-1 py-[6px]">
-              <img
-                src={`/assets/${active ? item.activeIcon : item.icon}`}
-                alt={t(item.labelKey)}
-                className="h-6 w-6 object-contain"
-              />
+              {LucideIcon ? (
+                <div className={`flex h-6 w-6 items-center justify-center rounded-full ${active ? "text-[#0F5BD7]" : "text-[#9CA3AF]"}`}>
+                  <LucideIcon className="h-5 w-5" strokeWidth={2.2} />
+                </div>
+              ) : (
+                <img
+                  src={`/assets/${active ? item.activeIcon : item.icon}`}
+                  alt={t(item.labelKey)}
+                  className="h-6 w-6 object-contain"
+                />
+              )}
               <span
                 className={`text-[12px] ${active ? "font-semibold text-[#0F5BD7]" : "text-[#9CA3AF]"}`}
                 suppressHydrationWarning

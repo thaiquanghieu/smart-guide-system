@@ -8,6 +8,8 @@ public class AppDbContext : DbContext
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
     public DbSet<Poi> Pois => Set<Poi>();
+    public DbSet<Tour> Tours => Set<Tour>();
+    public DbSet<TourPoi> TourPois => Set<TourPoi>();
     public DbSet<User> Users => Set<User>();
     public DbSet<Device> Devices => Set<Device>();
     public DbSet<DeviceEntryGrant> DeviceEntryGrants => Set<DeviceEntryGrant>();
@@ -27,6 +29,8 @@ public class AppDbContext : DbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<Poi>().ToTable("pois");
+        modelBuilder.Entity<Tour>().ToTable("tours");
+        modelBuilder.Entity<TourPoi>().ToTable("tour_pois");
         modelBuilder.Entity<PoiImage>().ToTable("poi_images");
         modelBuilder.Entity<PoiTranslation>().ToTable("poi_translations");
         modelBuilder.Entity<User>().ToTable("users");
@@ -47,6 +51,10 @@ public class AppDbContext : DbContext
         // unique favorite (tránh trùng)
         modelBuilder.Entity<Favorite>()
             .HasIndex(x => new { x.DeviceId, x.PoiId })
+            .IsUnique();
+
+        modelBuilder.Entity<TourPoi>()
+            .HasIndex(x => new { x.TourId, x.PoiId })
             .IsUnique();
     }
 }
