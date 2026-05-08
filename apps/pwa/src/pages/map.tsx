@@ -56,6 +56,7 @@ type TourSummary = {
 
 let mapCache:
   | {
+      modeKey: string;
       hasLoaded: boolean;
       pois: Poi[];
       searchText: string;
@@ -63,6 +64,7 @@ let mapCache:
       subscriptionActive: boolean;
       freePlaysRemaining: number;
       mapCenter: GeoPoint | null;
+      activeTour: TourSummary | null;
     }
   | null = null;
 
@@ -74,6 +76,8 @@ export default function MapPage() {
   const router = useRouter();
   const { t, lang } = useAppI18n();
   const isTourMode = typeof router.query.tourId === "string" && router.query.tourId.length > 0;
+  const tourId = typeof router.query.tourId === "string" ? router.query.tourId : "";
+  const modeKey = tourId ? `tour:${tourId}` : "default";
   const [pois, setPois] = useState<Poi[]>([]);
   const [selectedPoiId, setSelectedPoiId] = useState("");
   const [searchText, setSearchText] = useState("");
@@ -120,6 +124,7 @@ export default function MapPage() {
       try {
         const queryPoiId = typeof router.query.poiId === "string" ? router.query.poiId : "";
         const queryTourId = typeof router.query.tourId === "string" ? router.query.tourId : "";
+        const currentModeKey = queryTourId ? `tour:${queryTourId}` : "default";
         const forceRefresh = shouldForceRefreshMap(router.query);
 
         if (forceRefresh) {
@@ -127,7 +132,7 @@ export default function MapPage() {
         }
 
         if (mapCache) {
-          if (!mapCache.hasLoaded) {
+          if (!mapCache.hasLoaded || mapCache.modeKey !== currentModeKey) {
             mapCache = null;
           } else {
             setPois(translatePois<Poi>(mapCache.pois, lang));
@@ -136,7 +141,7 @@ export default function MapPage() {
             setTrackingEnabled(false);
             setSubscriptionActive(mapCache.subscriptionActive);
             setFreePlaysRemaining(mapCache.freePlaysRemaining);
-            setActiveTour(null);
+            setActiveTour(mapCache.activeTour);
             setMapCenter(
               mapCache.userLocation ||
                 mapCache.mapCenter ||
@@ -270,6 +275,7 @@ export default function MapPage() {
     if (!hasLoadedMap) return;
 
     mapCache = {
+      modeKey,
       hasLoaded: !errorMessage && pois.length > 0,
       pois,
       searchText,
@@ -277,8 +283,9 @@ export default function MapPage() {
       subscriptionActive,
       freePlaysRemaining,
       mapCenter,
+      activeTour,
     };
-  }, [errorMessage, freePlaysRemaining, hasLoadedMap, mapCenter, pois, searchText, subscriptionActive, userLocation]);
+  }, [activeTour, errorMessage, freePlaysRemaining, hasLoadedMap, mapCenter, modeKey, pois, searchText, subscriptionActive, userLocation]);
 
   const enrichedPois = useMemo(() => {
     return pois.map((poi) => ({
@@ -587,6 +594,13 @@ export default function MapPage() {
           </div>
         ) : null}
 
+        {activeTour ? (
+          <div className="absolute left-4 right-4 z-20 rounded-[18px] border border-[#DBEAFE] bg-white/95 px-4 py-3 shadow-[0_10px_24px_rgba(15,91,215,0.12)] backdrop-blur-sm" style={{ top: "calc(env(safe-area-inset-top) + 88px)" }}>
+            <p className="text-[16px] font-bold text-[#111827]">{activeTour.name}</p>
+            <p className="mt-1 text-[12px] text-[#64748B]">{activeTour.poi_count} điểm theo thứ tự 1 đến {activeTour.poi_count}</p>
+          </div>
+        ) : null}
+
         {!isTourMode ? (
           <div className="absolute inset-x-5 z-20" style={{ top: "calc(env(safe-area-inset-top) + 92px)" }}>
             <SearchBar
@@ -635,7 +649,7 @@ export default function MapPage() {
         <button
           type="button"
           className="absolute right-4 z-30 flex h-[54px] w-[54px] items-center justify-center rounded-[18px] bg-white shadow-[0_10px_18px_rgba(0,0,0,0.08)]"
-          style={{ top: "calc(env(safe-area-inset-top) + 190px)" }}
+          style={{ top: activeTour ? "calc(env(safe-area-inset-top) + 160px)" : "calc(env(safe-area-inset-top) + 190px)" }}
           onClick={() => {
             if (userLocation) {
               clearSelectedPoi();
@@ -809,15 +823,6 @@ export default function MapPage() {
             </div>
           </div>
         ) : null}
-
-        {activeTour ? (
-          <div className="absolute left-4 right-4 top-[calc(env(safe-area-inset-top)+150px)] z-20 rounded-[18px] border border-[#DBEAFE] bg-white/95 px-4 py-3 shadow-[0_10px_24px_rgba(15,91,215,0.12)] backdrop-blur-sm">
-            <p className="text-[12px] font-bold uppercase tracking-[0.2em] text-[#0F5BD7]">Tour</p>
-            <p className="mt-1 text-[16px] font-bold text-[#111827]">{activeTour.name}</p>
-            <p className="mt-1 text-[12px] text-[#64748B]">{activeTour.poi_count} điểm theo thứ tự 1 đến {activeTour.poi_count}</p>
-          </div>
-        ) : null}
-
         {errorMessage ? (
           <div className="absolute inset-x-4 bottom-[116px] z-20 rounded-[18px] bg-white px-4 py-4 text-[14px] text-[#DC2626] shadow-[0_10px_24px_rgba(0,0,0,0.08)]">
             {errorMessage}

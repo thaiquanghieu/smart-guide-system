@@ -61,10 +61,7 @@ export default function ToursPage() {
         <AppHeader />
 
         <section className="space-y-1">
-          <p className="text-[12px] font-bold text-[#0F5BD7]" suppressHydrationWarning>
-            {t("nav.tours")}
-          </p>
-          <h2 className="max-w-[320px] text-[27px] font-bold leading-[1.18] text-[#0F5BD7]" suppressHydrationWarning>
+          <h2 className="max-w-[320px] text-[27px] font-bold leading-[1.18] text-[#111827]" suppressHydrationWarning>
             {t("tours.title")}
           </h2>
           <p className="max-w-[360px] text-[14px] leading-6 text-[#6B7280]" suppressHydrationWarning>
@@ -105,7 +102,7 @@ export default function ToursPage() {
                   <p className="text-[14px] leading-6 text-[#5B6474]">{tour.description || t("tours.subtitle")}</p>
 
                   <div className="space-y-3">
-                    {tour.pois.slice(0, 3).map((poi, index) => (
+                    {tour.pois.slice(0, 1).map((poi, index) => (
                       <div key={poi.id} className="flex items-start gap-3 rounded-[18px] border border-[#E6EEF8] bg-[#F8FBFF] px-4 py-3">
                         <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#0F5BD7] text-[12px] font-bold text-white">
                           {index + 1}
@@ -118,7 +115,7 @@ export default function ToursPage() {
                     ))}
                   </div>
 
-                  {tour.pois.length > 3 ? (
+                  {tour.pois.length > 1 ? (
                     <button
                       type="button"
                       onClick={() => setExpandedTour(tour)}
@@ -151,7 +148,6 @@ export default function ToursPage() {
           <div className="absolute bottom-0 left-0 right-0 mx-auto max-h-[78vh] max-w-[540px] rounded-t-[28px] bg-white p-5 animate-sheet-up" onClick={(event) => event.stopPropagation()}>
             <div className="flex items-start justify-between gap-4">
               <div>
-                <p className="text-[12px] font-bold uppercase tracking-[0.22em] text-[#0F5BD7]">{t("nav.tours")}</p>
                 <h3 className="mt-2 text-[22px] font-bold text-[#111827]">{expandedTour.name}</h3>
               </div>
               <button type="button" onClick={() => setExpandedTour(null)} className="flex h-10 w-10 items-center justify-center rounded-full bg-[#F3F7FF] text-[#0F5BD7]">

@@ -11,6 +11,8 @@ type PoiOption = {
   address?: string
   category?: string
   shortDescription?: string
+  latitude?: number
+  longitude?: number
   listenedCount: number
   ratingAvg: number
   images: string[]
@@ -72,6 +74,24 @@ function mediaUrl(url?: string) {
   return `${API_ORIGIN}${url.startsWith('/') ? url : `/${url}`}`
 }
 
+function calculateDistanceKm(
+  from?: { latitude?: number; longitude?: number },
+  to?: { latitude?: number; longitude?: number }
+) {
+  if (!from?.latitude || !from?.longitude || !to?.latitude || !to?.longitude) return null
+  const toRadians = (value: number) => (value * Math.PI) / 180
+  const earthRadiusKm = 6371
+  const latDelta = toRadians((to.latitude || 0) - (from.latitude || 0))
+  const lngDelta = toRadians((to.longitude || 0) - (from.longitude || 0))
+  const lat1 = toRadians(from.latitude || 0)
+  const lat2 = toRadians(to.latitude || 0)
+  const a =
+    Math.sin(latDelta / 2) * Math.sin(latDelta / 2) +
+    Math.cos(lat1) * Math.cos(lat2) * Math.sin(lngDelta / 2) * Math.sin(lngDelta / 2)
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+  return earthRadiusKm * c
+}
+
 export default function ToursPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -105,6 +125,8 @@ export default function ToursPage() {
           address: poi.address || '',
           category: poi.category || '',
           shortDescription: poi.shortDescription || poi.short_description || '',
+          latitude: Number(poi.latitude ?? 0),
+          longitude: Number(poi.longitude ?? 0),
           listenedCount: Number(poi.listened_count ?? poi.listenedCount ?? 0),
           ratingAvg: Number(poi.rating_avg ?? poi.ratingAvg ?? 0),
           images: Array.isArray(poi.images) ? poi.images.filter(Boolean) : [],
@@ -323,34 +345,16 @@ export default function ToursPage() {
                             </span>
                           </div>
 
-                          <div className="mt-5 grid gap-3 md:grid-cols-2">
-                            {tour.pois.slice(0, 3).map((poi, index) => (
-                              <div key={poi.poi_id} className="rounded-2xl border border-gray-700 bg-white/5 px-4 py-3">
-                                <div className="flex items-start gap-3">
-                                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-bold text-white">
-                                    {index + 1}
-                                  </div>
-                                  <div className="min-w-0">
-                                    <p className="truncate font-semibold text-white">{poi.poi_name}</p>
-                                    <p className="mt-1 text-sm text-gray-400">{poi.poi_address || poi.poi_category || poi.poi_id}</p>
-                                  </div>
-                                </div>
-                              </div>
-                            ))}
+                          <div className="mt-5">
+                            <button
+                              type="button"
+                              onClick={() => setExpandedTourId((current) => current === tour.id ? null : tour.id)}
+                              className="inline-flex items-center gap-2 rounded-full bg-white/5 px-4 py-2 text-sm font-semibold text-sky-300 hover:bg-white/10"
+                            >
+                              {expandedTourId === tour.id ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                              {expandedTourId === tour.id ? 'Thu gọn danh sách điểm' : `Hiện tất cả ${tour.poi_count} điểm`}
+                            </button>
                           </div>
-
-                          {tour.pois.length > 3 ? (
-                            <div className="mt-3">
-                              <button
-                                type="button"
-                                onClick={() => setExpandedTourId((current) => current === tour.id ? null : tour.id)}
-                                className="inline-flex items-center gap-2 rounded-full bg-white/5 px-4 py-2 text-sm font-semibold text-sky-300 hover:bg-white/10"
-                              >
-                                {expandedTourId === tour.id ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                                {expandedTourId === tour.id ? 'Thu gọn danh sách điểm' : `... Xem tất cả ${tour.poi_count} điểm`}
-                              </button>
-                            </div>
-                          ) : null}
 
                           {expandedTourId === tour.id ? (
                             <div className="mt-4 space-y-3 rounded-[24px] border border-gray-700 bg-black/10 p-4">
@@ -509,25 +513,38 @@ export default function ToursPage() {
                       {selectedPoiDetails.length === 0 ? (
                         <p className="text-sm text-gray-500">Chưa chọn điểm nào cho tour.</p>
                       ) : (
-                        selectedPoiDetails.map((poi, index) => (
-                          <div key={poi.id} className="flex items-center gap-3 rounded-xl border border-gray-700 bg-secondary px-3 py-3">
-                            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-bold text-white">
-                              {index + 1}
+                        selectedPoiDetails.map((poi, index) => {
+                          const previousPoi = index > 0 ? selectedPoiDetails[index - 1] : null
+                          const distanceFromPrevious = calculateDistanceKm(
+                            previousPoi ? { latitude: previousPoi.latitude, longitude: previousPoi.longitude } : undefined,
+                            { latitude: poi.latitude, longitude: poi.longitude }
+                          )
+                          return (
+                            <div key={poi.id} className="flex items-center gap-3 rounded-xl border border-gray-700 bg-secondary px-3 py-3">
+                              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-bold text-white">
+                                {index + 1}
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <p className="truncate font-semibold text-white">{poi.name}</p>
+                                <p className="mt-1 truncate text-xs text-gray-400">{poi.address || poi.category || poi.id}</p>
+                                {distanceFromPrevious != null ? (
+                                  <p className="mt-1 text-[11px] font-semibold text-sky-300">
+                                    Cách điểm trước: {distanceFromPrevious.toFixed(2)} km
+                                  </p>
+                                ) : index === 0 ? (
+                                  <p className="mt-1 text-[11px] font-semibold text-sky-300">Điểm bắt đầu của tour</p>
+                                ) : null}
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => removeSelectedPoi(poi.id)}
+                                className="rounded-full bg-red-500/15 p-2 text-red-300 hover:bg-red-500/25"
+                                aria-label="Bỏ khỏi tour"
+                              >
+                                <X size={14} />
+                              </button>
                             </div>
-                            <div className="min-w-0 flex-1">
-                              <p className="truncate font-semibold text-white">{poi.name}</p>
-                              <p className="mt-1 truncate text-xs text-gray-400">{poi.address || poi.category || poi.id}</p>
-                            </div>
-                            <button
-                              type="button"
-                              onClick={() => removeSelectedPoi(poi.id)}
-                              className="rounded-full bg-red-500/15 p-2 text-red-300 hover:bg-red-500/25"
-                              aria-label="Bỏ khỏi tour"
-                            >
-                              <X size={14} />
-                            </button>
-                          </div>
-                        ))
+                          )})
                       )}
                     </div>
                     {fieldErrors.poiIds ? <p className="mt-2 text-sm text-red-300">{fieldErrors.poiIds}</p> : null}
@@ -572,6 +589,19 @@ export default function ToursPage() {
                   ) : filteredPois.map((poi) => {
                     const selectedIndex = form.poiIds.indexOf(poi.id)
                     const isSelected = selectedIndex >= 0
+                    const previousSelectedPoi = selectedIndex > 0
+                      ? poiOptions.find((item) => item.id === form.poiIds[selectedIndex - 1])
+                      : null
+                    const lastChosenPoi = form.poiIds.length
+                      ? poiOptions.find((item) => item.id === form.poiIds[form.poiIds.length - 1])
+                      : null
+                    const referencePoi = isSelected ? previousSelectedPoi : lastChosenPoi
+                    const distanceFromReference = referencePoi
+                      ? calculateDistanceKm(
+                          { latitude: referencePoi.latitude, longitude: referencePoi.longitude },
+                          { latitude: poi.latitude, longitude: poi.longitude }
+                        )
+                      : null
                     return (
                       <button
                         key={poi.id}
@@ -613,6 +643,12 @@ export default function ToursPage() {
                               <span className="rounded-full bg-secondary px-3 py-1">{poi.listenedCount} lượt nghe</span>
                               <span className="rounded-full bg-secondary px-3 py-1">★ {poi.ratingAvg.toFixed(1)}</span>
                               <span className="rounded-full bg-secondary px-3 py-1">ID: {poi.id}</span>
+                              {distanceFromReference != null ? (
+                                <span className="rounded-full bg-sky-500/15 px-3 py-1 text-sky-300">
+                                  {isSelected ? 'Cách điểm trước ' : 'Từ điểm cuối hiện tại '}
+                                  {distanceFromReference.toFixed(2)} km
+                                </span>
+                              ) : null}
                             </div>
                           </div>
                         </div>
@@ -637,7 +673,9 @@ function AdminTourMapModal({ tour, onClose }: { tour: Tour; onClose: () => void 
   const mapRef = useRef<HTMLDivElement | null>(null)
   const leafletMapRef = useRef<any>(null)
   const markersRef = useRef<any[]>([])
+  const routeLineRef = useRef<any>(null)
   const [leafletReady, setLeafletReady] = useState(false)
+  const [showRoute, setShowRoute] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -695,6 +733,8 @@ function AdminTourMapModal({ tour, onClose }: { tour: Tour; onClose: () => void 
     setTimeout(() => map.invalidateSize(), 60)
 
     return () => {
+      routeLineRef.current?.remove?.()
+      routeLineRef.current = null
       map.remove()
       leafletMapRef.current = null
     }
@@ -705,8 +745,11 @@ function AdminTourMapModal({ tour, onClose }: { tour: Tour; onClose: () => void 
     const L = (window as any).L
     markersRef.current.forEach((marker) => marker.remove())
     markersRef.current = []
+    routeLineRef.current?.remove?.()
+    routeLineRef.current = null
 
     const bounds: any[] = []
+    const routePoints: [number, number][] = []
     tour.pois.forEach((poi, index) => {
       if (!poi.latitude || !poi.longitude) return
       const icon = L.divIcon({
@@ -719,12 +762,22 @@ function AdminTourMapModal({ tour, onClose }: { tour: Tour; onClose: () => void 
       marker.bindPopup(`<strong>${index + 1}. ${poi.poi_name}</strong><br/>${poi.poi_address || poi.poi_category || poi.poi_id}`)
       markersRef.current.push(marker)
       bounds.push([poi.latitude, poi.longitude])
+      routePoints.push([poi.latitude, poi.longitude])
     })
+
+    if (showRoute && routePoints.length > 1) {
+      routeLineRef.current = L.polyline(routePoints, {
+        color: '#22C55E',
+        weight: 5,
+        opacity: 0.88,
+        lineJoin: 'round',
+      }).addTo(leafletMapRef.current)
+    }
 
     if (bounds.length) {
       leafletMapRef.current.fitBounds(bounds, { padding: [36, 36] })
     }
-  }, [leafletReady, tour])
+  }, [leafletReady, showRoute, tour])
 
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/75 p-4">
@@ -734,9 +787,18 @@ function AdminTourMapModal({ tour, onClose }: { tour: Tour; onClose: () => void 
             <h3 className="text-2xl font-bold text-white">{tour.name}</h3>
             <p className="mt-1 text-sm text-gray-400">Leaflet + OpenStreetMap, chỉ hiển thị các điểm thuộc tour theo thứ tự admin đã tạo.</p>
           </div>
-          <button type="button" onClick={onClose} className="rounded-full bg-dark p-2 text-gray-300 hover:text-white" aria-label="Đóng popup map">
-            <X size={18} />
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setShowRoute((current) => !current)}
+              className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${showRoute ? 'bg-emerald-500 text-white' : 'bg-emerald-500/15 text-emerald-300 hover:bg-emerald-500/25'}`}
+            >
+              {showRoute ? 'Ẩn đường đi' : 'Đường đi'}
+            </button>
+            <button type="button" onClick={onClose} className="rounded-full bg-dark p-2 text-gray-300 hover:text-white" aria-label="Đóng popup map">
+              <X size={18} />
+            </button>
+          </div>
         </div>
         <div className="grid gap-0 xl:grid-cols-[1fr_360px]">
           <div className="h-[68vh] min-h-[420px] bg-slate-200">
