@@ -230,10 +230,10 @@ public class MediaStorageService : IMediaStorageService
 
     private string GetCurrentCloudinaryStrategy()
     {
-        return !string.IsNullOrWhiteSpace(_apiKey) && !string.IsNullOrWhiteSpace(_apiSecret)
-            ? "signed"
-            : !string.IsNullOrWhiteSpace(_uploadPreset)
-                ? "unsigned"
+        return !string.IsNullOrWhiteSpace(_uploadPreset)
+            ? "unsigned"
+            : !string.IsNullOrWhiteSpace(_apiKey) && !string.IsNullOrWhiteSpace(_apiSecret)
+                ? "signed"
                 : "local";
     }
 }

@@ -98,7 +98,7 @@ public class AdminToursController : ControllerBase
         {
             return StatusCode(500, new
             {
-                message = exception.InnerException?.Message ?? exception.Message
+                message = exception.Message
             });
         }
     }
