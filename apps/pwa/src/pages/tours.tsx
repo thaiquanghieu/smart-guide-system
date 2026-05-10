@@ -193,7 +193,7 @@ export default function ToursPage() {
                     <button
                       type="button"
                       onClick={() => router.push(`/map?tourId=${encodeURIComponent(String(tour.id))}`)}
-                      className="w-full rounded-[18px] bg-[#0F5BD7] px-4 py-4 text-[15px] font-bold text-white shadow-[0_16px_34px_rgba(15,91,215,0.22)]"
+                      className="w-full rounded-[18px] bg-[#0F5BD7] px-4 py-4 text-[15px] font-bold text-white"
                       suppressHydrationWarning
                     >
                       {t("tours.view")}

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import ProtectedRoute from '@/components/ProtectedRoute'
 import Sidebar from '@/components/Sidebar'
 import apiClient from '@/lib/api'
-import { Eye, EyeOff, Map, Pencil, Plus, Save, Trash2, Upload, X } from 'lucide-react'
+import { Eye, Map, Pencil, Plus, Save, Trash2, Upload, X } from 'lucide-react'
 
 type PoiOption = {
   id: string
@@ -40,6 +40,11 @@ type Tour = {
   poi_ids: string[]
   pois: TourPoi[]
   updated_at: string
+}
+
+type TourMetrics = {
+  distanceKm: number
+  durationMinutes: number
 }
 
 type FormState = {
@@ -92,8 +97,27 @@ function calculateDistanceKm(
   return earthRadiusKm * c
 }
 
+function estimateWalkingMinutes(distanceKm: number) {
+  if (distanceKm <= 0) return 0
+  return Math.max(1, Math.round((distanceKm / 4.5) * 60))
+}
+
+function measureRouteDistanceKm(points: { latitude: number; longitude: number }[]) {
+  if (points.length < 2) return 0
+
+  let totalKm = 0
+  for (let index = 1; index < points.length; index += 1) {
+    totalKm += calculateDistanceKm(points[index - 1], points[index]) || 0
+  }
+
+  return totalKm
+}
+
 async function fetchRoadRoute(points: { latitude?: number; longitude?: number }[]) {
-  const normalizedPoints = points.filter((point) => point.latitude && point.longitude)
+  const normalizedPoints = points.filter(
+    (point): point is { latitude: number; longitude: number } =>
+      Number.isFinite(point.latitude) && Number.isFinite(point.longitude)
+  )
   if (normalizedPoints.length < 2) return []
 
   const coordinates = normalizedPoints
@@ -113,6 +137,12 @@ async function fetchRoadRoute(points: { latitude?: number; longitude?: number }[
   if (!Array.isArray(routeCoordinates)) return []
 
   return routeCoordinates
+    .filter((item: unknown) => Array.isArray(item) && item.length >= 2)
+    .map((item: any) => ({
+      latitude: Number(item[1]),
+      longitude: Number(item[0]),
+    }))
+    .filter((point) => Number.isFinite(point.latitude) && Number.isFinite(point.longitude))
 }
 
 export default function ToursPage() {
@@ -129,6 +159,7 @@ export default function ToursPage() {
   const [errorMessage, setErrorMessage] = useState('')
   const [listTour, setListTour] = useState<Tour | null>(null)
   const [selectedMapTour, setSelectedMapTour] = useState<Tour | null>(null)
+  const [metricsByTour, setMetricsByTour] = useState<Record<number, TourMetrics>>({})
 
   useEffect(() => {
     void loadData()
@@ -194,6 +225,52 @@ export default function ToursPage() {
       .map((poiId) => poiOptions.find((poi) => poi.id === poiId))
       .filter(Boolean) as PoiOption[]
   }, [form.poiIds, poiOptions])
+
+  useEffect(() => {
+    let cancelled = false
+
+    const loadMetrics = async () => {
+      const entries = await Promise.all(
+        tours.map(async (tour) => {
+          const points = tour.pois
+            .slice()
+            .sort((left, right) => left.sort_order - right.sort_order)
+            .filter(
+              (poi): poi is TourPoi & { latitude: number; longitude: number } =>
+                Number.isFinite(poi.latitude) && Number.isFinite(poi.longitude)
+            )
+            .map((poi) => ({ latitude: poi.latitude, longitude: poi.longitude }))
+
+          if (points.length < 2) {
+            return [tour.id, { distanceKm: 0, durationMinutes: 0 }] as const
+          }
+
+          try {
+            const routePath = await fetchRoadRoute(points)
+            const distanceKm = measureRouteDistanceKm(routePath.length ? routePath : points)
+            return [tour.id, { distanceKm, durationMinutes: estimateWalkingMinutes(distanceKm) }] as const
+          } catch {
+            const distanceKm = measureRouteDistanceKm(points)
+            return [tour.id, { distanceKm, durationMinutes: estimateWalkingMinutes(distanceKm) }] as const
+          }
+        })
+      )
+
+      if (!cancelled) {
+        setMetricsByTour(Object.fromEntries(entries))
+      }
+    }
+
+    if (tours.length) {
+      void loadMetrics()
+    } else {
+      setMetricsByTour({})
+    }
+
+    return () => {
+      cancelled = true
+    }
+  }, [tours])
 
   const openCreateModal = () => {
     setForm(emptyForm)
@@ -358,15 +435,29 @@ export default function ToursPage() {
                           />
                         </div>
                         <div className="p-6">
+                          {(() => {
+                            const metrics = metricsByTour[tour.id]
+                            return (
                           <div className="flex flex-wrap items-start justify-between gap-4">
                             <div>
                               <p className="text-3xl font-bold text-white">{tour.name}</p>
                               <p className="mt-2 max-w-3xl text-base leading-7 text-gray-400">{tour.description || 'Chưa có mô tả cho tour này.'}</p>
+                              <div className="mt-4 flex flex-wrap gap-2 text-sm font-semibold text-[#C6D4F5]">
+                                <span className="rounded-full bg-white/5 px-3 py-2">{tour.poi_count} điểm dừng</span>
+                                <span className="rounded-full bg-white/5 px-3 py-2">
+                                  {metrics?.distanceKm ? `${metrics.distanceKm.toFixed(1).replace('.', ',')} km` : 'Đang tính quãng đường'}
+                                </span>
+                                <span className="rounded-full bg-white/5 px-3 py-2">
+                                  {metrics?.durationMinutes ? `~${metrics.durationMinutes} phút đi bộ` : 'Đang tính thời gian'}
+                                </span>
+                              </div>
                             </div>
                             <span className={`rounded-full px-3 py-1 text-xs font-semibold ${tour.is_published ? 'bg-emerald-500/15 text-emerald-300' : 'bg-yellow-500/15 text-yellow-300'}`}>
                               {tour.is_published ? 'Published' : 'Draft'}
                             </span>
                           </div>
+                            )
+                          })()}
 
                           <div className="mt-5">
                             <button
@@ -491,24 +582,41 @@ export default function ToursPage() {
 
                     {form.coverImageUrl ? (
                       <div className="mt-4 overflow-hidden rounded-2xl border border-gray-700">
-                        <img src={mediaUrl(form.coverImageUrl)} alt="Tour cover" className="h-[210px] w-full object-cover" />
+                        <div className="relative">
+                          <img src={mediaUrl(form.coverImageUrl)} alt="Tour cover" className="h-[210px] w-full object-cover" />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setForm((current) => ({ ...current, coverImageUrl: '' }))
+                              setFieldErrors((current) => ({ ...current, coverImageUrl: undefined }))
+                            }}
+                            className="absolute right-3 top-3 rounded-full bg-black/70 p-2 text-white transition hover:bg-black/85"
+                            aria-label="Xóa ảnh cover"
+                          >
+                            <X size={14} />
+                          </button>
+                        </div>
                       </div>
                     ) : null}
 
                     {fieldErrors.coverImageUrl ? <p className="mt-3 text-sm text-red-300">{fieldErrors.coverImageUrl}</p> : null}
                   </div>
 
-                  <label className="flex items-center gap-3 rounded-xl border border-gray-700 bg-dark px-4 py-3 text-white">
-                    <input
-                      type="checkbox"
-                      checked={form.isPublished}
-                      onChange={(event) => setForm((current) => ({ ...current, isPublished: event.target.checked }))}
-                    />
-                    <span className="inline-flex items-center gap-2">
-                      {form.isPublished ? <Eye size={16} /> : <EyeOff size={16} />}
-                      Hiển thị tour cho user
+                  <button
+                    type="button"
+                    onClick={() => setForm((current) => ({ ...current, isPublished: !current.isPublished }))}
+                    className="flex w-full items-center justify-between rounded-xl border border-gray-700 bg-dark px-4 py-3 text-white transition hover:border-gray-500"
+                  >
+                    <span className="inline-flex items-center gap-3">
+                      <span className={`flex h-9 w-9 items-center justify-center rounded-full ${form.isPublished ? 'bg-primary/15 text-primary' : 'bg-white/10 text-gray-300'}`}>
+                        <Eye size={17} />
+                      </span>
+                      <span className="font-medium">Hiển thị tour cho user</span>
                     </span>
-                  </label>
+                    <span className={`text-sm font-semibold ${form.isPublished ? 'text-emerald-300' : 'text-gray-400'}`}>
+                      {form.isPublished ? 'Đang hiển thị' : 'Đang ẩn'}
+                    </span>
+                  </button>
 
                   <div>
                     <div className="mb-2 flex items-center justify-between">
@@ -620,11 +728,11 @@ export default function ToursPage() {
                         }`}
                       >
                         <div className="grid gap-0 sm:grid-cols-[172px_1fr]">
-                          <div className="relative h-[172px] overflow-hidden bg-slate-900">
+                          <div className="relative h-full min-h-[172px] overflow-hidden bg-slate-900">
                             <img
                               src={mediaUrl(poi.images[0]) || '/assets/appiconfg.png'}
                               alt={poi.name}
-                              className="h-full w-full object-cover"
+                              className="absolute inset-0 h-full w-full object-cover object-center"
                             />
                             <div className={`absolute left-3 top-3 flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold ${isSelected ? 'bg-primary text-white' : 'bg-black/65 text-white'}`}>
                               {isSelected ? selectedIndex + 1 : '+'}
@@ -650,7 +758,7 @@ export default function ToursPage() {
                               <span className="rounded-full bg-secondary px-3 py-1">★ {poi.ratingAvg.toFixed(1)}</span>
                               {distanceFromReference != null ? (
                                 <span className="rounded-full bg-sky-500/15 px-3 py-1 text-sky-300">
-                                  {isSelected ? `Cách điểm ${selectedIndex} ` : form.poiIds.length ? `Cách điểm ${form.poiIds.length} ` : 'Khoảng cách '}
+                                  {isSelected ? `Cách điểm ${selectedIndex}: ` : form.poiIds.length ? `Cách điểm ${form.poiIds.length}: ` : 'Khoảng cách: '}
                                   {distanceFromReference.toFixed(2)} km
                                 </span>
                               ) : null}
@@ -684,7 +792,7 @@ function AdminTourMapModal({ tour, onClose }: { tour: Tour; onClose: () => void 
   const markersRef = useRef<any[]>([])
   const routeLineRef = useRef<any>(null)
   const [leafletReady, setLeafletReady] = useState(false)
-  const [showRoute, setShowRoute] = useState(false)
+  const [showRoute, setShowRoute] = useState(true)
   const [routeError, setRouteError] = useState('')
 
   useEffect(() => {
@@ -803,7 +911,17 @@ function AdminTourMapModal({ tour, onClose }: { tour: Tour; onClose: () => void 
       })
       .catch(() => {
         if (!cancelled) {
-          setRouteError('Không tải được đường bộ lúc này.')
+          if (!leafletMapRef.current) return
+          routeLineRef.current = L.polyline(
+            routePoints.map((point) => [point.latitude, point.longitude]),
+            {
+              color: '#60A5FA',
+              weight: 4,
+              opacity: 0.65,
+              dashArray: '10 10',
+            }
+          ).addTo(leafletMapRef.current)
+          setRouteError('Đường bộ đang tạm chậm, hiện đường nối tạm để bạn vẫn xem được hành trình.')
         }
       })
 
@@ -827,7 +945,7 @@ function AdminTourMapModal({ tour, onClose }: { tour: Tour; onClose: () => void 
               onClick={() => setShowRoute((current) => !current)}
               className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${showRoute ? 'bg-emerald-500 text-white' : 'bg-emerald-500/15 text-emerald-300 hover:bg-emerald-500/25'}`}
             >
-              {showRoute ? 'Ẩn đường đi' : 'Đường đi'}
+              {showRoute ? 'Ẩn đường đi' : 'Hiện đường đi'}
             </button>
             <button type="button" onClick={onClose} className="rounded-full bg-dark p-2 text-gray-300 hover:text-white" aria-label="Đóng popup map">
               <X size={18} />
