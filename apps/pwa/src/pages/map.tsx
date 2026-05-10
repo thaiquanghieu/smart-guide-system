@@ -23,7 +23,6 @@ import {
 import {
   calculateDistanceKm,
   estimateMotorbikeMinutes,
-  estimateWalkingMinutes,
   fetchRoadRoute,
   measureRouteDistanceKm,
   type GeoPoint,
@@ -63,7 +62,6 @@ type TourSummary = {
 
 type TourOverview = {
   distanceKm: number;
-  durationMinutes: number;
   motorbikeMinutes: number;
 };
 
@@ -357,7 +355,7 @@ export default function MapPage() {
       const summaryPoints = orderedTourPoints;
 
       if (routePoints.length < 2) {
-        setTourOverview({ distanceKm: 0, durationMinutes: 0, motorbikeMinutes: 0 });
+        setTourOverview({ distanceKm: 0, motorbikeMinutes: 0 });
         setTourRoutePath([]);
         return;
       }
@@ -375,7 +373,7 @@ export default function MapPage() {
 
       if (summaryPoints.length < 2) {
         if (!cancelled) {
-          setTourOverview({ distanceKm: 0, durationMinutes: 0, motorbikeMinutes: 0 });
+          setTourOverview({ distanceKm: 0, motorbikeMinutes: 0 });
         }
         return;
       }
@@ -386,7 +384,6 @@ export default function MapPage() {
         if (!cancelled) {
           setTourOverview({
             distanceKm,
-            durationMinutes: estimateWalkingMinutes(distanceKm),
             motorbikeMinutes: estimateMotorbikeMinutes(distanceKm),
           });
         }
@@ -395,7 +392,6 @@ export default function MapPage() {
         if (!cancelled) {
           setTourOverview({
             distanceKm,
-            durationMinutes: estimateWalkingMinutes(distanceKm),
             motorbikeMinutes: estimateMotorbikeMinutes(distanceKm),
           });
         }
@@ -755,7 +751,6 @@ export default function MapPage() {
                 <p className="text-[16px] font-bold text-[#111827]">{activeTour.name}</p>
                 <p className="mt-1 text-[12px] text-[#64748B]">
                   {t("tours.poiCount", { count: activeTour.poi_count })}, {tourOverview?.distanceKm ? `${tourOverview.distanceKm.toFixed(1).replace(".", ",")} km` : t("tours.distancePending")}
-                  {tourOverview?.durationMinutes ? `, ${t("tours.walkingTime", { count: tourOverview.durationMinutes })}` : ""}
                   {tourOverview?.motorbikeMinutes ? `, ${t("tours.motorbikeTime", { count: tourOverview.motorbikeMinutes })}` : ""}
                 </p>
               </button>
@@ -766,6 +761,8 @@ export default function MapPage() {
                     const nextValue = !current;
                     if (nextValue) {
                       setTrackingEnabled(true);
+                    } else {
+                      setTrackingEnabled(false);
                     }
                     return nextValue;
                   })
@@ -851,6 +848,7 @@ export default function MapPage() {
               stopSpeech();
               await playTrackingStatusTts(false);
               setTrackingEnabled(false);
+              setTourFollowing(false);
               return;
             }
 

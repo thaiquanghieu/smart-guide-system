@@ -5,8 +5,8 @@ import BottomNav from "@/components/BottomNav";
 import ToastBanner from "@/components/ToastBanner";
 import AppLoadingScreen from "@/components/AppLoadingScreen";
 import apiClient, { assetUrl } from "@/lib/api";
-import { useAppI18n } from "@/lib/i18n";
-import { estimateMotorbikeMinutes, estimateWalkingMinutes, fetchRoadRoute, measureRouteDistanceKm } from "@/lib/location";
+import { localizeAddress, localizeCategory, useAppI18n } from "@/lib/i18n";
+import { estimateMotorbikeMinutes, fetchRoadRoute, measureRouteDistanceKm } from "@/lib/location";
 
 type TourPoi = {
   id: string;
@@ -30,7 +30,6 @@ type Tour = {
 
 type TourMetrics = {
   distanceKm: number;
-  durationMinutes: number;
   motorbikeMinutes: number;
 };
 
@@ -92,16 +91,16 @@ export default function ToursPage() {
             .map((poi) => ({ latitude: poi.latitude, longitude: poi.longitude }));
 
           if (points.length < 2) {
-            return [tour.id, { distanceKm: 0, durationMinutes: 0, motorbikeMinutes: 0 }] as const;
+            return [tour.id, { distanceKm: 0, motorbikeMinutes: 0 }] as const;
           }
 
           try {
             const routePath = await fetchRoadRoute(points);
             const distanceKm = measureRouteDistanceKm(routePath.length ? routePath : points);
-            return [tour.id, { distanceKm, durationMinutes: estimateWalkingMinutes(distanceKm), motorbikeMinutes: estimateMotorbikeMinutes(distanceKm) }] as const;
+            return [tour.id, { distanceKm, motorbikeMinutes: estimateMotorbikeMinutes(distanceKm) }] as const;
           } catch {
             const distanceKm = measureRouteDistanceKm(points);
-            return [tour.id, { distanceKm, durationMinutes: estimateWalkingMinutes(distanceKm), motorbikeMinutes: estimateMotorbikeMinutes(distanceKm) }] as const;
+            return [tour.id, { distanceKm, motorbikeMinutes: estimateMotorbikeMinutes(distanceKm) }] as const;
           }
         })
       );
@@ -191,19 +190,18 @@ export default function ToursPage() {
                         </div>
                         <div className="min-w-0">
                           <p className="truncate text-[15px] font-bold text-[#111827]">{poi.name}</p>
-                          <p className="mt-1 text-[13px] text-[#6B7280]">{poi.address || poi.category || t("tours.firstStop")}</p>
+                          <p className="mt-1 text-[13px] text-[#6B7280]">
+                            {localizeAddress(poi.address, lang) || localizeCategory(poi.category, lang) || t("tours.firstStop")}
+                          </p>
                         </div>
                       </div>
                     ))}
                   </div>
 
                   <div className="flex flex-wrap gap-2 text-[12px] font-semibold text-[#37517A]">
-                    <span className="rounded-full bg-[#EEF5FF] px-3 py-2">{tour.poi_count} điểm dừng</span>
+                    <span className="rounded-full bg-[#EEF5FF] px-3 py-2">{t("tours.poiCount", { count: tour.poi_count })}</span>
                     <span className="rounded-full bg-[#EEF5FF] px-3 py-2">
                       {metrics?.distanceKm ? `${metrics.distanceKm.toFixed(1).replace(".", ",")} km` : t("tours.distancePending")}
-                    </span>
-                    <span className="rounded-full bg-[#EEF5FF] px-3 py-2">
-                      {metrics?.durationMinutes ? t("tours.walkingTime", { count: metrics.durationMinutes }) : t("tours.timePending")}
                     </span>
                     <span className="rounded-full bg-[#EEF5FF] px-3 py-2">
                       {metrics?.motorbikeMinutes ? t("tours.motorbikeTime", { count: metrics.motorbikeMinutes }) : t("tours.timePending")}
@@ -257,7 +255,9 @@ export default function ToursPage() {
                   </div>
                   <div className="min-w-0">
                     <p className="truncate text-[15px] font-bold text-[#111827]">{poi.name}</p>
-                    <p className="mt-1 text-[13px] text-[#6B7280]">{poi.address || poi.category || t("tours.poiFallback")}</p>
+                    <p className="mt-1 text-[13px] text-[#6B7280]">
+                      {localizeAddress(poi.address, lang) || localizeCategory(poi.category, lang) || t("tours.poiFallback")}
+                    </p>
                   </div>
                 </div>
               ))}

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import ProtectedRoute from '@/components/ProtectedRoute'
 import Sidebar from '@/components/Sidebar'
 import apiClient from '@/lib/api'
-import { Eye, Map, Pencil, Plus, Save, Trash2, Upload, X } from 'lucide-react'
+import { Eye, EyeOff, Map, Pencil, Plus, Save, Trash2, Upload, X } from 'lucide-react'
 
 type PoiOption = {
   id: string
@@ -44,7 +44,6 @@ type Tour = {
 
 type TourMetrics = {
   distanceKm: number
-  durationMinutes: number
   motorbikeMinutes: number
 }
 
@@ -96,11 +95,6 @@ function calculateDistanceKm(
     Math.cos(lat1) * Math.cos(lat2) * Math.sin(lngDelta / 2) * Math.sin(lngDelta / 2)
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
   return earthRadiusKm * c
-}
-
-function estimateWalkingMinutes(distanceKm: number) {
-  if (distanceKm <= 0) return 0
-  return Math.max(1, Math.round((distanceKm / 4.5) * 60))
 }
 
 function estimateMotorbikeMinutes(distanceKm: number) {
@@ -248,16 +242,16 @@ export default function ToursPage() {
             .map((poi) => ({ latitude: poi.latitude, longitude: poi.longitude }))
 
           if (points.length < 2) {
-            return [tour.id, { distanceKm: 0, durationMinutes: 0, motorbikeMinutes: 0 }] as const
+            return [tour.id, { distanceKm: 0, motorbikeMinutes: 0 }] as const
           }
 
           try {
             const routePath = await fetchRoadRoute(points)
             const distanceKm = measureRouteDistanceKm(routePath.length ? routePath : points)
-            return [tour.id, { distanceKm, durationMinutes: estimateWalkingMinutes(distanceKm), motorbikeMinutes: estimateMotorbikeMinutes(distanceKm) }] as const
+            return [tour.id, { distanceKm, motorbikeMinutes: estimateMotorbikeMinutes(distanceKm) }] as const
           } catch {
             const distanceKm = measureRouteDistanceKm(points)
-            return [tour.id, { distanceKm, durationMinutes: estimateWalkingMinutes(distanceKm), motorbikeMinutes: estimateMotorbikeMinutes(distanceKm) }] as const
+            return [tour.id, { distanceKm, motorbikeMinutes: estimateMotorbikeMinutes(distanceKm) }] as const
           }
         })
       )
@@ -454,9 +448,6 @@ export default function ToursPage() {
                                   {metrics?.distanceKm ? `${metrics.distanceKm.toFixed(1).replace('.', ',')} km` : 'Đang tính quãng đường'}
                                 </span>
                                 <span className="rounded-full bg-white/5 px-3 py-2">
-                                  {metrics?.durationMinutes ? `~${metrics.durationMinutes} phút đi bộ` : 'Đang tính thời gian'}
-                                </span>
-                                <span className="rounded-full bg-white/5 px-3 py-2">
                                   {metrics?.motorbikeMinutes ? `~${metrics.motorbikeMinutes} phút xe máy` : 'Đang tính thời gian'}
                                 </span>
                               </div>
@@ -617,10 +608,10 @@ export default function ToursPage() {
                     className="flex w-full items-center justify-between gap-3 rounded-xl border border-gray-700 bg-dark px-4 py-3 text-white transition hover:border-gray-500"
                   >
                     <span className="inline-flex min-w-0 items-center gap-3">
-                      <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${form.isPublished ? 'bg-primary/15 text-primary' : 'bg-white/10 text-gray-300'}`}>
-                        <Eye size={17} />
+                      <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${form.isPublished ? 'bg-emerald-500/15 text-emerald-300' : 'bg-red-500/15 text-red-300'}`}>
+                        {form.isPublished ? <Eye size={17} /> : <EyeOff size={17} />}
                       </span>
-                      <span className="font-medium text-left">Hiển thị tour cho user</span>
+                      <span className="font-medium text-left whitespace-nowrap">Tình trạng hiển thị</span>
                     </span>
                     <span
                       className={`shrink-0 whitespace-nowrap rounded-full px-4 py-1.5 text-sm font-semibold ${
@@ -708,9 +699,9 @@ export default function ToursPage() {
                   />
                 </div>
 
-                <div className="space-y-4">
+                <div className="grid gap-4 lg:grid-cols-2">
                   {filteredPois.length === 0 ? (
-                    <div className="rounded-2xl border border-dashed border-gray-700 bg-dark px-5 py-8 text-sm text-gray-400">
+                    <div className="rounded-2xl border border-dashed border-gray-700 bg-dark px-5 py-8 text-sm text-gray-400 lg:col-span-2">
                       Chưa có POI hoạt động để chọn hoặc không có POI khớp với từ khóa tìm kiếm.
                     </div>
                   ) : filteredPois.map((poi) => {
@@ -740,8 +731,8 @@ export default function ToursPage() {
                             : 'border-gray-700 bg-dark hover:border-gray-500'
                         }`}
                       >
-                        <div className="flex flex-col md:h-[236px] md:flex-row">
-                          <div className="relative h-[220px] overflow-hidden bg-slate-900 md:h-full md:basis-[37.5%] md:max-w-[37.5%]">
+                        <div className="flex h-full min-h-[420px] flex-col">
+                          <div className="relative h-[160px] overflow-hidden bg-slate-900">
                             <img
                               src={mediaUrl(poi.images[0]) || '/assets/appiconfg.png'}
                               alt={poi.name}
@@ -753,20 +744,14 @@ export default function ToursPage() {
                           </div>
 
                           <div className="flex min-w-0 flex-1 flex-col p-5">
-                            <div className="flex items-start justify-between gap-3">
-                              <div className="min-w-0">
-                                <p className="text-[24px] font-semibold leading-tight text-white">{poi.name}</p>
-                                <p className="mt-2 text-xs uppercase tracking-[0.2em] text-gray-500">{poi.category || 'POI'}</p>
-                              </div>
-                              <span className="rounded-full bg-emerald-500/15 px-3 py-1 text-xs font-semibold text-emerald-300">
-                                Active
-                              </span>
+                            <div className="min-w-0">
+                              <p className="line-clamp-2 text-[22px] font-semibold leading-tight text-white">{poi.name}</p>
+                              <p className="mt-2 text-xs uppercase tracking-[0.2em] text-gray-500">{poi.category || 'POI'}</p>
                             </div>
 
-                            <p className="mt-3 line-clamp-2 text-sm text-gray-400">{poi.shortDescription || 'Chưa có mô tả ngắn'}</p>
-                            <p className="mt-3 line-clamp-2 text-sm text-gray-500">{poi.address || 'Chưa có địa chỉ chi tiết'}</p>
+                            <p className="mt-4 line-clamp-3 text-sm leading-6 text-gray-400">{poi.address || 'Chưa có địa chỉ chi tiết'}</p>
 
-                            <div className="mt-auto flex flex-wrap items-center gap-2 pt-4 text-xs text-gray-400">
+                            <div className="mt-auto flex flex-wrap items-center gap-2 pt-5 text-xs text-gray-400">
                               <span className="rounded-full bg-secondary px-3 py-1">{poi.listenedCount} lượt nghe</span>
                               <span className="rounded-full bg-secondary px-3 py-1">★ {poi.ratingAvg.toFixed(1)}</span>
                               {distanceFromReference != null ? (

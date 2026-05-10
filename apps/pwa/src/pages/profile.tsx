@@ -4,7 +4,7 @@ import AppHeader from "@/components/AppHeader";
 import BottomNav from "@/components/BottomNav";
 import ToastBanner from "@/components/ToastBanner";
 import apiClient, { assetUrl } from "@/lib/api";
-import { useAppI18n } from "@/lib/i18n";
+import { localizeAddress, localizePaymentStatus, localizePlanName, useAppI18n } from "@/lib/i18n";
 import {
   PROFILE_DATA_CHANGED_EVENT,
   consumeProfileRefreshPending,
@@ -98,6 +98,7 @@ export default function ProfilePage() {
   const { lang, t } = useAppI18n();
   const [profile, setProfile] = useState<ProfileSummary | null>(null);
   const [daysLeftText, setDaysLeftText] = useState(t("profile.checking"));
+  const [activeExpireAt, setActiveExpireAt] = useState("");
   const [showSettings, setShowSettings] = useState(false);
   const [showLanguage, setShowLanguage] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
@@ -149,10 +150,12 @@ export default function ProfilePage() {
     setProfile(profileResponse.data);
 
     if (paymentResponse.data?.isActive && paymentResponse.data?.expire) {
+      setActiveExpireAt(paymentResponse.data.expire);
       setDaysLeftText(buildDaysLeftText(paymentResponse.data.expire));
       return;
     }
 
+    setActiveExpireAt("");
     setDaysLeftText(t("profile.noPlan"));
   };
 
@@ -343,6 +346,10 @@ export default function ProfilePage() {
       setAudioLangState(lang);
     }
   }, [audioCustom, lang]);
+
+  useEffect(() => {
+    setDaysLeftText(activeExpireAt ? buildDaysLeftText(activeExpireAt) : t("profile.noPlan"));
+  }, [activeExpireAt, lang, t]);
 
   const formatDateTime = (value?: string) => {
     if (!value) return "";
@@ -671,7 +678,7 @@ export default function ProfilePage() {
                         <div className="min-w-0">
                           <p className="text-[12px] font-semibold uppercase tracking-[0.04em] text-[#0F5BD7]">{item.category}</p>
                           <p className="mt-1 line-clamp-2 text-[16px] font-semibold leading-[1.28] text-[#111827]">{item.name}</p>
-                          <p className="mt-1 line-clamp-2 text-[13px] leading-[1.45] text-[#6B7280]">{item.address}</p>
+                          <p className="mt-1 line-clamp-2 text-[13px] leading-[1.45] text-[#6B7280]">{localizeAddress(item.address, lang)}</p>
                           <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[12px]">
                             <span className="font-semibold text-[#0F5BD7]">{t("profile.lastListened")}: {formatDateTime(item.last_listened_at)}</span>
                             <span className="font-semibold text-[#C47D00]">{t("profile.listenTimes", { count: item.listen_count || 0 })}</span>
@@ -735,7 +742,7 @@ export default function ProfilePage() {
                         <div className="min-w-0">
                           <p className="text-[12px] font-semibold uppercase tracking-[0.04em] text-[#0F5BD7]">{item.category}</p>
                           <p className="mt-1 line-clamp-2 text-[16px] font-semibold leading-[1.28] text-[#111827]">{item.name}</p>
-                          <p className="mt-1 line-clamp-2 text-[13px] leading-[1.45] text-[#6B7280]">{item.address}</p>
+                          <p className="mt-1 line-clamp-2 text-[13px] leading-[1.45] text-[#6B7280]">{localizeAddress(item.address, lang)}</p>
                           <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[12px]">
                             <span className="font-semibold text-[#0F5BD7]">{t("profile.addedFavorite")}: {formatDateTime(item.created_at)}</span>
                             <span className="font-semibold text-[#C47D00]">★ {Number(item.rating_avg || 0).toFixed(1)}</span>
@@ -801,12 +808,12 @@ export default function ProfilePage() {
                           <div className="flex items-start justify-between gap-3">
                             <div className="min-w-0">
                               <p className="text-[15px] font-bold text-[#111827]">
-                                {item.plan_name || item.description || t("profile.paymentDefaultTitle")}
+                                {localizePlanName(item.plan_name, lang) || item.description || t("profile.paymentDefaultTitle")}
                               </p>
-                              <p className="mt-1 text-[12px] font-semibold text-[#0F5BD7]">Mã: {item.code}</p>
+                              <p className="mt-1 text-[12px] font-semibold text-[#0F5BD7]">{t("profile.paymentCode")}: {item.code}</p>
                             </div>
                             <span className={`shrink-0 rounded-full px-3 py-1 text-[12px] font-bold ${statusClass}`}>
-                              {item.status_label || item.status}
+                              {localizePaymentStatus(item.status, item.status_label, lang)}
                             </span>
                           </div>
 
@@ -849,18 +856,18 @@ export default function ProfilePage() {
           <div className="w-full max-w-[360px] rounded-[20px] bg-white p-5 text-[#111827] animate-pop-in" onClick={(event) => event.stopPropagation()}>
             <div className="flex items-start justify-between gap-3">
               <div>
-                <h3 className="text-[18px] font-bold">{selectedPayment.plan_name || selectedPayment.description || t("profile.paymentDefaultTitle")}</h3>
-                <p className="mt-1 text-[12px] font-semibold text-[#0F5BD7]">Mã: {selectedPayment.code}</p>
+                <h3 className="text-[18px] font-bold">{localizePlanName(selectedPayment.plan_name, lang) || selectedPayment.description || t("profile.paymentDefaultTitle")}</h3>
+                <p className="mt-1 text-[12px] font-semibold text-[#0F5BD7]">{t("profile.paymentCode")}: {selectedPayment.code}</p>
               </div>
               <button type="button" onClick={() => setSelectedPayment(null)} className="text-[24px] leading-none text-[#9CA3AF]">×</button>
             </div>
 
             <div className="mt-5 space-y-3 text-[14px]">
-              <PaymentInfoRow label={t("profile.paymentStatus")} value={selectedPayment.status_label || selectedPayment.status} />
+              <PaymentInfoRow label={t("profile.paymentStatus")} value={localizePaymentStatus(selectedPayment.status, selectedPayment.status_label, lang)} fallback={t("profile.noPlan")} />
               <PaymentInfoRow label={t("profile.paymentAmount")} value={formatSignedPaymentAmount(selectedPayment.amount, "out")} accent />
               <PaymentInfoRow label={t("profile.paymentType")} value={selectedPayment.payment_type} />
-              <PaymentInfoRow label={t("profile.paymentCreatedAt")} value={formatDateTime(selectedPayment.created_at)} />
-              <PaymentInfoRow label={t("profile.paymentConfirmedAt")} value={formatDateTime(selectedPayment.confirmed_at || selectedPayment.used_at)} />
+              <PaymentInfoRow label={t("profile.paymentCreatedAt")} value={formatDateTime(selectedPayment.created_at)} fallback={t("profile.noPlan")} />
+              <PaymentInfoRow label={t("profile.paymentConfirmedAt")} value={formatDateTime(selectedPayment.confirmed_at || selectedPayment.used_at)} fallback={t("profile.noPlan")} />
             </div>
 
             {selectedPayment.rejected_reason ? (
@@ -924,11 +931,11 @@ export default function ProfilePage() {
   );
 }
 
-function PaymentInfoRow({ label, value, accent = false }: { label: string; value?: string; accent?: boolean }) {
+function PaymentInfoRow({ label, value, accent = false, fallback = "Chưa có" }: { label: string; value?: string; accent?: boolean; fallback?: string }) {
   return (
     <div className="rounded-[14px] bg-[#F8FAFC] px-3 py-3">
       <p className="text-[12px] text-[#6B7280]">{label}</p>
-      <p className={`mt-1 font-semibold ${accent ? "text-[#0F5BD7]" : "text-[#111827]"}`}>{value || "Chưa có"}</p>
+      <p className={`mt-1 font-semibold ${accent ? "text-[#0F5BD7]" : "text-[#111827]"}`}>{value || fallback}</p>
     </div>
   );
 }

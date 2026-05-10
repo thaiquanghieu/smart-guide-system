@@ -117,6 +117,7 @@ const dictionaries: Record<AppLang, Dict> = {
     "profile.emptyPayments": "Chưa có giao dịch thanh toán nào.",
     "profile.paymentDefaultTitle": "Thanh toán Smart Guide",
     "profile.paymentAmount": "Số tiền",
+    "profile.paymentCode": "Mã",
     "profile.paymentTime": "Thời điểm",
     "profile.paymentStatus": "Trạng thái",
     "profile.paymentType": "Loại",
@@ -267,6 +268,7 @@ const dictionaries: Record<AppLang, Dict> = {
     "profile.emptyPayments": "No payment transactions yet.",
     "profile.paymentDefaultTitle": "Smart Guide payment",
     "profile.paymentAmount": "Amount",
+    "profile.paymentCode": "Code",
     "profile.paymentTime": "Time",
     "profile.paymentStatus": "Status",
     "profile.paymentType": "Type",
@@ -417,6 +419,7 @@ const dictionaries: Record<AppLang, Dict> = {
     "profile.emptyPayments": "支払い履歴はまだありません。",
     "profile.paymentDefaultTitle": "Smart Guide 決済",
     "profile.paymentAmount": "金額",
+    "profile.paymentCode": "コード",
     "profile.paymentTime": "日時",
     "profile.paymentStatus": "状態",
     "profile.paymentType": "種類",
@@ -567,6 +570,7 @@ const dictionaries: Record<AppLang, Dict> = {
     "profile.emptyPayments": "결제 내역이 아직 없습니다.",
     "profile.paymentDefaultTitle": "Smart Guide 결제",
     "profile.paymentAmount": "금액",
+    "profile.paymentCode": "코드",
     "profile.paymentTime": "시간",
     "profile.paymentStatus": "상태",
     "profile.paymentType": "유형",
@@ -717,6 +721,7 @@ const dictionaries: Record<AppLang, Dict> = {
     "profile.emptyPayments": "暂无支付记录。",
     "profile.paymentDefaultTitle": "Smart Guide 支付",
     "profile.paymentAmount": "金额",
+    "profile.paymentCode": "编号",
     "profile.paymentTime": "时间",
     "profile.paymentStatus": "状态",
     "profile.paymentType": "类型",
@@ -939,22 +944,173 @@ export function useAppI18n() {
   );
 }
 
+export function stripVietnameseAccents(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/g, "d")
+    .replace(/Đ/g, "D");
+}
+
+function replaceAddressTokens(value: string, lang: AppLang) {
+  if (lang === "vi") return value;
+
+  const replacements: Record<AppLang, Array<[RegExp, string]>> = {
+    vi: [],
+    en: [
+      [/\bthanh pho\b/gi, "City"],
+      [/\btinh\b/gi, "Province"],
+      [/\bquan\b/gi, "District"],
+      [/\bhuyen\b/gi, "District"],
+      [/\bthi tran\b/gi, "Town"],
+      [/\bthi xa\b/gi, "Town"],
+      [/\bphuong\b/gi, "Ward"],
+      [/\bxa\b/gi, "Commune"],
+      [/\bap\b/gi, "Hamlet"],
+      [/\bduong\b/gi, "Street"],
+    ],
+    ja: [
+      [/\bthanh pho\b/gi, "市"],
+      [/\btinh\b/gi, "省"],
+      [/\bquan\b/gi, "区"],
+      [/\bhuyen\b/gi, "郡"],
+      [/\bthi tran\b/gi, "町"],
+      [/\bthi xa\b/gi, "市社"],
+      [/\bphuong\b/gi, "坊"],
+      [/\bxa\b/gi, "社"],
+      [/\bap\b/gi, "邑"],
+      [/\bduong\b/gi, "通り"],
+    ],
+    ko: [
+      [/\bthanh pho\b/gi, "시"],
+      [/\btinh\b/gi, "성"],
+      [/\bquan\b/gi, "군"],
+      [/\bhuyen\b/gi, "현"],
+      [/\bthi tran\b/gi, "읍"],
+      [/\bthi xa\b/gi, "시사"],
+      [/\bphuong\b/gi, "방"],
+      [/\bxa\b/gi, "사"],
+      [/\bap\b/gi, "읍"],
+      [/\bduong\b/gi, "로"],
+    ],
+    zh: [
+      [/\bthanh pho\b/gi, "市"],
+      [/\btinh\b/gi, "省"],
+      [/\bquan\b/gi, "郡"],
+      [/\bhuyen\b/gi, "县"],
+      [/\bthi tran\b/gi, "镇"],
+      [/\bthi xa\b/gi, "市社"],
+      [/\bphuong\b/gi, "坊"],
+      [/\bxa\b/gi, "社"],
+      [/\bap\b/gi, "邑"],
+      [/\bduong\b/gi, "路"],
+    ],
+  };
+
+  return replacements[lang].reduce((nextValue, [pattern, replacement]) => nextValue.replace(pattern, replacement), value);
+}
+
+export function localizeAddress(address?: string, lang: AppLang = "vi") {
+  if (!address) return "";
+  if (lang === "vi") return address;
+
+  const unsigned = stripVietnameseAccents(address);
+  return replaceAddressTokens(unsigned, lang);
+}
+
+export function localizeCategory(category?: string, lang: AppLang = "vi") {
+  if (!category || lang === "vi") return category || "";
+
+  const normalized = stripVietnameseAccents(category).trim().toLowerCase();
+  const keyByValue: Record<string, string> = {
+    "mien phi": "poi.free",
+    "theo dich vu": "poi.service",
+    "kien truc": "poi.architecture",
+    "thien nhien": "poi.nature",
+    "van hoa": "poi.culture",
+    "giao duc": "poi.education",
+    "y te": "poi.health",
+  };
+
+  const key = keyByValue[normalized];
+  return key ? translateText(key, lang) : stripVietnameseAccents(category);
+}
+
+export function localizePaymentStatus(status?: string, statusLabel?: string, lang: AppLang = "vi") {
+  if (!status && !statusLabel) return "";
+  if (lang === "vi") return statusLabel || status || "";
+
+  const normalized = (status || statusLabel || "").trim().toLowerCase();
+  const map: Record<string, Record<AppLang, string>> = {
+    pending: {
+      vi: "Đang chờ thanh toán",
+      en: "Awaiting payment",
+      ja: "支払い待ち",
+      ko: "결제 대기 중",
+      zh: "等待付款",
+    },
+    submitted: {
+      vi: "Đã gửi xác nhận",
+      en: "Submitted",
+      ja: "送信済み",
+      ko: "제출됨",
+      zh: "已提交",
+    },
+    confirmed: {
+      vi: "Thanh toán thành công",
+      en: "Paid successfully",
+      ja: "支払い成功",
+      ko: "결제 완료",
+      zh: "支付成功",
+    },
+    used: {
+      vi: "Thanh toán thành công",
+      en: "Paid successfully",
+      ja: "支払い成功",
+      ko: "결제 완료",
+      zh: "支付成功",
+    },
+    rejected: {
+      vi: "Chưa ghi nhận giao dịch",
+      en: "Transaction not found",
+      ja: "取引未確認",
+      ko: "거래 미확인",
+      zh: "未记录到该交易",
+    },
+  };
+
+  return map[normalized]?.[lang] || statusLabel || status || "";
+}
+
+export function localizePlanName(planName?: string, lang: AppLang = "vi") {
+  if (!planName) return "";
+  if (lang === "vi") return planName;
+
+  const normalized = stripVietnameseAccents(planName).trim().toLowerCase();
+  if (normalized.includes("goi ngay")) return getPlanName(1, lang);
+  if (normalized.includes("goi tuan")) return getPlanName(2, lang);
+  if (normalized.includes("goi thang")) return getPlanName(3, lang);
+  if (normalized.includes("goi nam")) return getPlanName(4, lang);
+  return stripVietnameseAccents(planName);
+}
+
 export function translatePoi<T extends {
   id: string;
   category?: string;
   short_description?: string;
   description?: string;
   priceText?: string;
+  address?: string;
 }>(poi: T, lang: AppLang): T {
   if (lang === "vi") return poi;
   const translated = poiTranslations[poi.id]?.[lang];
-  if (!translated) return poi;
   return {
     ...poi,
-    category: translated.category || poi.category,
-    short_description: translated.short_description || poi.short_description,
-    description: translated.description || poi.description,
-    priceText: translated.priceText || poi.priceText,
+    category: translated?.category || localizeCategory(poi.category, lang) || poi.category,
+    short_description: translated?.short_description || poi.short_description,
+    description: translated?.description || poi.description,
+    priceText: translated?.priceText || poi.priceText,
+    address: localizeAddress(poi.address, lang) || poi.address,
   };
 }
 
@@ -964,6 +1120,7 @@ export function translatePois<T extends {
   short_description?: string;
   description?: string;
   priceText?: string;
+  address?: string;
 }>(pois: T[], lang: AppLang) {
   return pois.map((poi) => translatePoi(poi, lang));
 }
