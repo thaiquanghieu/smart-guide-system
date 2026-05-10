@@ -161,6 +161,8 @@ public class MediaStorageService : IMediaStorageService
     private async Task<string> UploadToCloudinaryUnsignedAsync(IFormFile file, string folder)
     {
         var cloudinaryFolder = $"smart-guide-system/{SanitizeSegment(folder)}";
+        var uploadUrl =
+            $"https://api.cloudinary.com/v1_1/{_cloudName}/image/upload?upload_preset={Uri.EscapeDataString(_uploadPreset!)}";
 
         using var multipart = new MultipartFormDataContent();
         await using var stream = file.OpenReadStream();
@@ -174,10 +176,7 @@ public class MediaStorageService : IMediaStorageService
         multipart.Add(new StringContent(cloudinaryFolder), "folder");
 
         var httpClient = _httpClientFactory.CreateClient();
-        var response = await httpClient.PostAsync(
-            $"https://api.cloudinary.com/v1_1/{_cloudName}/image/upload",
-            multipart
-        );
+        var response = await httpClient.PostAsync(uploadUrl, multipart);
 
         var responseBody = await response.Content.ReadAsStringAsync();
         if (!response.IsSuccessStatusCode)
