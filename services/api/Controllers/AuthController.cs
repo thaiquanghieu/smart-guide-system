@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SmartGuideAPI.Data;
 using SmartGuideAPI.Models;
+using SmartGuideAPI.Services;
 using Microsoft.AspNetCore.Identity;
 using System.Text.RegularExpressions;
 
@@ -12,10 +13,12 @@ namespace SmartGuideAPI.Controllers;
 public class AuthController : ControllerBase
 {
     private readonly AppDbContext _db;
+    private readonly IMediaStorageService _mediaStorageService;
 
-    public AuthController(AppDbContext db)
+    public AuthController(AppDbContext db, IMediaStorageService mediaStorageService)
     {
         _db = db;
+        _mediaStorageService = mediaStorageService;
     }
 
     private readonly PasswordHasher<User> _hasher = new PasswordHasher<User>();
@@ -241,20 +244,8 @@ public class AuthController : ControllerBase
         if (!allowed.Contains(ext))
             return BadRequest(new { message = "Chỉ hỗ trợ JPG, PNG, WEBP" });
 
-        var root = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "images", "avatars");
-        Directory.CreateDirectory(root);
-
         var safeName = Regex.Replace(user.UserName ?? $"user-{user.Id}", "[^a-zA-Z0-9_-]+", "-").Trim('-').ToLowerInvariant();
-        var token = Guid.NewGuid().ToString("N")[..8];
-        var fileName = $"{safeName}-{token}{ext}";
-        var path = Path.Combine(root, fileName);
-
-        await using (var stream = System.IO.File.Create(path))
-        {
-            await file.CopyToAsync(stream);
-        }
-
-        user.AvatarUrl = $"/images/avatars/{fileName}";
+        user.AvatarUrl = await _mediaStorageService.UploadImageAsync(file, "avatars", safeName);
         user.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync();
 

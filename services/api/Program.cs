@@ -1,8 +1,11 @@
 using Microsoft.EntityFrameworkCore;
 using SmartGuideAPI.Data;
+using SmartGuideAPI.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
+builder.Services.AddHttpClient();
+builder.Services.AddScoped<IMediaStorageService, MediaStorageService>();
 
 // Add CORS
 builder.Services.AddCors(options =>

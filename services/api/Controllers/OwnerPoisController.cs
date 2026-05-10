@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SmartGuideAPI.Data;
 using SmartGuideAPI.Models;
+using SmartGuideAPI.Services;
 using System.Text.Json;
 
 namespace SmartGuideAPI.Controllers;
@@ -11,13 +12,13 @@ namespace SmartGuideAPI.Controllers;
 public class OwnerPoisController : ControllerBase
 {
     private readonly AppDbContext _db;
-    private readonly IWebHostEnvironment _env;
+    private readonly IMediaStorageService _mediaStorageService;
     private static readonly HttpClient TranslationClient = new();
 
-    public OwnerPoisController(AppDbContext db, IWebHostEnvironment env)
+    public OwnerPoisController(AppDbContext db, IMediaStorageService mediaStorageService)
     {
         _db = db;
-        _env = env;
+        _mediaStorageService = mediaStorageService;
     }
 
     // =========================
@@ -183,6 +184,7 @@ public class OwnerPoisController : ControllerBase
     [HttpPost("translate")]
     public async Task<IActionResult> Translate([FromBody] TranslateRequest request, [FromQuery] int ownerId)
     {
+        // Dịch nhanh nội dung POI để hỗ trợ seller tạo bản đa ngôn ngữ ngay trên form.
         var user = await _db.Users.FindAsync(ownerId);
         if (user == null || user.Role != "owner")
             return Forbid("Chỉ owner mới có thể dịch nội dung POI");
@@ -219,6 +221,7 @@ public class OwnerPoisController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> CreatePoi([FromBody] CreatePoiRequest request, [FromQuery] int ownerId)
     {
+        // Tạo POI mới cùng ảnh, translation, audio và chuẩn bị payment nâng cấp nếu có.
         var validationError = PoiDraftWorkflow.Validate(request);
         if (!string.IsNullOrWhiteSpace(validationError))
             return BadRequest(new { message = validationError });
@@ -272,6 +275,7 @@ public class OwnerPoisController : ControllerBase
     [RequestSizeLimit(10_000_000)]
     public async Task<IActionResult> UploadPoiImages([FromForm] List<IFormFile> files, [FromQuery] int ownerId)
     {
+        // Upload ảnh POI và trả về URL để form seller gắn vào bản nháp POI.
         var user = await _db.Users.FindAsync(ownerId);
         if (user == null || user.Role != "owner")
             return Forbid("Chỉ owner mới có thể upload ảnh");
@@ -283,9 +287,6 @@ public class OwnerPoisController : ControllerBase
         {
             ".jpg", ".jpeg", ".png", ".webp"
         };
-
-        var uploadRoot = Path.Combine(_env.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot"), "images", "pois");
-        Directory.CreateDirectory(uploadRoot);
 
         var urls = new List<string>();
 
@@ -301,13 +302,7 @@ public class OwnerPoisController : ControllerBase
             if (!allowedExtensions.Contains(extension))
                 return BadRequest(new { message = "Chỉ hỗ trợ JPG, PNG, WEBP" });
 
-            var fileName = $"{Guid.NewGuid():N}{extension.ToLowerInvariant()}";
-            var filePath = Path.Combine(uploadRoot, fileName);
-
-            await using var stream = System.IO.File.Create(filePath);
-            await file.CopyToAsync(stream);
-
-            urls.Add($"/images/pois/{fileName}");
+            urls.Add(await _mediaStorageService.UploadImageAsync(file, "pois", "poi"));
         }
 
         return Ok(new { urls });
@@ -319,6 +314,7 @@ public class OwnerPoisController : ControllerBase
     [HttpPut("{id}")]
     public async Task<IActionResult> UpdatePoi(string id, [FromBody] UpdatePoiRequest request, [FromQuery] int ownerId)
     {
+        // Seller sửa nội dung sẽ đưa POI quay lại trạng thái pending để admin duyệt lại.
         var poi = await _db.Pois.FirstOrDefaultAsync(x => x.Id == id);
 
         if (poi == null)
@@ -398,6 +394,7 @@ public class OwnerPoisController : ControllerBase
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeletePoi(string id, [FromQuery] int ownerId)
     {
+        // Seller chỉ ẩn POI khỏi portal của mình, chưa xóa cứng khỏi hệ thống.
         var poi = await _db.Pois.FirstOrDefaultAsync(x => x.Id == id);
 
         if (poi == null)
@@ -419,6 +416,7 @@ public class OwnerPoisController : ControllerBase
     [HttpGet("analytics/summary")]
     public async Task<IActionResult> GetAnalytics([FromQuery] int ownerId)
     {
+        // Tổng hợp thống kê POI, lượt nghe và trạng thái duyệt để hiển thị dashboard seller.
         var user = await _db.Users.FindAsync(ownerId);
         if (user == null)
             return NotFound();

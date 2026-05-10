@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SmartGuideAPI.Data;
 using SmartGuideAPI.Models;
+using SmartGuideAPI.Services;
 
 namespace SmartGuideAPI.Controllers;
 
@@ -10,12 +11,12 @@ namespace SmartGuideAPI.Controllers;
 public class AdminToursController : ControllerBase
 {
     private readonly AppDbContext _db;
-    private readonly IWebHostEnvironment _env;
+    private readonly IMediaStorageService _mediaStorageService;
 
-    public AdminToursController(AppDbContext db, IWebHostEnvironment env)
+    public AdminToursController(AppDbContext db, IMediaStorageService mediaStorageService)
     {
         _db = db;
-        _env = env;
+        _mediaStorageService = mediaStorageService;
     }
 
     [HttpGet]
@@ -88,16 +89,8 @@ public class AdminToursController : ControllerBase
         if (!allowedExtensions.Contains(extension))
             return BadRequest(new { message = "Chỉ hỗ trợ JPG, PNG, WEBP" });
 
-        var uploadRoot = Path.Combine(_env.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot"), "images", "tours");
-        Directory.CreateDirectory(uploadRoot);
-
-        var fileName = $"{Guid.NewGuid():N}{extension.ToLowerInvariant()}";
-        var filePath = Path.Combine(uploadRoot, fileName);
-
-        await using var stream = System.IO.File.Create(filePath);
-        await file.CopyToAsync(stream);
-
-        return Ok(new { url = $"/images/tours/{fileName}" });
+        var url = await _mediaStorageService.UploadImageAsync(file, "tours", "tour-cover");
+        return Ok(new { url });
     }
 
     [HttpPost]
