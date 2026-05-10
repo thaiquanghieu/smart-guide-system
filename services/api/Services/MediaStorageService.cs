@@ -33,10 +33,10 @@ public class MediaStorageService : IMediaStorageService
     {
         _env = env;
         _httpClientFactory = httpClientFactory;
-        _cloudName = configuration["CLOUDINARY_CLOUD_NAME"];
-        _apiKey = configuration["CLOUDINARY_API_KEY"];
-        _apiSecret = configuration["CLOUDINARY_API_SECRET"];
-        _uploadPreset = configuration["CLOUDINARY_UPLOAD_PRESET"];
+        _cloudName = configuration["CLOUDINARY_CLOUD_NAME"]?.Trim();
+        _apiKey = configuration["CLOUDINARY_API_KEY"]?.Trim();
+        _apiSecret = configuration["CLOUDINARY_API_SECRET"]?.Trim();
+        _uploadPreset = configuration["CLOUDINARY_UPLOAD_PRESET"]?.Trim();
     }
 
     public async Task<string> UploadImageAsync(IFormFile file, string folder, string filePrefix)
@@ -143,7 +143,9 @@ public class MediaStorageService : IMediaStorageService
         var responseBody = await response.Content.ReadAsStringAsync();
         if (!response.IsSuccessStatusCode)
         {
-            throw new InvalidOperationException($"Cloudinary upload failed: {responseBody}");
+            throw new InvalidOperationException(
+                $"Cloudinary upload failed (cloud={_cloudName}, preset={_uploadPreset}, folder={cloudinaryFolder}): {responseBody}"
+            );
         }
 
         using var json = JsonDocument.Parse(responseBody);
