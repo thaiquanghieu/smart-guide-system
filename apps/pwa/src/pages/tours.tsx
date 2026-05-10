@@ -6,6 +6,7 @@ import ToastBanner from "@/components/ToastBanner";
 import AppLoadingScreen from "@/components/AppLoadingScreen";
 import apiClient, { assetUrl } from "@/lib/api";
 import { useAppI18n } from "@/lib/i18n";
+import { estimateWalkingMinutes, fetchRoadRoute, measureRouteDistanceKm } from "@/lib/location";
 
 type TourPoi = {
   id: string;
@@ -13,6 +14,8 @@ type TourPoi = {
   category?: string;
   address?: string;
   image?: string;
+  latitude: number;
+  longitude: number;
   sort_order: number;
 };
 
@@ -25,6 +28,11 @@ type Tour = {
   pois: TourPoi[];
 };
 
+type TourMetrics = {
+  distanceKm: number;
+  durationMinutes: number;
+};
+
 export default function ToursPage() {
   const router = useRouter();
   const { t } = useAppI18n();
@@ -32,6 +40,7 @@ export default function ToursPage() {
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
   const [expandedTour, setExpandedTour] = useState<Tour | null>(null);
+  const [metricsByTour, setMetricsByTour] = useState<Record<number, TourMetrics>>({});
 
   useEffect(() => {
     const load = async () => {
@@ -48,6 +57,49 @@ export default function ToursPage() {
 
     void load();
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadMetrics = async () => {
+      const entries = await Promise.all(
+        tours.map(async (tour) => {
+          const points = tour.pois
+            .slice()
+            .sort((left, right) => left.sort_order - right.sort_order)
+            .filter((poi) => Number.isFinite(poi.latitude) && Number.isFinite(poi.longitude))
+            .map((poi) => ({ latitude: poi.latitude, longitude: poi.longitude }));
+
+          if (points.length < 2) {
+            return [tour.id, { distanceKm: 0, durationMinutes: 0 }] as const;
+          }
+
+          try {
+            const routePath = await fetchRoadRoute(points);
+            const distanceKm = measureRouteDistanceKm(routePath.length ? routePath : points);
+            return [tour.id, { distanceKm, durationMinutes: estimateWalkingMinutes(distanceKm) }] as const;
+          } catch {
+            const distanceKm = measureRouteDistanceKm(points);
+            return [tour.id, { distanceKm, durationMinutes: estimateWalkingMinutes(distanceKm) }] as const;
+          }
+        })
+      );
+
+      if (!cancelled) {
+        setMetricsByTour(Object.fromEntries(entries));
+      }
+    };
+
+    if (tours.length) {
+      void loadMetrics();
+    } else {
+      setMetricsByTour({});
+    }
+
+    return () => {
+      cancelled = true;
+    };
+  }, [tours]);
 
   if (loading) {
     return <AppLoadingScreen message={t("tours.loading")} />;
@@ -85,6 +137,7 @@ export default function ToursPage() {
           {tours.map((tour) => {
             const previewImage = assetUrl(tour.cover_image_url || tour.pois[0]?.image) || "/assets/appiconfg.png";
             const firstPoiId = tour.pois[0]?.id;
+            const metrics = metricsByTour[tour.id];
 
             return (
               <article key={tour.id} className="ios-card overflow-hidden rounded-[26px] border border-[#D7E5FF] shadow-[0_18px_36px_rgba(15,23,42,0.08)]">
@@ -109,10 +162,20 @@ export default function ToursPage() {
                         </div>
                         <div className="min-w-0">
                           <p className="truncate text-[15px] font-bold text-[#111827]">{poi.name}</p>
-                          <p className="mt-1 text-[13px] text-[#6B7280]">{poi.address || poi.category || poi.id}</p>
+                          <p className="mt-1 text-[13px] text-[#6B7280]">{poi.address || poi.category || "Điểm dừng đầu tiên"}</p>
                         </div>
                       </div>
                     ))}
+                  </div>
+
+                  <div className="flex flex-wrap gap-2 text-[12px] font-semibold text-[#37517A]">
+                    <span className="rounded-full bg-[#EEF5FF] px-3 py-2">{tour.poi_count} điểm dừng</span>
+                    <span className="rounded-full bg-[#EEF5FF] px-3 py-2">
+                      {metrics?.distanceKm ? `${metrics.distanceKm.toFixed(1).replace(".", ",")} km` : "Đang tính quãng đường"}
+                    </span>
+                    <span className="rounded-full bg-[#EEF5FF] px-3 py-2">
+                      {metrics?.durationMinutes ? `~${metrics.durationMinutes} phút` : "Đang tính thời gian"}
+                    </span>
                   </div>
 
                   {tour.pois.length > 1 ? (
@@ -162,7 +225,7 @@ export default function ToursPage() {
                   </div>
                   <div className="min-w-0">
                     <p className="truncate text-[15px] font-bold text-[#111827]">{poi.name}</p>
-                    <p className="mt-1 text-[13px] text-[#6B7280]">{poi.address || poi.category || poi.id}</p>
+                    <p className="mt-1 text-[13px] text-[#6B7280]">{poi.address || poi.category || "Điểm trong tour"}</p>
                   </div>
                 </div>
               ))}

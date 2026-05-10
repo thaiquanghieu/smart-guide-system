@@ -77,6 +77,21 @@ export async function fetchRoadRoute(points: GeoPoint[]) {
   return simplifiedRoute;
 }
 
+export function measureRouteDistanceKm(points: GeoPoint[]) {
+  if (points.length < 2) return 0;
+
+  let totalKm = 0;
+  for (let index = 1; index < points.length; index += 1) {
+    totalKm += calculateDistanceKm(points[index - 1], points[index]);
+  }
+  return totalKm;
+}
+
+export function estimateWalkingMinutes(distanceKm: number) {
+  if (distanceKm <= 0) return 0;
+  return Math.max(1, Math.round((distanceKm / 4.5) * 60));
+}
+
 function simplifyRoutePath(points: GeoPoint[]) {
   if (points.length <= 80) return points;
 

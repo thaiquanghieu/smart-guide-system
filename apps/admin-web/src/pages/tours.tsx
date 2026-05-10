@@ -532,10 +532,10 @@ export default function ToursPage() {
                               </div>
                               <div className="min-w-0 flex-1">
                                 <p className="truncate font-semibold text-white">{poi.name}</p>
-                                <p className="mt-1 truncate text-xs text-gray-400">{poi.address || poi.category || poi.id}</p>
+                                <p className="mt-1 truncate text-xs text-gray-400">{poi.address || poi.category || 'POI trong tour'}</p>
                                 {distanceFromPrevious != null ? (
                                   <p className="mt-1 text-[11px] font-semibold text-sky-300">
-                                    Cách điểm trước: {distanceFromPrevious.toFixed(2)} km
+                                    Cách điểm {index}: {distanceFromPrevious.toFixed(2)} km
                                   </p>
                                 ) : index === 0 ? (
                                   <p className="mt-1 text-[11px] font-semibold text-sky-300">Điểm bắt đầu của tour</p>
@@ -619,8 +619,8 @@ export default function ToursPage() {
                             : 'border-gray-700 bg-dark hover:border-gray-500'
                         }`}
                       >
-                        <div className="grid gap-0 sm:grid-cols-[150px_1fr]">
-                          <div className="relative h-[150px]">
+                        <div className="grid gap-0 sm:grid-cols-[172px_1fr]">
+                          <div className="relative h-[172px] overflow-hidden bg-slate-900">
                             <img
                               src={mediaUrl(poi.images[0]) || '/assets/appiconfg.png'}
                               alt={poi.name}
@@ -643,15 +643,14 @@ export default function ToursPage() {
                             </div>
 
                             <p className="mt-3 line-clamp-2 text-sm text-gray-400">{poi.shortDescription || 'Chưa có mô tả ngắn'}</p>
-                            <p className="mt-3 text-sm text-gray-500">{poi.address || poi.id}</p>
+                            <p className="mt-3 text-sm text-gray-500">{poi.address || 'Chưa có địa chỉ chi tiết'}</p>
 
                             <div className="mt-4 flex flex-wrap gap-2 text-xs text-gray-400">
                               <span className="rounded-full bg-secondary px-3 py-1">{poi.listenedCount} lượt nghe</span>
                               <span className="rounded-full bg-secondary px-3 py-1">★ {poi.ratingAvg.toFixed(1)}</span>
-                              <span className="rounded-full bg-secondary px-3 py-1">ID: {poi.id}</span>
                               {distanceFromReference != null ? (
                                 <span className="rounded-full bg-sky-500/15 px-3 py-1 text-sky-300">
-                                  {isSelected ? 'Cách điểm trước ' : 'Từ điểm cuối hiện tại '}
+                                  {isSelected ? `Cách điểm ${selectedIndex} ` : form.poiIds.length ? `Cách điểm ${form.poiIds.length} ` : 'Khoảng cách '}
                                   {distanceFromReference.toFixed(2)} km
                                 </span>
                               ) : null}
@@ -774,7 +773,7 @@ function AdminTourMapModal({ tour, onClose }: { tour: Tour; onClose: () => void 
         iconAnchor: [16, 16],
       })
       const marker = L.marker([poi.latitude, poi.longitude], { icon }).addTo(leafletMapRef.current)
-      marker.bindPopup(`<strong>${index + 1}. ${poi.poi_name}</strong><br/>${poi.poi_address || poi.poi_category || poi.poi_id}`)
+      marker.bindPopup(`<strong>${index + 1}. ${poi.poi_name}</strong><br/>${poi.poi_address || poi.poi_category || 'POI trong tour'}`)
       markersRef.current.push(marker)
       bounds.push([poi.latitude, poi.longitude])
     })
@@ -849,7 +848,7 @@ function AdminTourMapModal({ tour, onClose }: { tour: Tour; onClose: () => void 
                     </div>
                     <div className="min-w-0">
                       <p className="truncate font-semibold text-white">{poi.poi_name}</p>
-                      <p className="mt-1 text-sm text-gray-400">{poi.poi_address || poi.poi_category || poi.poi_id}</p>
+                      <p className="mt-1 text-sm text-gray-400">{poi.poi_address || poi.poi_category || 'POI trong tour'}</p>
                     </div>
                   </div>
                 </div>
@@ -885,7 +884,7 @@ function AdminTourPoisModal({ tour, onClose }: { tour: Tour; onClose: () => void
                   </div>
                   <div className="min-w-0">
                     <p className="truncate font-semibold text-white">{poi.poi_name}</p>
-                    <p className="mt-1 text-sm text-gray-400">{poi.poi_address || poi.poi_category || poi.poi_id}</p>
+                    <p className="mt-1 text-sm text-gray-400">{poi.poi_address || poi.poi_category || 'POI trong tour'}</p>
                   </div>
                 </div>
               </div>

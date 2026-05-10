@@ -20,7 +20,7 @@ import {
   setPendingPoiId,
   setReturnTo,
 } from "@/lib/device";
-import { calculateDistanceKm, fetchRoadRoute, type GeoPoint } from "@/lib/location";
+import { calculateDistanceKm, estimateWalkingMinutes, fetchRoadRoute, measureRouteDistanceKm, type GeoPoint } from "@/lib/location";
 
 type Poi = {
   id: string;
@@ -52,6 +52,11 @@ type TourSummary = {
   description: string;
   poi_count: number;
   pois: TourPoi[];
+};
+
+type TourOverview = {
+  distanceKm: number;
+  durationMinutes: number;
 };
 
 let mapCache:
@@ -88,8 +93,10 @@ export default function MapPage() {
   const [subscriptionActive, setSubscriptionActive] = useState(false);
   const [freePlaysRemaining, setFreePlaysRemaining] = useState(0);
   const [activeTour, setActiveTour] = useState<TourSummary | null>(null);
+  const [tourOverview, setTourOverview] = useState<TourOverview | null>(null);
   const [tourRoutePath, setTourRoutePath] = useState<GeoPoint[]>([]);
   const [showDirections, setShowDirections] = useState(false);
+  const [tourFollowing, setTourFollowing] = useState(false);
   const [mapCenter, setMapCenter] = useState<GeoPoint | null>(null);
   const [mapCenterSignal, setMapCenterSignal] = useState(0);
   const [hasLoadedMap, setHasLoadedMap] = useState(false);
@@ -98,6 +105,7 @@ export default function MapPage() {
   const [startingQrPreview, setStartingQrPreview] = useState(false);
   const [userLocationResolved, setUserLocationResolved] = useState(false);
   const trackingTimerRef = useRef<number | null>(null);
+  const tourFollowWatchRef = useRef<number | null>(null);
   const trackingTickRef = useRef<(() => void) | null>(null);
   const lastPlayedAtRef = useRef<Record<string, number>>({});
   const candidateRef = useRef<{ poiId: string; hits: number }>({ poiId: "", hits: 0 });
@@ -120,6 +128,13 @@ export default function MapPage() {
       lastTrackingAutoPoiIdRef.current = "";
     }
   }, [trackingEnabled]);
+
+  useEffect(() => {
+    if (!activeTour) {
+      setTourFollowing(false);
+      setTourOverview(null);
+    }
+  }, [activeTour]);
 
   useEffect(() => {
     const load = async () => {
@@ -202,6 +217,7 @@ export default function MapPage() {
           setActiveTour(activeTourResponse);
         } else {
           setActiveTour(null);
+          setTourOverview(null);
           setTourRoutePath([]);
         }
 
@@ -242,6 +258,7 @@ export default function MapPage() {
         setHasLoadedMap(true);
       } catch (error: any) {
         setActiveTour(null);
+        setTourOverview(null);
         setTourRoutePath([]);
         setErrorMessage(error?.response?.data?.message || t("map.loadError"));
       }
@@ -319,6 +336,7 @@ export default function MapPage() {
 
     const loadTourRoute = async () => {
       if (!activeTour || !pois.length) {
+        setTourOverview(null);
         setTourRoutePath([]);
         return;
       }
@@ -328,8 +346,10 @@ export default function MapPage() {
         longitude: poi.longitude,
       }));
       const routePoints = userLocation ? [{ ...userLocation }, ...orderedTourPoints] : orderedTourPoints;
+      const summaryPoints = orderedTourPoints;
 
       if (routePoints.length < 2) {
+        setTourOverview({ distanceKm: 0, durationMinutes: 0 });
         setTourRoutePath([]);
         return;
       }
@@ -344,6 +364,26 @@ export default function MapPage() {
           setTourRoutePath([]);
         }
       }
+
+      if (summaryPoints.length < 2) {
+        if (!cancelled) {
+          setTourOverview({ distanceKm: 0, durationMinutes: 0 });
+        }
+        return;
+      }
+
+      try {
+        const summaryRoute = await fetchRoadRoute(summaryPoints);
+        const distanceKm = measureRouteDistanceKm(summaryRoute.length ? summaryRoute : summaryPoints);
+        if (!cancelled) {
+          setTourOverview({ distanceKm, durationMinutes: estimateWalkingMinutes(distanceKm) });
+        }
+      } catch {
+        const distanceKm = measureRouteDistanceKm(summaryPoints);
+        if (!cancelled) {
+          setTourOverview({ distanceKm, durationMinutes: estimateWalkingMinutes(distanceKm) });
+        }
+      }
     };
 
     void loadTourRoute();
@@ -352,6 +392,38 @@ export default function MapPage() {
       cancelled = true;
     };
   }, [activeTour, pois, userLocation]);
+
+  useEffect(() => {
+    if (!tourFollowing || !navigator.geolocation || !activeTour) {
+      if (tourFollowWatchRef.current != null) {
+        navigator.geolocation.clearWatch(tourFollowWatchRef.current);
+        tourFollowWatchRef.current = null;
+      }
+      return undefined;
+    }
+
+    const watchId = navigator.geolocation.watchPosition(
+      (position) => {
+        const currentLocation = {
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+        };
+        setUserLocation(currentLocation);
+        setSelectedPoiId("");
+        setMapCenter(currentLocation);
+        setMapCenterSignal((value) => value + 1);
+      },
+      () => undefined,
+      { enableHighAccuracy: true, maximumAge: 1500, timeout: 12000 }
+    );
+
+    tourFollowWatchRef.current = watchId;
+
+    return () => {
+      navigator.geolocation.clearWatch(watchId);
+      tourFollowWatchRef.current = null;
+    };
+  }, [activeTour, tourFollowing]);
 
   const updatePoi = (poiId: string, updater: (poi: Poi) => Poi) => {
     setPois((current) => current.map((poi) => (poi.id === poiId ? updater(poi) : poi)));
@@ -658,15 +730,29 @@ export default function MapPage() {
         ) : null}
 
         {activeTour ? (
-          <button
-            type="button"
-            onClick={() => router.push("/tours")}
-            className="absolute left-4 right-4 z-20 rounded-[18px] border border-[#DBEAFE] bg-white/95 px-4 py-3 text-left shadow-[0_10px_24px_rgba(15,91,215,0.12)] backdrop-blur-sm"
+          <div
+            className="absolute left-4 right-4 z-20 rounded-[18px] border border-[#DBEAFE] bg-white/95 px-4 py-3 shadow-[0_10px_24px_rgba(15,91,215,0.12)] backdrop-blur-sm"
             style={{ top: "calc(env(safe-area-inset-top) + 88px)" }}
           >
-            <p className="text-[16px] font-bold text-[#111827]">{activeTour.name}</p>
-            <p className="mt-1 text-[12px] text-[#64748B]">{activeTour.poi_count} điểm theo thứ tự 1 đến {activeTour.poi_count}</p>
-          </button>
+            <div className="flex items-start gap-3">
+              <button type="button" onClick={() => router.push("/tours")} className="min-w-0 flex-1 text-left">
+                <p className="text-[16px] font-bold text-[#111827]">{activeTour.name}</p>
+                <p className="mt-1 text-[12px] text-[#64748B]">
+                  {activeTour.poi_count} điểm, {tourOverview?.distanceKm ? `${tourOverview.distanceKm.toFixed(1).replace(".", ",")} km` : "đang tính quãng đường"}
+                  {tourOverview?.durationMinutes ? `, ~${tourOverview.durationMinutes} phút đi bộ` : ""}
+                </p>
+              </button>
+              <button
+                type="button"
+                onClick={() => setTourFollowing((current) => !current)}
+                className={`shrink-0 rounded-full px-4 py-2 text-[12px] font-bold ${
+                  tourFollowing ? "bg-[#0F5BD7] text-white" : "bg-[#EAF2FF] text-[#0F5BD7]"
+                }`}
+              >
+                {tourFollowing ? "Dừng" : "Bắt đầu"}
+              </button>
+            </div>
+          </div>
         ) : null}
 
         {!isTourMode ? (
@@ -717,7 +803,7 @@ export default function MapPage() {
         <button
           type="button"
           className="absolute right-4 z-30 flex h-[54px] w-[54px] items-center justify-center rounded-[18px] bg-white shadow-[0_10px_18px_rgba(0,0,0,0.08)]"
-          style={{ top: activeTour ? "calc(env(safe-area-inset-top) + 160px)" : "calc(env(safe-area-inset-top) + 190px)" }}
+          style={{ top: activeTour ? "calc(env(safe-area-inset-top) + 184px)" : "calc(env(safe-area-inset-top) + 190px)" }}
           onClick={() => {
             if (userLocation) {
               setSelectedPoiId("");
