@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using SmartGuideAPI.Services;
 
 namespace SmartGuideAPI.Controllers;
 
@@ -6,35 +7,26 @@ namespace SmartGuideAPI.Controllers;
 [Route("api/debug")]
 public class DebugController : ControllerBase
 {
-    private readonly IConfiguration _configuration;
+    private readonly IMediaStorageService _mediaStorageService;
 
-    public DebugController(IConfiguration configuration)
+    public DebugController(IMediaStorageService mediaStorageService)
     {
-        _configuration = configuration;
+        _mediaStorageService = mediaStorageService;
     }
 
     [HttpGet("cloudinary")]
     public IActionResult GetCloudinaryDebug()
     {
-        var cloudName = _configuration["CLOUDINARY_CLOUD_NAME"];
-        var apiKey = _configuration["CLOUDINARY_API_KEY"];
-        var apiSecret = _configuration["CLOUDINARY_API_SECRET"];
-        var uploadPreset = _configuration["CLOUDINARY_UPLOAD_PRESET"];
-
-        var mode = !string.IsNullOrWhiteSpace(cloudName) && !string.IsNullOrWhiteSpace(uploadPreset)
-            ? "unsigned"
-            : !string.IsNullOrWhiteSpace(cloudName) && !string.IsNullOrWhiteSpace(apiKey) && !string.IsNullOrWhiteSpace(apiSecret)
-                ? "signed"
-                : "local";
+        var debugInfo = _mediaStorageService.GetDebugInfo();
 
         return Ok(new
         {
-            cloudName = cloudName ?? "",
-            hasApiKey = !string.IsNullOrWhiteSpace(apiKey),
-            hasApiSecret = !string.IsNullOrWhiteSpace(apiSecret),
-            uploadPreset = uploadPreset ?? "",
-            hasUploadPreset = !string.IsNullOrWhiteSpace(uploadPreset),
-            mode
+            cloudName = debugInfo.CloudName,
+            hasApiKey = debugInfo.HasApiKey,
+            hasApiSecret = debugInfo.HasApiSecret,
+            uploadPreset = debugInfo.UploadPreset,
+            hasUploadPreset = debugInfo.HasUploadPreset,
+            mode = debugInfo.Strategy
         });
     }
 }

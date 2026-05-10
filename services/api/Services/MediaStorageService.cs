@@ -8,7 +8,17 @@ namespace SmartGuideAPI.Services;
 public interface IMediaStorageService
 {
     Task<string> UploadImageAsync(IFormFile file, string folder, string filePrefix);
+    MediaStorageDebugInfo GetDebugInfo();
 }
+
+public record MediaStorageDebugInfo(
+    string CloudName,
+    bool HasApiKey,
+    bool HasApiSecret,
+    string UploadPreset,
+    bool HasUploadPreset,
+    string Strategy
+);
 
 public class MediaStorageService : IMediaStorageService
 {
@@ -33,10 +43,34 @@ public class MediaStorageService : IMediaStorageService
     {
         if (UseCloudinary())
         {
-            return await UploadToCloudinaryAsync(file, folder, filePrefix);
+            var strategy = GetCurrentCloudinaryStrategy();
+
+            try
+            {
+                return await UploadToCloudinaryAsync(file, folder, filePrefix);
+            }
+            catch (Exception exception)
+            {
+                throw new InvalidOperationException(
+                    $"Cloudinary {strategy} upload failed: {exception.InnerException?.Message ?? exception.Message}",
+                    exception
+                );
+            }
         }
 
         return await UploadToLocalStorageAsync(file, folder, filePrefix);
+    }
+
+    public MediaStorageDebugInfo GetDebugInfo()
+    {
+        return new MediaStorageDebugInfo(
+            _cloudName ?? "",
+            !string.IsNullOrWhiteSpace(_apiKey),
+            !string.IsNullOrWhiteSpace(_apiSecret),
+            _uploadPreset ?? "",
+            !string.IsNullOrWhiteSpace(_uploadPreset),
+            UseCloudinary() ? GetCurrentCloudinaryStrategy() : "local"
+        );
     }
 
     private bool UseCloudinary()
@@ -48,12 +82,12 @@ public class MediaStorageService : IMediaStorageService
 
     private async Task<string> UploadToCloudinaryAsync(IFormFile file, string folder, string filePrefix)
     {
-        if (!string.IsNullOrWhiteSpace(_apiKey) && !string.IsNullOrWhiteSpace(_apiSecret))
+        if (GetCurrentCloudinaryStrategy() == "signed")
         {
             return await UploadToCloudinarySignedAsync(file, folder, filePrefix);
         }
 
-        if (!string.IsNullOrWhiteSpace(_uploadPreset))
+        if (GetCurrentCloudinaryStrategy() == "unsigned")
         {
             return await UploadToCloudinaryUnsignedAsync(file, folder);
         }
@@ -176,5 +210,14 @@ public class MediaStorageService : IMediaStorageService
     {
         var bytes = SHA1.HashData(Encoding.UTF8.GetBytes(value));
         return Convert.ToHexString(bytes).ToLowerInvariant();
+    }
+
+    private string GetCurrentCloudinaryStrategy()
+    {
+        return !string.IsNullOrWhiteSpace(_apiKey) && !string.IsNullOrWhiteSpace(_apiSecret)
+            ? "signed"
+            : !string.IsNullOrWhiteSpace(_uploadPreset)
+                ? "unsigned"
+                : "local";
     }
 }
