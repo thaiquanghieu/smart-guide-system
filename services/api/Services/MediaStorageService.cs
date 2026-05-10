@@ -42,17 +42,27 @@ public class MediaStorageService : IMediaStorageService
     private bool UseCloudinary()
     {
         return !string.IsNullOrWhiteSpace(_cloudName) &&
-               (!string.IsNullOrWhiteSpace(_uploadPreset) ||
-                (!string.IsNullOrWhiteSpace(_apiKey) && !string.IsNullOrWhiteSpace(_apiSecret)));
+               ((!string.IsNullOrWhiteSpace(_apiKey) && !string.IsNullOrWhiteSpace(_apiSecret)) ||
+                !string.IsNullOrWhiteSpace(_uploadPreset));
     }
 
     private async Task<string> UploadToCloudinaryAsync(IFormFile file, string folder, string filePrefix)
     {
+        if (!string.IsNullOrWhiteSpace(_apiKey) && !string.IsNullOrWhiteSpace(_apiSecret))
+        {
+            return await UploadToCloudinarySignedAsync(file, folder, filePrefix);
+        }
+
         if (!string.IsNullOrWhiteSpace(_uploadPreset))
         {
             return await UploadToCloudinaryUnsignedAsync(file, folder);
         }
 
+        throw new InvalidOperationException("Cloudinary is configured incompletely.");
+    }
+
+    private async Task<string> UploadToCloudinarySignedAsync(IFormFile file, string folder, string filePrefix)
+    {
         var safePrefix = SanitizeSegment(filePrefix);
         var publicId = $"{safePrefix}-{Guid.NewGuid():N}";
         var cloudinaryFolder = $"smart-guide-system/{SanitizeSegment(folder)}";
