@@ -290,19 +290,29 @@ public class OwnerPoisController : ControllerBase
 
         var urls = new List<string>();
 
-        foreach (var file in files)
+        try
         {
-            if (file.Length <= 0)
-                continue;
+            foreach (var file in files)
+            {
+                if (file.Length <= 0)
+                    continue;
 
-            if (file.Length > 5_000_000)
-                return BadRequest(new { message = $"Ảnh {file.FileName} vượt quá 5MB" });
+                if (file.Length > 5_000_000)
+                    return BadRequest(new { message = $"Ảnh {file.FileName} vượt quá 5MB" });
 
-            var extension = Path.GetExtension(file.FileName);
-            if (!allowedExtensions.Contains(extension))
-                return BadRequest(new { message = "Chỉ hỗ trợ JPG, PNG, WEBP" });
+                var extension = Path.GetExtension(file.FileName);
+                if (!allowedExtensions.Contains(extension))
+                    return BadRequest(new { message = "Chỉ hỗ trợ JPG, PNG, WEBP" });
 
-            urls.Add(await _mediaStorageService.UploadImageAsync(file, "pois", "poi"));
+                urls.Add(await _mediaStorageService.UploadImageAsync(file, "pois", "poi"));
+            }
+        }
+        catch (Exception exception)
+        {
+            return StatusCode(500, new
+            {
+                message = exception.InnerException?.Message ?? exception.Message
+            });
         }
 
         return Ok(new { urls });

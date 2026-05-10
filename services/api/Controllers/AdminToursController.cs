@@ -89,8 +89,18 @@ public class AdminToursController : ControllerBase
         if (!allowedExtensions.Contains(extension))
             return BadRequest(new { message = "Chỉ hỗ trợ JPG, PNG, WEBP" });
 
-        var url = await _mediaStorageService.UploadImageAsync(file, "tours", "tour-cover");
-        return Ok(new { url });
+        try
+        {
+            var url = await _mediaStorageService.UploadImageAsync(file, "tours", "tour-cover");
+            return Ok(new { url });
+        }
+        catch (Exception exception)
+        {
+            return StatusCode(500, new
+            {
+                message = exception.InnerException?.Message ?? exception.Message
+            });
+        }
     }
 
     [HttpPost]

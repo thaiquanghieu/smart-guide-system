@@ -244,10 +244,20 @@ public class AuthController : ControllerBase
         if (!allowed.Contains(ext))
             return BadRequest(new { message = "Chỉ hỗ trợ JPG, PNG, WEBP" });
 
-        var safeName = Regex.Replace(user.UserName ?? $"user-{user.Id}", "[^a-zA-Z0-9_-]+", "-").Trim('-').ToLowerInvariant();
-        user.AvatarUrl = await _mediaStorageService.UploadImageAsync(file, "avatars", safeName);
-        user.UpdatedAt = DateTime.UtcNow;
-        await _db.SaveChangesAsync();
+        try
+        {
+            var safeName = Regex.Replace(user.UserName ?? $"user-{user.Id}", "[^a-zA-Z0-9_-]+", "-").Trim('-').ToLowerInvariant();
+            user.AvatarUrl = await _mediaStorageService.UploadImageAsync(file, "avatars", safeName);
+            user.UpdatedAt = DateTime.UtcNow;
+            await _db.SaveChangesAsync();
+        }
+        catch (Exception exception)
+        {
+            return StatusCode(500, new
+            {
+                message = exception.InnerException?.Message ?? exception.Message
+            });
+        }
 
         return Ok(new
         {
