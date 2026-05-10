@@ -731,8 +731,8 @@ export default function ToursPage() {
                             : 'border-gray-700 bg-dark hover:border-gray-500'
                         }`}
                       >
-                        <div className="flex h-full min-h-[420px] flex-col">
-                          <div className="relative h-[160px] overflow-hidden bg-slate-900">
+                        <div className="flex h-full min-h-[400px] flex-col">
+                          <div className="relative h-[152px] overflow-hidden bg-slate-900">
                             <img
                               src={mediaUrl(poi.images[0]) || '/assets/appiconfg.png'}
                               alt={poi.name}
@@ -749,9 +749,9 @@ export default function ToursPage() {
                               <p className="mt-2 text-xs uppercase tracking-[0.2em] text-gray-500">{poi.category || 'POI'}</p>
                             </div>
 
-                            <p className="mt-4 line-clamp-3 text-sm leading-6 text-gray-400">{poi.address || 'Chưa có địa chỉ chi tiết'}</p>
+                            <p className="mt-4 line-clamp-2 text-sm leading-6 text-gray-400">{poi.address || 'Chưa có địa chỉ chi tiết'}</p>
 
-                            <div className="mt-auto flex flex-wrap items-center gap-2 pt-5 text-xs text-gray-400">
+                            <div className="mt-4 flex flex-wrap items-center gap-2 text-xs text-gray-400">
                               <span className="rounded-full bg-secondary px-3 py-1">{poi.listenedCount} lượt nghe</span>
                               <span className="rounded-full bg-secondary px-3 py-1">★ {poi.ratingAvg.toFixed(1)}</span>
                               {distanceFromReference != null ? (

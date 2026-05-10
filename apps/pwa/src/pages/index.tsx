@@ -34,6 +34,7 @@ type FilterOption = "all" | "nearby" | "free";
 
 let homeCache:
   | {
+      lang: string;
       hasLoaded: boolean;
       pois: Poi[];
       searchText: string;
@@ -76,7 +77,7 @@ export default function HomePage() {
       try {
         const cachedState = homeCache?.hasLoaded ? homeCache : loadPageState<typeof homeCache>(HOME_STATE_KEY);
 
-        if (cachedState?.hasLoaded) {
+        if (cachedState?.hasLoaded && cachedState.lang === lang) {
           setPois(translatePois<Poi>(cachedState.pois, lang));
           setSearchText(cachedState.searchText);
           setUserLocation(cachedState.userLocation);
@@ -133,6 +134,7 @@ export default function HomePage() {
   useEffect(() => {
     const saveCache = () => {
       const nextState = {
+        lang,
         hasLoaded: !isLoading && !errorMessage && pois.length > 0,
         pois,
         searchText,
@@ -156,7 +158,7 @@ export default function HomePage() {
       saveCache();
       window.removeEventListener("scroll", saveCache);
     };
-  }, [errorMessage, filter, freePlaysRemaining, isLoading, pois, searchText, sortAscending, sortBy, subscriptionActive, userLocation]);
+  }, [errorMessage, filter, freePlaysRemaining, isLoading, lang, pois, searchText, sortAscending, sortBy, subscriptionActive, userLocation]);
 
   useEffect(() => {
     if (!navigator.geolocation) return;

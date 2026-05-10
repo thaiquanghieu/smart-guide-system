@@ -67,6 +67,7 @@ type TourOverview = {
 
 let mapCache:
   | {
+      lang: string;
       modeKey: string;
       hasLoaded: boolean;
       pois: Poi[];
@@ -155,7 +156,7 @@ export default function MapPage() {
         }
 
         if (mapCache) {
-          if (!mapCache.hasLoaded || mapCache.modeKey !== currentModeKey) {
+          if (!mapCache.hasLoaded || mapCache.modeKey !== currentModeKey || mapCache.lang !== lang) {
             mapCache = null;
           } else {
             setPois(translatePois<Poi>(mapCache.pois, lang));
@@ -303,6 +304,7 @@ export default function MapPage() {
     if (!hasLoadedMap) return;
 
     mapCache = {
+      lang,
       modeKey,
       hasLoaded: !errorMessage && pois.length > 0,
       pois,
@@ -313,7 +315,7 @@ export default function MapPage() {
       mapCenter,
       activeTour,
     };
-  }, [activeTour, errorMessage, freePlaysRemaining, hasLoadedMap, mapCenter, modeKey, pois, searchText, subscriptionActive, userLocation]);
+  }, [activeTour, errorMessage, freePlaysRemaining, hasLoadedMap, lang, mapCenter, modeKey, pois, searchText, subscriptionActive, userLocation]);
 
   const enrichedPois = useMemo(() => {
     return pois.map((poi) => ({
@@ -331,10 +333,6 @@ export default function MapPage() {
 
   const clearSelectedPoi = () => {
     setSelectedPoiId("");
-    if (userLocation) {
-      setMapCenter({ ...userLocation });
-      setMapCenterSignal((value) => value + 1);
-    }
   };
 
   useEffect(() => {
