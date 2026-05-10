@@ -23,7 +23,6 @@
   </defs>
 
   <rect x="0" y="0" width="1800" height="1320" fill="#f8fafc"/>
-  <text x="900" y="40" text-anchor="middle" style="font: 700 24px Arial, sans-serif; fill: #0f172a;">Smart Guide System - Manual Domain/Class Diagram</text>
 
   <!-- Column 1 -->
   <g transform="translate(60,90)">
