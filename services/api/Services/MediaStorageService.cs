@@ -101,7 +101,19 @@ public class MediaStorageService : IMediaStorageService
         var publicId = $"{safePrefix}-{Guid.NewGuid():N}";
         var cloudinaryFolder = $"smart-guide-system/{SanitizeSegment(folder)}";
         var timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-        var signatureBase = $"folder={cloudinaryFolder}&public_id={publicId}&timestamp={timestamp}";
+        var signatureParams = new List<string>
+        {
+            $"folder={cloudinaryFolder}",
+            $"public_id={publicId}",
+            $"timestamp={timestamp}"
+        };
+
+        if (!string.IsNullOrWhiteSpace(_uploadPreset))
+        {
+            signatureParams.Add($"upload_preset={_uploadPreset}");
+        }
+
+        var signatureBase = string.Join("&", signatureParams.OrderBy(value => value, StringComparer.Ordinal));
         var signature = ComputeSha1($"{signatureBase}{_apiSecret}");
 
         using var multipart = new MultipartFormDataContent();
@@ -116,6 +128,10 @@ public class MediaStorageService : IMediaStorageService
         multipart.Add(new StringContent(timestamp.ToString()), "timestamp");
         multipart.Add(new StringContent(cloudinaryFolder), "folder");
         multipart.Add(new StringContent(publicId), "public_id");
+        if (!string.IsNullOrWhiteSpace(_uploadPreset))
+        {
+            multipart.Add(new StringContent(_uploadPreset), "upload_preset");
+        }
         multipart.Add(new StringContent(signature), "signature");
 
         var httpClient = _httpClientFactory.CreateClient();
