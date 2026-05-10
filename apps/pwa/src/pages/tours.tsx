@@ -6,7 +6,7 @@ import ToastBanner from "@/components/ToastBanner";
 import AppLoadingScreen from "@/components/AppLoadingScreen";
 import apiClient, { assetUrl } from "@/lib/api";
 import { useAppI18n } from "@/lib/i18n";
-import { estimateWalkingMinutes, fetchRoadRoute, measureRouteDistanceKm } from "@/lib/location";
+import { estimateMotorbikeMinutes, estimateWalkingMinutes, fetchRoadRoute, measureRouteDistanceKm } from "@/lib/location";
 
 type TourPoi = {
   id: string;
@@ -31,32 +31,53 @@ type Tour = {
 type TourMetrics = {
   distanceKm: number;
   durationMinutes: number;
+  motorbikeMinutes: number;
 };
+
+let toursCache:
+  | {
+      lang: string;
+      tours: Tour[];
+      metricsByTour: Record<number, TourMetrics>;
+    }
+  | null = null;
 
 export default function ToursPage() {
   const router = useRouter();
-  const { t } = useAppI18n();
-  const [tours, setTours] = useState<Tour[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { lang, t } = useAppI18n();
+  const [tours, setTours] = useState<Tour[]>(() => (toursCache ? toursCache.tours : []));
+  const [loading, setLoading] = useState(() => !toursCache);
   const [errorMessage, setErrorMessage] = useState("");
   const [expandedTour, setExpandedTour] = useState<Tour | null>(null);
-  const [metricsByTour, setMetricsByTour] = useState<Record<number, TourMetrics>>({});
+  const [metricsByTour, setMetricsByTour] = useState<Record<number, TourMetrics>>(() => toursCache?.metricsByTour || {});
 
   useEffect(() => {
     const load = async () => {
-      setLoading(true);
+      if (!toursCache) {
+        setLoading(true);
+      }
       try {
         const response = await apiClient.get("/tours");
         setTours(Array.isArray(response.data) ? response.data : []);
+        setErrorMessage("");
       } catch (error: any) {
-        setErrorMessage(error?.response?.data?.message || error?.message || "Không tải được tour.");
+        setErrorMessage(error?.response?.data?.message || error?.message || t("tours.loadError"));
       } finally {
         setLoading(false);
       }
     };
 
+    if (toursCache) {
+      setTours(toursCache.tours);
+      setMetricsByTour(toursCache.metricsByTour);
+      setLoading(false);
+      if (toursCache.lang === lang) {
+        return;
+      }
+    }
+
     void load();
-  }, []);
+  }, [lang, t]);
 
   useEffect(() => {
     let cancelled = false;
@@ -71,16 +92,16 @@ export default function ToursPage() {
             .map((poi) => ({ latitude: poi.latitude, longitude: poi.longitude }));
 
           if (points.length < 2) {
-            return [tour.id, { distanceKm: 0, durationMinutes: 0 }] as const;
+            return [tour.id, { distanceKm: 0, durationMinutes: 0, motorbikeMinutes: 0 }] as const;
           }
 
           try {
             const routePath = await fetchRoadRoute(points);
             const distanceKm = measureRouteDistanceKm(routePath.length ? routePath : points);
-            return [tour.id, { distanceKm, durationMinutes: estimateWalkingMinutes(distanceKm) }] as const;
+            return [tour.id, { distanceKm, durationMinutes: estimateWalkingMinutes(distanceKm), motorbikeMinutes: estimateMotorbikeMinutes(distanceKm) }] as const;
           } catch {
             const distanceKm = measureRouteDistanceKm(points);
-            return [tour.id, { distanceKm, durationMinutes: estimateWalkingMinutes(distanceKm) }] as const;
+            return [tour.id, { distanceKm, durationMinutes: estimateWalkingMinutes(distanceKm), motorbikeMinutes: estimateMotorbikeMinutes(distanceKm) }] as const;
           }
         })
       );
@@ -100,6 +121,14 @@ export default function ToursPage() {
       cancelled = true;
     };
   }, [tours]);
+
+  useEffect(() => {
+    toursCache = {
+      lang,
+      tours,
+      metricsByTour,
+    };
+  }, [lang, metricsByTour, tours]);
 
   if (loading) {
     return <AppLoadingScreen message={t("tours.loading")} />;
@@ -162,7 +191,7 @@ export default function ToursPage() {
                         </div>
                         <div className="min-w-0">
                           <p className="truncate text-[15px] font-bold text-[#111827]">{poi.name}</p>
-                          <p className="mt-1 text-[13px] text-[#6B7280]">{poi.address || poi.category || "Điểm dừng đầu tiên"}</p>
+                          <p className="mt-1 text-[13px] text-[#6B7280]">{poi.address || poi.category || t("tours.firstStop")}</p>
                         </div>
                       </div>
                     ))}
@@ -171,10 +200,13 @@ export default function ToursPage() {
                   <div className="flex flex-wrap gap-2 text-[12px] font-semibold text-[#37517A]">
                     <span className="rounded-full bg-[#EEF5FF] px-3 py-2">{tour.poi_count} điểm dừng</span>
                     <span className="rounded-full bg-[#EEF5FF] px-3 py-2">
-                      {metrics?.distanceKm ? `${metrics.distanceKm.toFixed(1).replace(".", ",")} km` : "Đang tính quãng đường"}
+                      {metrics?.distanceKm ? `${metrics.distanceKm.toFixed(1).replace(".", ",")} km` : t("tours.distancePending")}
                     </span>
                     <span className="rounded-full bg-[#EEF5FF] px-3 py-2">
-                      {metrics?.durationMinutes ? `~${metrics.durationMinutes} phút` : "Đang tính thời gian"}
+                      {metrics?.durationMinutes ? t("tours.walkingTime", { count: metrics.durationMinutes }) : t("tours.timePending")}
+                    </span>
+                    <span className="rounded-full bg-[#EEF5FF] px-3 py-2">
+                      {metrics?.motorbikeMinutes ? t("tours.motorbikeTime", { count: metrics.motorbikeMinutes }) : t("tours.timePending")}
                     </span>
                   </div>
 
@@ -185,7 +217,7 @@ export default function ToursPage() {
                       className="text-[14px] font-bold text-[#0F5BD7]"
                       suppressHydrationWarning
                     >
-                      Xem tất cả {tour.poi_count} điểm
+                      {t("tours.viewAllPois", { count: tour.poi_count })}
                     </button>
                   ) : null}
 
@@ -225,7 +257,7 @@ export default function ToursPage() {
                   </div>
                   <div className="min-w-0">
                     <p className="truncate text-[15px] font-bold text-[#111827]">{poi.name}</p>
-                    <p className="mt-1 text-[13px] text-[#6B7280]">{poi.address || poi.category || "Điểm trong tour"}</p>
+                    <p className="mt-1 text-[13px] text-[#6B7280]">{poi.address || poi.category || t("tours.poiFallback")}</p>
                   </div>
                 </div>
               ))}

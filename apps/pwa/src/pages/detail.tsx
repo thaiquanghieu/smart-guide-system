@@ -7,7 +7,7 @@ import ToastBanner from "@/components/ToastBanner";
 import apiClient, { assetUrl } from "@/lib/api";
 import { getLanguageName, translatePoi, useAppI18n } from "@/lib/i18n";
 import { playPoiAudio, stopSpeech } from "@/lib/audio";
-import { ensureDeviceReady, getAutoPlay, getDeviceId, notifyProfileDataChanged, setPendingPoiId, setReturnTo } from "@/lib/device";
+import { ensureDeviceReady, getAudioLanguage, getAutoPlay, getDeviceId, notifyProfileDataChanged, setPendingPoiId, setReturnTo } from "@/lib/device";
 import { calculateDistanceKm, type GeoPoint } from "@/lib/location";
 
 type Poi = {
@@ -257,7 +257,11 @@ export default function DetailPage() {
   }
 
   const currentImage = assetUrl(poi.images?.[imageIndex]) || "/assets/appiconfg.png";
-  const currentAudio = poi.audios?.[0];
+  const currentAudio =
+    poi.audios.find((item) => item.languageCode === getAudioLanguage()) ||
+    poi.audios.find((item) => item.languageCode === lang) ||
+    poi.audios.find((item) => item.languageCode === "vi") ||
+    poi.audios?.[0];
   const currentShareUrl = typeof window !== "undefined" ? window.location.href : "";
 
   const toggleFavorite = async () => {

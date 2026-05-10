@@ -20,7 +20,14 @@ import {
   setPendingPoiId,
   setReturnTo,
 } from "@/lib/device";
-import { calculateDistanceKm, estimateWalkingMinutes, fetchRoadRoute, measureRouteDistanceKm, type GeoPoint } from "@/lib/location";
+import {
+  calculateDistanceKm,
+  estimateMotorbikeMinutes,
+  estimateWalkingMinutes,
+  fetchRoadRoute,
+  measureRouteDistanceKm,
+  type GeoPoint,
+} from "@/lib/location";
 
 type Poi = {
   id: string;
@@ -57,6 +64,7 @@ type TourSummary = {
 type TourOverview = {
   distanceKm: number;
   durationMinutes: number;
+  motorbikeMinutes: number;
 };
 
 let mapCache:
@@ -349,7 +357,7 @@ export default function MapPage() {
       const summaryPoints = orderedTourPoints;
 
       if (routePoints.length < 2) {
-        setTourOverview({ distanceKm: 0, durationMinutes: 0 });
+        setTourOverview({ distanceKm: 0, durationMinutes: 0, motorbikeMinutes: 0 });
         setTourRoutePath([]);
         return;
       }
@@ -367,7 +375,7 @@ export default function MapPage() {
 
       if (summaryPoints.length < 2) {
         if (!cancelled) {
-          setTourOverview({ distanceKm: 0, durationMinutes: 0 });
+          setTourOverview({ distanceKm: 0, durationMinutes: 0, motorbikeMinutes: 0 });
         }
         return;
       }
@@ -376,12 +384,20 @@ export default function MapPage() {
         const summaryRoute = await fetchRoadRoute(summaryPoints);
         const distanceKm = measureRouteDistanceKm(summaryRoute.length ? summaryRoute : summaryPoints);
         if (!cancelled) {
-          setTourOverview({ distanceKm, durationMinutes: estimateWalkingMinutes(distanceKm) });
+          setTourOverview({
+            distanceKm,
+            durationMinutes: estimateWalkingMinutes(distanceKm),
+            motorbikeMinutes: estimateMotorbikeMinutes(distanceKm),
+          });
         }
       } catch {
         const distanceKm = measureRouteDistanceKm(summaryPoints);
         if (!cancelled) {
-          setTourOverview({ distanceKm, durationMinutes: estimateWalkingMinutes(distanceKm) });
+          setTourOverview({
+            distanceKm,
+            durationMinutes: estimateWalkingMinutes(distanceKm),
+            motorbikeMinutes: estimateMotorbikeMinutes(distanceKm),
+          });
         }
       }
     };
@@ -738,18 +754,27 @@ export default function MapPage() {
               <button type="button" onClick={() => router.push("/tours")} className="min-w-0 flex-1 text-left">
                 <p className="text-[16px] font-bold text-[#111827]">{activeTour.name}</p>
                 <p className="mt-1 text-[12px] text-[#64748B]">
-                  {activeTour.poi_count} điểm, {tourOverview?.distanceKm ? `${tourOverview.distanceKm.toFixed(1).replace(".", ",")} km` : "đang tính quãng đường"}
-                  {tourOverview?.durationMinutes ? `, ~${tourOverview.durationMinutes} phút đi bộ` : ""}
+                  {t("tours.poiCount", { count: activeTour.poi_count })}, {tourOverview?.distanceKm ? `${tourOverview.distanceKm.toFixed(1).replace(".", ",")} km` : t("tours.distancePending")}
+                  {tourOverview?.durationMinutes ? `, ${t("tours.walkingTime", { count: tourOverview.durationMinutes })}` : ""}
+                  {tourOverview?.motorbikeMinutes ? `, ${t("tours.motorbikeTime", { count: tourOverview.motorbikeMinutes })}` : ""}
                 </p>
               </button>
               <button
                 type="button"
-                onClick={() => setTourFollowing((current) => !current)}
+                onClick={() =>
+                  setTourFollowing((current) => {
+                    const nextValue = !current;
+                    if (nextValue) {
+                      setTrackingEnabled(true);
+                    }
+                    return nextValue;
+                  })
+                }
                 className={`shrink-0 rounded-full px-4 py-2 text-[12px] font-bold ${
                   tourFollowing ? "bg-[#0F5BD7] text-white" : "bg-[#EAF2FF] text-[#0F5BD7]"
                 }`}
               >
-                {tourFollowing ? "Dừng" : "Bắt đầu"}
+                {tourFollowing ? t("tours.stop") : t("tours.start")}
               </button>
             </div>
           </div>

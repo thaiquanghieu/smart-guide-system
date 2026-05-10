@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { useRouter } from "next/router";
+import { useEffect } from "react";
 import { useAppI18n } from "@/lib/i18n";
 import { Route } from "lucide-react";
 
@@ -13,6 +14,10 @@ const items = [
 export default function BottomNav() {
   const router = useRouter();
   const { t } = useAppI18n();
+
+  useEffect(() => {
+    void Promise.all(items.map((item) => router.prefetch(item.href)));
+  }, [router]);
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-20 border-t border-[#E5E7EB] bg-white pb-[max(10px,env(safe-area-inset-bottom))] pt-2">

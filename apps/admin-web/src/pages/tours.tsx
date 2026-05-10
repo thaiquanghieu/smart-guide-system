@@ -45,6 +45,7 @@ type Tour = {
 type TourMetrics = {
   distanceKm: number
   durationMinutes: number
+  motorbikeMinutes: number
 }
 
 type FormState = {
@@ -100,6 +101,11 @@ function calculateDistanceKm(
 function estimateWalkingMinutes(distanceKm: number) {
   if (distanceKm <= 0) return 0
   return Math.max(1, Math.round((distanceKm / 4.5) * 60))
+}
+
+function estimateMotorbikeMinutes(distanceKm: number) {
+  if (distanceKm <= 0) return 0
+  return Math.max(1, Math.round((distanceKm / 24) * 60))
 }
 
 function measureRouteDistanceKm(points: { latitude: number; longitude: number }[]) {
@@ -242,16 +248,16 @@ export default function ToursPage() {
             .map((poi) => ({ latitude: poi.latitude, longitude: poi.longitude }))
 
           if (points.length < 2) {
-            return [tour.id, { distanceKm: 0, durationMinutes: 0 }] as const
+            return [tour.id, { distanceKm: 0, durationMinutes: 0, motorbikeMinutes: 0 }] as const
           }
 
           try {
             const routePath = await fetchRoadRoute(points)
             const distanceKm = measureRouteDistanceKm(routePath.length ? routePath : points)
-            return [tour.id, { distanceKm, durationMinutes: estimateWalkingMinutes(distanceKm) }] as const
+            return [tour.id, { distanceKm, durationMinutes: estimateWalkingMinutes(distanceKm), motorbikeMinutes: estimateMotorbikeMinutes(distanceKm) }] as const
           } catch {
             const distanceKm = measureRouteDistanceKm(points)
-            return [tour.id, { distanceKm, durationMinutes: estimateWalkingMinutes(distanceKm) }] as const
+            return [tour.id, { distanceKm, durationMinutes: estimateWalkingMinutes(distanceKm), motorbikeMinutes: estimateMotorbikeMinutes(distanceKm) }] as const
           }
         })
       )
@@ -450,10 +456,13 @@ export default function ToursPage() {
                                 <span className="rounded-full bg-white/5 px-3 py-2">
                                   {metrics?.durationMinutes ? `~${metrics.durationMinutes} phút đi bộ` : 'Đang tính thời gian'}
                                 </span>
+                                <span className="rounded-full bg-white/5 px-3 py-2">
+                                  {metrics?.motorbikeMinutes ? `~${metrics.motorbikeMinutes} phút xe máy` : 'Đang tính thời gian'}
+                                </span>
                               </div>
                             </div>
-                            <span className={`rounded-full px-3 py-1 text-xs font-semibold ${tour.is_published ? 'bg-emerald-500/15 text-emerald-300' : 'bg-yellow-500/15 text-yellow-300'}`}>
-                              {tour.is_published ? 'Published' : 'Draft'}
+                            <span className={`rounded-full px-3 py-1 text-xs font-semibold ${tour.is_published ? 'bg-emerald-500/15 text-emerald-300' : 'bg-red-500/15 text-red-300'}`}>
+                              {tour.is_published ? 'Hiện' : 'Ẩn'}
                             </span>
                           </div>
                             )
@@ -605,16 +614,20 @@ export default function ToursPage() {
                   <button
                     type="button"
                     onClick={() => setForm((current) => ({ ...current, isPublished: !current.isPublished }))}
-                    className="flex w-full items-center justify-between rounded-xl border border-gray-700 bg-dark px-4 py-3 text-white transition hover:border-gray-500"
+                    className="flex w-full items-center justify-between gap-3 rounded-xl border border-gray-700 bg-dark px-4 py-3 text-white transition hover:border-gray-500"
                   >
-                    <span className="inline-flex items-center gap-3">
-                      <span className={`flex h-9 w-9 items-center justify-center rounded-full ${form.isPublished ? 'bg-primary/15 text-primary' : 'bg-white/10 text-gray-300'}`}>
+                    <span className="inline-flex min-w-0 items-center gap-3">
+                      <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${form.isPublished ? 'bg-primary/15 text-primary' : 'bg-white/10 text-gray-300'}`}>
                         <Eye size={17} />
                       </span>
-                      <span className="font-medium">Hiển thị tour cho user</span>
+                      <span className="font-medium text-left">Hiển thị tour cho user</span>
                     </span>
-                    <span className={`text-sm font-semibold ${form.isPublished ? 'text-emerald-300' : 'text-gray-400'}`}>
-                      {form.isPublished ? 'Đang hiển thị' : 'Đang ẩn'}
+                    <span
+                      className={`shrink-0 whitespace-nowrap rounded-full px-4 py-1.5 text-sm font-semibold ${
+                        form.isPublished ? 'bg-emerald-500/15 text-emerald-300' : 'bg-red-500/15 text-red-300'
+                      }`}
+                    >
+                      {form.isPublished ? 'Hiện' : 'Ẩn'}
                     </span>
                   </button>
 
@@ -695,7 +708,7 @@ export default function ToursPage() {
                   />
                 </div>
 
-                <div className="grid gap-4 lg:grid-cols-2">
+                <div className="space-y-4">
                   {filteredPois.length === 0 ? (
                     <div className="rounded-2xl border border-dashed border-gray-700 bg-dark px-5 py-8 text-sm text-gray-400">
                       Chưa có POI hoạt động để chọn hoặc không có POI khớp với từ khóa tìm kiếm.
@@ -727,8 +740,8 @@ export default function ToursPage() {
                             : 'border-gray-700 bg-dark hover:border-gray-500'
                         }`}
                       >
-                        <div className="grid gap-0 sm:grid-cols-[172px_1fr]">
-                          <div className="relative h-full min-h-[172px] overflow-hidden bg-slate-900">
+                        <div className="flex flex-col md:h-[236px] md:flex-row">
+                          <div className="relative h-[220px] overflow-hidden bg-slate-900 md:h-full md:basis-[37.5%] md:max-w-[37.5%]">
                             <img
                               src={mediaUrl(poi.images[0]) || '/assets/appiconfg.png'}
                               alt={poi.name}
@@ -739,11 +752,11 @@ export default function ToursPage() {
                             </div>
                           </div>
 
-                          <div className="p-4">
+                          <div className="flex min-w-0 flex-1 flex-col p-5">
                             <div className="flex items-start justify-between gap-3">
-                              <div>
-                                <p className="text-lg font-semibold text-white">{poi.name}</p>
-                                <p className="mt-1 text-xs uppercase tracking-[0.2em] text-gray-500">{poi.category || 'POI'}</p>
+                              <div className="min-w-0">
+                                <p className="text-[24px] font-semibold leading-tight text-white">{poi.name}</p>
+                                <p className="mt-2 text-xs uppercase tracking-[0.2em] text-gray-500">{poi.category || 'POI'}</p>
                               </div>
                               <span className="rounded-full bg-emerald-500/15 px-3 py-1 text-xs font-semibold text-emerald-300">
                                 Active
@@ -751,9 +764,9 @@ export default function ToursPage() {
                             </div>
 
                             <p className="mt-3 line-clamp-2 text-sm text-gray-400">{poi.shortDescription || 'Chưa có mô tả ngắn'}</p>
-                            <p className="mt-3 text-sm text-gray-500">{poi.address || 'Chưa có địa chỉ chi tiết'}</p>
+                            <p className="mt-3 line-clamp-2 text-sm text-gray-500">{poi.address || 'Chưa có địa chỉ chi tiết'}</p>
 
-                            <div className="mt-4 flex flex-wrap gap-2 text-xs text-gray-400">
+                            <div className="mt-auto flex flex-wrap items-center gap-2 pt-4 text-xs text-gray-400">
                               <span className="rounded-full bg-secondary px-3 py-1">{poi.listenedCount} lượt nghe</span>
                               <span className="rounded-full bg-secondary px-3 py-1">★ {poi.ratingAvg.toFixed(1)}</span>
                               {distanceFromReference != null ? (

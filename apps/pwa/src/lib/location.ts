@@ -92,6 +92,11 @@ export function estimateWalkingMinutes(distanceKm: number) {
   return Math.max(1, Math.round((distanceKm / 4.5) * 60));
 }
 
+export function estimateMotorbikeMinutes(distanceKm: number) {
+  if (distanceKm <= 0) return 0;
+  return Math.max(1, Math.round((distanceKm / 24) * 60));
+}
+
 function simplifyRoutePath(points: GeoPoint[]) {
   if (points.length <= 80) return points;
 

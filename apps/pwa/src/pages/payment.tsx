@@ -115,10 +115,10 @@ export default function PaymentPage() {
         }
 
         if (nextPayment.status === "rejected") {
-          setMessage(nextPayment.rejected_reason || "Chưa ghi nhận giao dịch. Vui lòng kiểm tra lại nội dung chuyển khoản.");
+          setMessage(nextPayment.rejected_reason || t("payment.rejectedDefault"));
           setCanRetryRejected(true);
         } else {
-          setMessage("Đang kiểm tra giao dịch từ SePay...");
+          setMessage(t("payment.checkingTransfer"));
         }
       } catch {
         // silent polling
@@ -129,7 +129,7 @@ export default function PaymentPage() {
   }, [payment, router, t]);
 
   if (!payment && message === loadingMessage) {
-    return <AppLoadingScreen message={loadingMessage} detail="Đang chuẩn bị thông tin thanh toán cho bạn." />;
+    return <AppLoadingScreen message={loadingMessage} detail={t("payment.preparing")} />;
   }
 
   const qrUrl =
@@ -157,7 +157,7 @@ export default function PaymentPage() {
               <div className="grid grid-cols-[1fr,auto] gap-3">
                 <div>
                   <p className="text-[18px] font-bold">{getPlanName(payment.plan.id, lang)}</p>
-                  <p className="text-[12px] text-[#6B7280]">/{payment.plan.days} ngày</p>
+                  <p className="text-[12px] text-[#6B7280]">{t("payment.planDays", { count: payment.plan.days })}</p>
                 </div>
                 <p className="text-[18px] font-bold text-[#0F5BD7]">{payment.plan.price.toLocaleString("vi-VN")} đ</p>
               </div>
@@ -165,18 +165,18 @@ export default function PaymentPage() {
 
             <div className="rounded-[16px] bg-white p-3">
               <div className="mx-auto aspect-square w-[228px] max-w-full">
-                <img src={qrUrl} alt="QR thanh toán" className="h-full w-full object-contain" />
+                <img src={qrUrl} alt={t("payment.title")} className="h-full w-full object-contain" />
               </div>
             </div>
 
             <div className="rounded-[16px] bg-[#F4F9FF] p-4 text-[#111827]">
               <div className="grid gap-2 text-[14px] leading-[1.45]">
-                <p><span className="font-semibold">Ngân hàng:</span> {payment.bank_name || "VietinBank"}</p>
-                <p><span className="font-semibold">Số tài khoản:</span> {payment.account_number || "109881770761"}</p>
-                <p><span className="font-semibold">Chủ tài khoản:</span> {payment.account_name || "THAI QUANG HIEU"}</p>
+                <p><span className="font-semibold">{t("payment.bankName")}</span> {payment.bank_name || "VietinBank"}</p>
+                <p><span className="font-semibold">{t("payment.accountNumber")}</span> {payment.account_number || "109881770761"}</p>
+                <p><span className="font-semibold">{t("payment.accountHolder")}</span> {payment.account_name || "THAI QUANG HIEU"}</p>
                 <p className="pt-1 font-bold">{t("payment.transferContent")}</p>
                 <p className="break-all font-bold text-[#0F5BD7]">{payment.transfer_content || payment.code}</p>
-                <p className="pt-2 text-[13px] text-[#6B7280]">Lưu ý: ghi đúng nội dung chuyển khoản và hoàn tất trước khi giao dịch hết hạn.</p>
+                <p className="pt-2 text-[13px] text-[#6B7280]">{t("payment.transferHint")}</p>
               </div>
             </div>
 
@@ -206,7 +206,7 @@ export default function PaymentPage() {
                     `/payments/submit?code=${encodeURIComponent(payment.code)}&deviceId=${getDeviceId()}`
                   );
                   setPayment((prev) => ({ ...(prev || payment), ...(response.data?.payment || {}), status: response.data?.payment?.status || "pending" }));
-                  setMessage(response.data?.message || "Đang kiểm tra giao dịch từ SePay...");
+                  setMessage(response.data?.message || t("payment.checkingTransfer"));
                   setCanRetryRejected(response.data?.payment?.status === "rejected");
                 } catch (error: any) {
                   setMessage(error?.response?.data?.message || t("payment.confirmError"));
@@ -218,9 +218,9 @@ export default function PaymentPage() {
               {isConfirming
                 ? t("payment.confirming")
                 : isExpired
-                  ? "Đã hết hạn thanh toán"
+                  ? t("payment.expired")
                 : payment?.status === "rejected" && canRetryRejected
-                    ? "Kiểm tra lại thanh toán"
+                    ? t("payment.retry")
                     : t("payment.confirm")}
             </button>
           </>
@@ -251,9 +251,9 @@ export default function PaymentPage() {
         <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/30 px-5 animate-fade-in">
           <div className="w-full max-w-[340px] overflow-hidden rounded-[18px] bg-white text-center text-[#111827] animate-pop-in">
             <div className="px-5 pb-4 pt-5">
-              <h3 className="text-[18px] font-bold">Chưa xác minh được thanh toán</h3>
+              <h3 className="text-[18px] font-bold">{t("payment.unverifiedTitle")}</h3>
               <p className="mt-2 text-[15px] leading-[1.5]">
-                {payment?.rejected_reason || "Hệ thống chưa ghi nhận giao dịch này. Vui lòng kiểm tra lại chuyển khoản rồi bấm kiểm tra lại thanh toán."}
+                {payment?.rejected_reason || t("payment.unverifiedBody")}
               </p>
             </div>
             <button

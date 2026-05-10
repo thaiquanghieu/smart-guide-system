@@ -122,6 +122,22 @@ export default function ProfilePage() {
   const [favoritesLoading, setFavoritesLoading] = useState(false);
   const [paymentsLoading, setPaymentsLoading] = useState(false);
 
+  const buildDaysLeftText = (expireValue?: string) => {
+    if (!expireValue) {
+      return t("profile.noPlan");
+    }
+
+    const expireDate = new Date(expireValue);
+    const remainingMs = expireDate.getTime() - Date.now();
+    if (remainingMs <= 0) {
+      return t("profile.noPlan");
+    }
+
+    const dayMs = 1000 * 60 * 60 * 24;
+    const diffDays = Math.max(1, Math.ceil((remainingMs - 1000) / dayMs));
+    return t("profile.daysLeft", { count: diffDays });
+  };
+
   const fetchSummary = async () => {
     await ensureDeviceReady();
 
@@ -133,9 +149,7 @@ export default function ProfilePage() {
     setProfile(profileResponse.data);
 
     if (paymentResponse.data?.isActive && paymentResponse.data?.expire) {
-      const expireDate = new Date(paymentResponse.data.expire);
-      const diffDays = Math.max(0, Math.ceil((expireDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24)));
-      setDaysLeftText(t("profile.daysLeft", { count: diffDays }));
+      setDaysLeftText(buildDaysLeftText(paymentResponse.data.expire));
       return;
     }
 
@@ -387,7 +401,7 @@ export default function ProfilePage() {
   const menuItems = [
     { icon: "history.png", label: t("profile.history"), onClick: openHistory },
     { icon: "favorite.png", label: t("profile.favoritePlaces"), onClick: openFavorites },
-    { icon: "ticket.png", label: "Lịch sử thanh toán", onClick: openPayments },
+    { icon: "ticket.png", label: t("profile.paymentHistory"), onClick: openPayments },
     { icon: "settings.png", label: t("profile.settings"), onClick: () => setShowSettings(true) },
     { icon: "language.png", label: t("profile.language"), onClick: () => setShowLanguage(true) },
     { icon: "support.png", label: t("profile.support") },
@@ -476,7 +490,7 @@ export default function ProfilePage() {
 
         <section className="pb-4 text-center text-[12px] text-[#9CA3AF]">
           {errorMessage ? <p className="mb-2 text-[#DC2626]">{errorMessage}</p> : null}
-          <p>Điều khoản   Bảo mật   Về chúng tôi</p>
+          <p>{t("profile.footerLinks")}</p>
           <p className="mt-1">© 2024 SMART GUIDE VIETNAM</p>
           <p className="mt-1">Version 2.4.0</p>
         </section>
@@ -752,7 +766,7 @@ export default function ProfilePage() {
         >
           <div className="absolute bottom-0 left-0 right-0 mx-auto flex h-[78vh] max-w-[540px] flex-col overflow-hidden rounded-t-[20px] bg-white px-5 pb-6 pt-5 animate-sheet-up">
             <div className="flex h-full flex-col" onClick={(event) => event.stopPropagation()}>
-              <h3 className="text-[18px] font-bold text-[#111827]">Lịch sử thanh toán</h3>
+              <h3 className="text-[18px] font-bold text-[#111827]">{t("profile.paymentHistoryTitle")}</h3>
 
               <div
                 className="mt-5 min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain pb-3"
@@ -763,7 +777,7 @@ export default function ProfilePage() {
 
                 {!paymentsLoading && paymentItems.length === 0 ? (
                   <div className="rounded-[18px] border border-dashed border-[#D1D5DB] px-5 py-8 text-center text-[14px] text-[#6B7280]">
-                    Chưa có giao dịch thanh toán nào.
+                    {t("profile.emptyPayments")}
                   </div>
                 ) : null}
 
@@ -787,7 +801,7 @@ export default function ProfilePage() {
                           <div className="flex items-start justify-between gap-3">
                             <div className="min-w-0">
                               <p className="text-[15px] font-bold text-[#111827]">
-                                {item.plan_name || item.description || "Thanh toán Smart Guide"}
+                                {item.plan_name || item.description || t("profile.paymentDefaultTitle")}
                               </p>
                               <p className="mt-1 text-[12px] font-semibold text-[#0F5BD7]">Mã: {item.code}</p>
                             </div>
@@ -798,11 +812,11 @@ export default function ProfilePage() {
 
                           <div className="mt-4 grid grid-cols-2 gap-3 text-[13px]">
                             <div className="rounded-[14px] bg-[#F3F7FF] px-3 py-3">
-                              <p className="text-[#6B7280]">Số tiền</p>
+                              <p className="text-[#6B7280]">{t("profile.paymentAmount")}</p>
                               <p className="mt-1 font-bold text-[#0F5BD7]">{formatSignedPaymentAmount(item.amount, "out")}</p>
                             </div>
                             <div className="rounded-[14px] bg-[#F9FAFB] px-3 py-3">
-                              <p className="text-[#6B7280]">Thời điểm</p>
+                              <p className="text-[#6B7280]">{t("profile.paymentTime")}</p>
                               <p className="mt-1 font-semibold text-[#111827]">{formatDateTime(dateText)}</p>
                             </div>
                           </div>
@@ -835,18 +849,18 @@ export default function ProfilePage() {
           <div className="w-full max-w-[360px] rounded-[20px] bg-white p-5 text-[#111827] animate-pop-in" onClick={(event) => event.stopPropagation()}>
             <div className="flex items-start justify-between gap-3">
               <div>
-                <h3 className="text-[18px] font-bold">{selectedPayment.plan_name || selectedPayment.description || "Thanh toán Smart Guide"}</h3>
+                <h3 className="text-[18px] font-bold">{selectedPayment.plan_name || selectedPayment.description || t("profile.paymentDefaultTitle")}</h3>
                 <p className="mt-1 text-[12px] font-semibold text-[#0F5BD7]">Mã: {selectedPayment.code}</p>
               </div>
               <button type="button" onClick={() => setSelectedPayment(null)} className="text-[24px] leading-none text-[#9CA3AF]">×</button>
             </div>
 
             <div className="mt-5 space-y-3 text-[14px]">
-              <PaymentInfoRow label="Trạng thái" value={selectedPayment.status_label || selectedPayment.status} />
-              <PaymentInfoRow label="Số tiền" value={formatSignedPaymentAmount(selectedPayment.amount, "out")} accent />
-              <PaymentInfoRow label="Loại" value={selectedPayment.payment_type} />
-              <PaymentInfoRow label="Tạo lúc" value={formatDateTime(selectedPayment.created_at)} />
-              <PaymentInfoRow label="Xác nhận" value={formatDateTime(selectedPayment.confirmed_at || selectedPayment.used_at)} />
+              <PaymentInfoRow label={t("profile.paymentStatus")} value={selectedPayment.status_label || selectedPayment.status} />
+              <PaymentInfoRow label={t("profile.paymentAmount")} value={formatSignedPaymentAmount(selectedPayment.amount, "out")} accent />
+              <PaymentInfoRow label={t("profile.paymentType")} value={selectedPayment.payment_type} />
+              <PaymentInfoRow label={t("profile.paymentCreatedAt")} value={formatDateTime(selectedPayment.created_at)} />
+              <PaymentInfoRow label={t("profile.paymentConfirmedAt")} value={formatDateTime(selectedPayment.confirmed_at || selectedPayment.used_at)} />
             </div>
 
             {selectedPayment.rejected_reason ? (
@@ -872,7 +886,7 @@ export default function ProfilePage() {
             <div onClick={(event) => event.stopPropagation()}>
               <h3 className="text-[18px] font-bold text-[#111827]">{t("profile.deleteDevice")}</h3>
               <p className="mt-3 text-[14px] leading-[1.5] text-[#6B7280]">
-                Thiết bị sẽ bị xóa, gói đã mua sẽ mất và khi vào lại sẽ như máy mới. Bạn có chắc muốn tiếp tục?
+                {t("profile.deleteWarning")}
               </p>
 
               <div className="mt-6 grid grid-cols-2 gap-3">
