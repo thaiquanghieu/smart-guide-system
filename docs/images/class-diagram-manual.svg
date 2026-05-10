@@ -1,0 +1,315 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="1320" viewBox="0 0 1800 1320">
+  <defs>
+    <style>
+      .title { font: 700 16px Arial, sans-serif; fill: #111827; }
+      .text { font: 13px Arial, sans-serif; fill: #1f2937; }
+      .small { font: 12px Arial, sans-serif; fill: #374151; }
+      .box { fill: #ffffff; stroke: #111827; stroke-width: 2; rx: 8; }
+      .header { fill: #e8eefc; stroke: #111827; stroke-width: 2; }
+      .line { fill: none; stroke: #334155; stroke-width: 2.2; }
+      .label { font: 12px Arial, sans-serif; fill: #475569; }
+      .line-blue { fill: none; stroke: #2563eb; stroke-width: 2.4; }
+      .line-green { fill: none; stroke: #059669; stroke-width: 2.4; }
+      .line-red { fill: none; stroke: #dc2626; stroke-width: 2.4; }
+      .line-amber { fill: none; stroke: #d97706; stroke-width: 2.4; }
+      .label-blue { font: 12px Arial, sans-serif; fill: #1d4ed8; font-weight: 700; }
+      .label-green { font: 12px Arial, sans-serif; fill: #047857; font-weight: 700; }
+      .label-red { font: 12px Arial, sans-serif; fill: #b91c1c; font-weight: 700; }
+      .label-amber { font: 12px Arial, sans-serif; fill: #b45309; font-weight: 700; }
+    </style>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#334155"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="1800" height="1320" fill="#f8fafc"/>
+  <text x="900" y="40" text-anchor="middle" style="font: 700 24px Arial, sans-serif; fill: #0f172a;">Smart Guide System - Manual Domain/Class Diagram</text>
+
+  <!-- Column 1 -->
+  <g transform="translate(60,90)">
+    <rect class="box" width="250" height="150"/>
+    <rect class="header" width="250" height="36"/>
+    <text class="title" x="125" y="24" text-anchor="middle">User</text>
+    <text class="text" x="14" y="58">+ Id: int</text>
+    <text class="text" x="14" y="78">+ UserName: string</text>
+    <text class="text" x="14" y="98">+ Email: string</text>
+    <text class="text" x="14" y="118">+ Role: string</text>
+    <text class="text" x="14" y="138">+ IsActive: bool</text>
+  </g>
+
+  <g transform="translate(60,310)">
+    <rect class="box" width="250" height="210"/>
+    <rect class="header" width="250" height="36"/>
+    <text class="title" x="125" y="24" text-anchor="middle">Device</text>
+    <text class="text" x="14" y="58">+ Id: int</text>
+    <text class="text" x="14" y="78">+ DeviceUuid: Guid</text>
+    <text class="text" x="14" y="98">+ Name: string?</text>
+    <text class="text" x="14" y="118">+ Platform: string?</text>
+    <text class="text" x="14" y="138">+ AppVersion: string?</text>
+    <text class="text" x="14" y="158">+ Status: string</text>
+    <text class="text" x="14" y="178">+ IsActive: bool</text>
+    <text class="text" x="14" y="198">+ LastSeen: DateTime?</text>
+  </g>
+
+  <g transform="translate(60,590)">
+    <rect class="box" width="250" height="110"/>
+    <rect class="header" width="250" height="36"/>
+    <text class="title" x="125" y="24" text-anchor="middle">Subscription</text>
+    <text class="text" x="14" y="58">+ Id: int</text>
+    <text class="text" x="14" y="78">+ DeviceId: int</text>
+    <text class="text" x="14" y="98">+ ExpireAt: DateTime</text>
+  </g>
+
+  <g transform="translate(60,760)">
+    <rect class="box" width="250" height="120"/>
+    <rect class="header" width="250" height="36"/>
+    <text class="title" x="125" y="24" text-anchor="middle">Profile</text>
+    <text class="text" x="14" y="58">+ Id: int</text>
+    <text class="text" x="14" y="78">+ UserName: string</text>
+    <text class="text" x="14" y="98">+ FavoriteCount: int</text>
+    <text class="text" x="14" y="118">+ ListenedPoiCount: int</text>
+  </g>
+
+  <g transform="translate(60,950)">
+    <rect class="box" width="250" height="150"/>
+    <rect class="header" width="250" height="36"/>
+    <text class="title" x="125" y="24" text-anchor="middle">Payment</text>
+    <text class="text" x="14" y="58">+ Id: int</text>
+    <text class="text" x="14" y="78">+ Code: string</text>
+    <text class="text" x="14" y="98">+ PaymentType: string</text>
+    <text class="text" x="14" y="118">+ Amount: int</text>
+    <text class="text" x="14" y="138">+ Status: string</text>
+  </g>
+
+  <!-- Column 2 -->
+  <g transform="translate(430,90)">
+    <rect class="box" width="310" height="280"/>
+    <rect class="header" width="310" height="36"/>
+    <text class="title" x="155" y="24" text-anchor="middle">Poi</text>
+    <text class="text" x="14" y="58">+ Id: string</text>
+    <text class="text" x="14" y="78">+ OwnerId: int?</text>
+    <text class="text" x="14" y="98">+ Name: string</text>
+    <text class="text" x="14" y="118">+ Category: string</text>
+    <text class="text" x="14" y="138">+ ShortDescription: string</text>
+    <text class="text" x="14" y="158">+ Address: string</text>
+    <text class="text" x="14" y="178">+ Latitude: double</text>
+    <text class="text" x="14" y="198">+ Longitude: double</text>
+    <text class="text" x="14" y="218">+ Radius: int</text>
+    <text class="text" x="14" y="238">+ Priority: int</text>
+    <text class="text" x="14" y="258">+ Status: string</text>
+  </g>
+
+  <g transform="translate(430,430)">
+    <rect class="box" width="310" height="110"/>
+    <rect class="header" width="310" height="36"/>
+    <text class="title" x="155" y="24" text-anchor="middle">PoiImage</text>
+    <text class="text" x="14" y="58">+ Id: int</text>
+    <text class="text" x="14" y="78">+ PoiId: string</text>
+    <text class="text" x="14" y="98">+ ImageUrl: string</text>
+  </g>
+
+  <g transform="translate(430,600)">
+    <rect class="box" width="310" height="150"/>
+    <rect class="header" width="310" height="36"/>
+    <text class="title" x="155" y="24" text-anchor="middle">PoiTranslation</text>
+    <text class="text" x="14" y="58">+ Id: int</text>
+    <text class="text" x="14" y="78">+ PoiId: string</text>
+    <text class="text" x="14" y="98">+ LanguageCode: string</text>
+    <text class="text" x="14" y="118">+ Name: string?</text>
+    <text class="text" x="14" y="138">+ Description: string?</text>
+  </g>
+
+  <g transform="translate(430,820)">
+    <rect class="box" width="310" height="170"/>
+    <rect class="header" width="310" height="36"/>
+    <text class="title" x="155" y="24" text-anchor="middle">AudioGuide</text>
+    <text class="text" x="14" y="58">+ Id: string</text>
+    <text class="text" x="14" y="78">+ PoiId: string</text>
+    <text class="text" x="14" y="98">+ LanguageCode: string</text>
+    <text class="text" x="14" y="118">+ VoiceName: string</text>
+    <text class="text" x="14" y="138">+ ScriptText: string</text>
+    <text class="text" x="14" y="158">+ ApprovalStatus: string</text>
+  </g>
+
+  <!-- Column 3 -->
+  <g transform="translate(860,90)">
+    <rect class="box" width="250" height="130"/>
+    <rect class="header" width="250" height="36"/>
+    <text class="title" x="125" y="24" text-anchor="middle">Tour</text>
+    <text class="text" x="14" y="58">+ Id: int</text>
+    <text class="text" x="14" y="78">+ Name: string</text>
+    <text class="text" x="14" y="98">+ CoverImageUrl: string?</text>
+    <text class="text" x="14" y="118">+ IsPublished: bool</text>
+  </g>
+
+  <g transform="translate(860,280)">
+    <rect class="box" width="250" height="110"/>
+    <rect class="header" width="250" height="36"/>
+    <text class="title" x="125" y="24" text-anchor="middle">TourPoi</text>
+    <text class="text" x="14" y="58">+ Id: int</text>
+    <text class="text" x="14" y="78">+ TourId: int</text>
+    <text class="text" x="14" y="98">+ PoiId: string</text>
+  </g>
+
+  <g transform="translate(860,470)">
+    <rect class="box" width="250" height="170"/>
+    <rect class="header" width="250" height="36"/>
+    <text class="title" x="125" y="24" text-anchor="middle">QrEntry</text>
+    <text class="text" x="14" y="58">+ Id: int</text>
+    <text class="text" x="14" y="78">+ OwnerId: int</text>
+    <text class="text" x="14" y="98">+ PoiId: string</text>
+    <text class="text" x="14" y="118">+ EntryCode: string</text>
+    <text class="text" x="14" y="138">+ TotalScans: int</text>
+    <text class="text" x="14" y="158">+ Status: string</text>
+  </g>
+
+  <g transform="translate(860,720)">
+    <rect class="box" width="250" height="170"/>
+    <rect class="header" width="250" height="36"/>
+    <text class="title" x="125" y="24" text-anchor="middle">QrLog</text>
+    <text class="text" x="14" y="58">+ Id: int</text>
+    <text class="text" x="14" y="78">+ QrEntryId: int?</text>
+    <text class="text" x="14" y="98">+ DeviceId: int</text>
+    <text class="text" x="14" y="118">+ PoiId: string?</text>
+    <text class="text" x="14" y="138">+ ScanStatus: string</text>
+    <text class="text" x="14" y="158">+ ScannedAt: DateTime</text>
+  </g>
+
+  <g transform="translate(860,970)">
+    <rect class="box" width="250" height="170"/>
+    <rect class="header" width="250" height="36"/>
+    <text class="title" x="125" y="24" text-anchor="middle">DeviceEntryGrant</text>
+    <text class="text" x="14" y="58">+ Id: int</text>
+    <text class="text" x="14" y="78">+ QrEntryId: int?</text>
+    <text class="text" x="14" y="98">+ DeviceId: int</text>
+    <text class="text" x="14" y="118">+ PoiId: string?</text>
+    <text class="text" x="14" y="138">+ FreePlaysTotal: int</text>
+    <text class="text" x="14" y="158">+ FreePlaysUsed: int</text>
+  </g>
+
+  <!-- Column 4 -->
+  <g transform="translate(1250,120)">
+    <rect class="box" width="240" height="110"/>
+    <rect class="header" width="240" height="36"/>
+    <text class="title" x="120" y="24" text-anchor="middle">Plan</text>
+    <text class="text" x="14" y="58">+ Id: int</text>
+    <text class="text" x="14" y="78">+ Name: string</text>
+    <text class="text" x="14" y="98">+ Price: int</text>
+  </g>
+
+  <g transform="translate(1250,320)">
+    <rect class="box" width="240" height="110"/>
+    <rect class="header" width="240" height="36"/>
+    <text class="title" x="120" y="24" text-anchor="middle">Favorite</text>
+    <text class="text" x="14" y="58">+ Id: int</text>
+    <text class="text" x="14" y="78">+ DeviceId: int</text>
+    <text class="text" x="14" y="98">+ PoiId: string</text>
+  </g>
+
+  <g transform="translate(1250,500)">
+    <rect class="box" width="240" height="110"/>
+    <rect class="header" width="240" height="36"/>
+    <text class="title" x="120" y="24" text-anchor="middle">ListenLog</text>
+    <text class="text" x="14" y="58">+ Id: int</text>
+    <text class="text" x="14" y="78">+ DeviceId: int</text>
+    <text class="text" x="14" y="98">+ PoiId: string</text>
+  </g>
+
+  <g transform="translate(1250,680)">
+    <rect class="box" width="240" height="110"/>
+    <rect class="header" width="240" height="36"/>
+    <text class="title" x="120" y="24" text-anchor="middle">Rating</text>
+    <text class="text" x="14" y="58">+ Id: int</text>
+    <text class="text" x="14" y="78">+ DeviceId: int</text>
+    <text class="text" x="14" y="98">+ PoiId: string</text>
+  </g>
+
+  <!-- Relationships -->
+  <!-- User -> Poi -->
+  <path class="line" marker-end="url(#arrow)" d="M310 165 H370 V165 H430"/>
+  <text class="label" x="340" y="154">owns 1..*</text>
+
+  <!-- User -> QrEntry -->
+  <path class="line" marker-end="url(#arrow)" d="M310 185 H790 V585 H860"/>
+  <text class="label" x="560" y="174">owns 0..*</text>
+
+  <!-- User -> Payment -->
+  <path class="line" marker-end="url(#arrow)" d="M310 205 H380 V920 H160 V950"/>
+  <text class="label" x="390" y="908">owner payments</text>
+
+  <!-- Device -> Subscription -->
+  <path class="line" marker-end="url(#arrow)" d="M60 415 H30 V570 H185 V590"/>
+  <text class="label" x="72" y="556">has 0..1</text>
+
+  <!-- Device -> Favorite -->
+  <path class="line-blue" marker-end="url(#arrow)" d="M310 400 H1180 V375 H1250"/>
+  <text class="label-blue" x="1190" y="364">favorites</text>
+
+  <!-- Device -> ListenLog -->
+  <path class="line-green" marker-end="url(#arrow)" d="M310 420 H1160 V555 H1250"/>
+  <text class="label-green" x="1170" y="544">listens</text>
+
+  <!-- Device -> Rating -->
+  <path class="line-red" marker-end="url(#arrow)" d="M310 440 H380 V70 H1530 V735 H1490"/>
+  <text class="label-red" x="390" y="60">rates</text>
+
+  <!-- Device -> DeviceEntryGrant -->
+  <path class="line" marker-end="url(#arrow)" d="M310 460 H380 V1160 H985 V1140"/>
+  <text class="label" x="710" y="1178">receives</text>
+
+  <!-- Device -> Payment -->
+  <path class="line" marker-end="url(#arrow)" d="M60 500 H20 V930 H210 V950"/>
+  <text class="label" x="74" y="918">creates</text>
+
+  <!-- Poi -> PoiImage -->
+  <path class="line" marker-end="url(#arrow)" d="M430 345 H400 V485 H430"/>
+  <text class="label" x="332" y="474">has 0..*</text>
+
+  <!-- Poi -> PoiTranslation -->
+  <path class="line" marker-end="url(#arrow)" d="M430 325 H385 V675 H430"/>
+  <text class="label" x="310" y="664">translates</text>
+
+  <!-- Poi -> AudioGuide -->
+  <path class="line" marker-end="url(#arrow)" d="M430 305 H370 V895 H430"/>
+  <text class="label" x="322" y="884">audio</text>
+
+  <!-- Poi -> TourPoi -->
+  <path class="line" marker-end="url(#arrow)" d="M740 260 H800 V335 H860"/>
+  <text class="label" x="764" y="324">appears</text>
+
+  <!-- Tour -> TourPoi -->
+  <path class="line" marker-end="url(#arrow)" d="M985 220 V250 V280"/>
+  <text class="label" x="997" y="252">contains</text>
+
+  <!-- Poi -> Favorite -->
+  <path class="line-blue" marker-end="url(#arrow)" d="M740 295 H780 V250 H1370 V320"/>
+  <text class="label-blue" x="790" y="240">fav target</text>
+
+  <!-- Poi -> ListenLog -->
+  <path class="line-green" marker-end="url(#arrow)" d="M740 315 H790 V450 H1370 V500"/>
+  <text class="label-green" x="1080" y="440">listen target</text>
+
+  <!-- Poi -> Rating -->
+  <path class="line-red" marker-end="url(#arrow)" d="M740 335 H800 V660 H1200 V660 H1410 V680"/>
+  <text class="label-red" x="1080" y="650">rating target</text>
+
+  <!-- Poi -> QrEntry -->
+  <path class="line" marker-end="url(#arrow)" d="M740 355 H820 V525 H860"/>
+  <text class="label" x="755" y="514">binds</text>
+
+  <!-- QrEntry -> QrLog -->
+  <path class="line-amber" marker-end="url(#arrow)" d="M1110 555 H1160 V700 H985 V720"/>
+  <text class="label-amber" x="1118" y="690">logs</text>
+
+  <!-- QrEntry -> DeviceEntryGrant -->
+  <path class="line-amber" marker-end="url(#arrow)" d="M1110 575 H1170 V950 H985 V970"/>
+  <text class="label-amber" x="1118" y="938">grants</text>
+
+  <!-- Plan -> Payment -->
+  <path class="line" marker-end="url(#arrow)" d="M1250 175 H1200 V1180 H215 V1100"/>
+  <text class="label" x="1120" y="1198">selected</text>
+
+  <!-- Payment -> Poi -->
+  <path class="line" marker-end="url(#arrow)" d="M310 1075 H390 V240 H430"/>
+  <text class="label" x="324" y="229">upgrade target</text>
+</svg>

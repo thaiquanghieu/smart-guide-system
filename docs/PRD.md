@@ -1,46 +1,50 @@
 # Smart Guide System — Product Requirements Document (PRD)
 
+<p align="center">
+  <img src="images/logo.png" alt="Smart Guide Logo" width="180" />
+</p>
+
 ## Mục lục
 
 1. [Giới Thiệu Chung](#1-giới-thiệu-chung)
-    - [1.1. Mục tiêu hệ thống](#11-mục-tiêu-hệ-thống)
-    - [1.2. Mục tiêu tài liệu](#12-mục-tiêu-tài-liệu)
+   - [1.1. Mục tiêu hệ thống](#11-mục-tiêu-hệ-thống)
+   - [1.2. Mục tiêu tài liệu](#12-mục-tiêu-tài-liệu)
 2. [Phân Quyền Và Đối Tượng Người Dùng](#2-phân-quyền-và-đối-tượng-người-dùng)
-    - [2.1. Mô hình nhận diện người dùng](#21-mô-hình-nhận-diện-người-dùng)
-    - [2.2. Mô hình cấp quyền truy cập nội dung](#22-mô-hình-cấp-quyền-truy-cập-nội-dung)
+   - [2.1. Mô hình nhận diện người dùng](#21-mô-hình-nhận-diện-người-dùng)
+   - [2.2. Mô hình cấp quyền truy cập nội dung](#22-mô-hình-cấp-quyền-truy-cập-nội-dung)
 3. [User Stories Và Yêu Cầu Chức Năng](#3-user-stories-và-yêu-cầu-chức-năng)
-    - [Epic 1: Trải Nghiệm Người Dùng Trên PWA](#epic-1-trải-nghiệm-người-dùng-trên-pwa)
-    - [Epic 2: Seller Quản Lý Nội Dung Và Tài Nguyên](#epic-2-seller-quản-lý-nội-dung-và-tài-nguyên)
-    - [Epic 3: Admin Điều Hành Toàn Hệ Thống](#epic-3-admin-điều-hành-toàn-hệ-thống)
+   - [Epic 1: Trải Nghiệm Người Dùng Trên PWA](#epic-1-trải-nghiệm-người-dùng-trên-pwa)
+   - [Epic 2: Seller Quản Lý Nội Dung Và Tài Nguyên](#epic-2-seller-quản-lý-nội-dung-và-tài-nguyên)
+   - [Epic 3: Admin Điều Hành Toàn Hệ Thống](#epic-3-admin-điều-hành-toàn-hệ-thống)
 4. [Yêu Cầu Phi Chức Năng](#4-yêu-cầu-phi-chức-năng)
 5. [Technology Stack Và Kiến Trúc Hệ Thống](#5-technology-stack-và-kiến-trúc-hệ-thống)
-    - [5.1. Technology Stack](#51-technology-stack)
-    - [5.2. Kiến trúc hệ thống tổng quan](#52-kiến-trúc-hệ-thống-tổng-quan)
-    - [5.3. Hạ tầng triển khai](#53-hạ-tầng-triển-khai)
-    - [5.4. Luồng tổng quát](#54-luồng-tổng-quát)
+   - [5.1. Technology Stack](#51-technology-stack)
+   - [5.2. Kiến trúc hệ thống tổng quan](#52-kiến-trúc-hệ-thống-tổng-quan)
+   - [5.3. Hạ tầng triển khai](#53-hạ-tầng-triển-khai)
+   - [5.4. Luồng tổng quát](#54-luồng-tổng-quát)
 6. [Cơ Sở Dữ Liệu](#6-cơ-sở-dữ-liệu)
-    - [6.1. Các thực thể chính](#61-các-thực-thể-chính)
-    - [6.2. Ghi chú dữ liệu nghiệp vụ](#62-ghi-chú-dữ-liệu-nghiệp-vụ)
-    - [6.3. Ràng buộc đáng chú ý](#63-ràng-buộc-đáng-chú-ý)
+   - [6.1. Các thực thể chính](#61-các-thực-thể-chính)
+   - [6.2. Ghi chú dữ liệu nghiệp vụ](#62-ghi-chú-dữ-liệu-nghiệp-vụ)
+   - [6.3. Ràng buộc đáng chú ý](#63-ràng-buộc-đáng-chú-ý)
 7. [Danh Mục API Routes](#7-danh-mục-api-routes)
-    - [7.1. Nhóm Auth](#71-nhóm-auth)
-    - [7.2. Nhóm Devices](#72-nhóm-devices)
-    - [7.3. Nhóm Access](#73-nhóm-access)
-    - [7.4. Nhóm PWA Content](#74-nhóm-pwa-content)
-    - [7.5. Nhóm Seller](#75-nhóm-seller)
-    - [7.6. Nhóm Admin](#76-nhóm-admin)
-    - [7.7. Nhóm Plans Và Payments](#77-nhóm-plans-và-payments)
+   - [7.1. Nhóm Auth](#71-nhóm-auth)
+   - [7.2. Nhóm Devices](#72-nhóm-devices)
+   - [7.3. Nhóm Access](#73-nhóm-access)
+   - [7.4. Nhóm PWA Content](#74-nhóm-pwa-content)
+   - [7.5. Nhóm Seller](#75-nhóm-seller)
+   - [7.6. Nhóm Admin](#76-nhóm-admin)
+   - [7.7. Nhóm Plans Và Payments](#77-nhóm-plans-và-payments)
 8. [Cấu Trúc Ứng Dụng Web](#8-cấu-trúc-ứng-dụng-web)
-    - [8.1. PWA](#81-pwa)
-    - [8.2. Seller Web](#82-seller-web)
-    - [8.3. Admin Web](#83-admin-web)
+   - [8.1. PWA](#81-pwa)
+   - [8.2. Seller Web](#82-seller-web)
+   - [8.3. Admin Web](#83-admin-web)
 9. [Sơ Đồ Use Case](#9-sơ-đồ-use-case)
-    - [9.1. Use Case Tổng Quan Hệ Thống](#91-use-case-tổng-quan-hệ-thống)
-    - [9.2. Use Case User / Guest](#92-use-case-user--guest)
-    - [9.3. Use Case Seller / Owner](#93-use-case-seller--owner)
-    - [9.4. Use Case Admin](#94-use-case-admin)
-    - [9.5. Use Case Thanh Toán Và Kích Hoạt Quyền Truy Cập](#95-use-case-thanh-toán-và-kích-hoạt-quyền-truy-cập)
-10. [Sơ Đồ Trình Tự](#10-sơ-đồ-trình-tự-sequence-diagram)
+   - [9.1. Use Case Tổng Quan Hệ Thống](#91-use-case-tổng-quan-hệ-thống)
+   - [9.2. Use Case User / Guest](#92-use-case-user--guest)
+   - [9.3. Use Case Seller / Owner](#93-use-case-seller--owner)
+   - [9.4. Use Case Admin](#94-use-case-admin)
+   - [9.5. Use Case Thanh Toán Và Kích Hoạt Quyền Truy Cập](#95-use-case-thanh-toán-và-kích-hoạt-quyền-truy-cập)
+10. [Sơ Đồ Trình Tự (Sequence)](#10-sơ-đồ-trình-tự-sequence-diagram)
     - [10.1. Sequence Tự Động Đăng Ký Thiết Bị](#101-sequence-tự-động-đăng-ký-thiết-bị)
     - [10.2. Sequence Tìm Kiếm Và Lọc POI](#102-sequence-tìm-kiếm-và-lọc-poi)
     - [10.3. Sequence Quét QR Và Cấp Lượt Nghe Miễn Phí](#103-sequence-quét-qr-và-cấp-lượt-nghe-miễn-phí)
@@ -60,42 +64,50 @@
     - [10.17. Sequence Admin Cập Nhật Trạng Thái Thiết Bị](#1017-sequence-admin-cập-nhật-trạng-thái-thiết-bị)
     - [10.18. Sequence Admin Xử Lý QR Bị Tạm Ngưng](#1018-sequence-admin-xử-lý-qr-bị-tạm-ngưng)
     - [10.19. Sequence Admin Tạo, Cập Nhật Và Xóa Gói Sử Dụng](#1019-sequence-admin-tạo-cập-nhật-và-xóa-gói-sử-dụng)
-11. [Sơ Đồ Lớp](#11-sơ-đồ-lớp-class-diagram)
-12. [Sơ Đồ Hoạt Động](#12-sơ-đồ-hoạt-động-activity-diagram)
-    - [12.1. Activity Khởi Tạo Thiết Bị Và Truy Cập PWA](#121-activity-khởi-tạo-thiết-bị-và-truy-cập-pwa)
-    - [12.2. Activity Tìm Kiếm Và Lọc POI](#122-activity-tìm-kiếm-và-lọc-poi)
-    - [12.3. Activity User Quét QR Và Nhận Quyền Nghe](#123-activity-user-quét-qr-và-nhận-quyền-nghe)
-    - [12.4. Activity Kiểm Tra Quyền Truy Cập Và Phát Audio](#124-activity-kiểm-tra-quyền-truy-cập-và-phát-audio)
-    - [12.5. Activity Theo Dõi Vị Trí Và Tự Động Phát Audio](#125-activity-theo-dõi-vị-trí-và-tự-động-phát-audio)
-    - [12.6. Activity Seller Tạo Và Gửi Duyệt POI](#126-activity-seller-tạo-và-gửi-duyệt-poi)
-    - [12.7. Activity Seller Quản Lý QR](#127-activity-seller-quản-lý-qr)
-    - [12.8. Activity Thanh Toán Và Kích Hoạt Gói](#128-activity-thanh-toán-và-kích-hoạt-gói)
-    - [12.9. Activity Admin Duyệt POI](#129-activity-admin-duyệt-poi)
-    - [12.10. Activity Admin Xử Lý QR Bị Tạm Ngưng](#1210-activity-admin-xử-lý-qr-bị-tạm-ngưng)
-    - [12.11. Activity Admin Quản Trị Hệ Thống](#1211-activity-admin-quản-trị-hệ-thống)
-13. [Phụ Lục: Cấu Trúc Thư Mục Dự Án](#13-phụ-lục-cấu-trúc-thư-mục-dự-án)
+    - [10.20. Sequence Seller Upload Ảnh POI](#1020-sequence-seller-upload-ảnh-poi)
+    - [10.21. Sequence Admin Quản Lý Tour](#1021-sequence-admin-quản-lý-tour)
+    - [10.22. Sequence User Xem Tour Và Mở Bản Đồ](#1022-sequence-user-xem-tour-và-mở-bản-đồ)
+11. [Sơ Đồ Lớp (Class)](#11-sơ-đồ-lớp-class-diagram)
+12. [Sơ Đồ ERD](#12-sơ-đồ-erd)
+13. [Sơ Đồ Hoạt Động (Activity)](#13-sơ-đồ-hoạt-động-activity-diagram)
+    - [13.1. Activity Khởi Tạo Thiết Bị Và Truy Cập PWA](#131-activity-khởi-tạo-thiết-bị-và-truy-cập-pwa)
+    - [13.2. Activity Tìm Kiếm Và Lọc POI](#132-activity-tìm-kiếm-và-lọc-poi)
+    - [13.3. Activity User Quét QR Và Nhận Quyền Nghe](#133-activity-user-quét-qr-và-nhận-quyền-nghe)
+    - [13.4. Activity Kiểm Tra Quyền Truy Cập Và Phát Audio](#134-activity-kiểm-tra-quyền-truy-cập-và-phát-audio)
+    - [13.5. Activity Theo Dõi Vị Trí Và Tự Động Phát Audio](#135-activity-theo-dõi-vị-trí-và-tự-động-phát-audio)
+    - [13.6. Activity Seller Tạo Và Gửi Duyệt POI](#136-activity-seller-tạo-và-gửi-duyệt-poi)
+    - [13.7. Activity Seller Quản Lý QR](#137-activity-seller-quản-lý-qr)
+    - [13.8. Activity Thanh Toán Và Kích Hoạt Gói](#138-activity-thanh-toán-và-kích-hoạt-gói)
+    - [13.9. Activity Admin Duyệt POI](#139-activity-admin-duyệt-poi)
+    - [13.10. Activity Admin Xử Lý QR Bị Tạm Ngưng](#1310-activity-admin-xử-lý-qr-bị-tạm-ngưng)
+    - [13.11. Activity Admin Quản Trị Hệ Thống](#1311-activity-admin-quản-trị-hệ-thống)
+    - [13.12. Activity Seller Upload Ảnh POI](#1312-activity-seller-upload-ảnh-poi)
+    - [13.13. Activity Admin Quản Lý Tour](#1313-activity-admin-quản-lý-tour)
+    - [13.14. Activity User Khám Phá Theo Tour](#1314-activity-user-khám-phá-theo-tour)
+14. [Phụ Lục: Cấu Trúc Thư Mục Dự Án](#14-phụ-lục-cấu-trúc-thư-mục-dự-án)
 
 ---
 
 ## 1. Giới Thiệu Chung
 
-**Smart Guide System** là hệ thống hỗ trợ trải nghiệm tham quan thông minh, cho phép user/guest truy cập nội dung hướng dẫn tại điểm đến thông qua **PWA**, quét **QR** để kích hoạt lượt nghe miễn phí hoặc mở khóa quyền truy cập, đồng thời cung cấp hai cổng quản trị riêng cho **seller (owner)** và **admin**.
+**Smart Guide System** là hệ thống hỗ trợ trải nghiệm tham quan thông minh, cho phép user/guest truy cập nội dung hướng dẫn tại điểm đến thông qua **PWA**, quét **QR** để kích hoạt lượt nghe miễn phí hoặc mở khóa quyền truy cập, khám phá **tour tham quan được sắp sẵn theo thứ tự POI**, đồng thời cung cấp hai cổng quản trị riêng cho **seller (owner)** và **admin**.
 
 Hệ thống được tổ chức theo kiến trúc web gồm:
 
-| Thành phần      | Vai trò                                            | Công nghệ                                       |
-| :-------------- | :------------------------------------------------- | :---------------------------------------------- |
-| **PWA**         | Ứng dụng cho user/guest                            | Next.js, TypeScript, TailwindCSS                |
-| **Seller Web**  | Cổng quản lý cho seller/owner                      | Next.js, TypeScript, TailwindCSS                |
-| **Admin Web**   | Cổng điều hành và kiểm duyệt hệ thống              | Next.js, TypeScript, TailwindCSS                |
-| **Backend API** | Xử lý nghiệp vụ, dữ liệu, thanh toán, QR, thiết bị | ASP.NET Core, Entity Framework Core, PostgreSQL |
+| Thành phần      | Vai trò                                                         | Công nghệ                                       |
+| :-------------- | :-------------------------------------------------------------- | :---------------------------------------------- |
+| **PWA**         | Ứng dụng cho user/guest                                         | Next.js, TypeScript, TailwindCSS                |
+| **Seller Web**  | Cổng quản lý cho seller/owner                                   | Next.js, TypeScript, TailwindCSS                |
+| **Admin Web**   | Cổng điều hành, kiểm duyệt và quản lý tour                      | Next.js, TypeScript, TailwindCSS                |
+| **Backend API** | Xử lý nghiệp vụ, dữ liệu, thanh toán, QR, thiết bị, media, tour | ASP.NET Core, Entity Framework Core, PostgreSQL |
 
 ### 1.1. Mục tiêu hệ thống
 
 - Cung cấp trải nghiệm nghe thuyết minh và khám phá POI trực tiếp trên web app.
+- Cung cấp thêm trải nghiệm khám phá theo tuyến/tour thay vì chỉ duyệt POI rời rạc.
 - Quản lý quyền truy cập theo thiết bị, QR và gói thanh toán.
-- Cho seller/owner tự quản lý POI, nội dung, audio, QR và giao dịch liên quan.
-- Cho admin quản lý tài khoản, POI, thiết bị, QR, gói dịch vụ và thanh toán toàn hệ thống.
+- Cho seller/owner tự quản lý POI, nội dung, audio, ảnh, QR và giao dịch liên quan.
+- Cho admin quản lý tài khoản, POI, thiết bị, QR, tour, gói dịch vụ và thanh toán toàn hệ thống.
 
 ### 1.2. Mục tiêu tài liệu
 
@@ -103,17 +115,18 @@ Tài liệu PRD này dùng để:
 
 - Thống nhất phạm vi sản phẩm.
 - Mô tả rõ actor, chức năng, dữ liệu và luồng xử lý chính.
+- Ghi nhận những thay đổi đã triển khai thực tế để tránh lệch giữa tài liệu và codebase.
 - Làm nền cho việc vẽ UML, ERD, use case và các sơ đồ phân tích sau này.
 
 ---
 
 ## 2. Phân Quyền Và Đối Tượng Người Dùng
 
-| Vai trò            | Nền tảng sử dụng | Mục tiêu chính                                              | Quyền hạn chính                                                       |
-| :----------------- | :--------------- | :---------------------------------------------------------- | :-------------------------------------------------------------------- |
-| **User / Guest**   | PWA              | Quét QR, xem bản đồ, nghe nội dung, lưu yêu thích, đánh giá | Truy cập nội dung POI, thanh toán gói sử dụng, quản lý hồ sơ thiết bị |
-| **Seller / Owner** | Seller Web       | Tạo và quản lý POI, audio, QR, thanh toán nâng cấp          | CRUD POI của mình, quản lý QR, theo dõi giao dịch                     |
-| **Admin**          | Admin Web        | Quản trị vận hành toàn hệ thống                             | Quản lý user, POI, QR, plans, devices, payments                       |
+| Vai trò            | Nền tảng sử dụng | Mục tiêu chính                                                            | Quyền hạn chính                                                            |
+| :----------------- | :--------------- | :------------------------------------------------------------------------ | :------------------------------------------------------------------------- |
+| **User / Guest**   | PWA              | Quét QR, xem bản đồ, nghe nội dung, đi theo tour, lưu yêu thích, đánh giá | Truy cập nội dung POI/tour, thanh toán gói sử dụng, quản lý hồ sơ thiết bị |
+| **Seller / Owner** | Seller Web       | Tạo và quản lý POI, audio, ảnh, QR, thanh toán nâng cấp                   | CRUD POI của mình, upload ảnh, quản lý QR, theo dõi giao dịch              |
+| **Admin**          | Admin Web        | Quản trị vận hành toàn hệ thống                                           | Quản lý user, POI, QR, tour, plans, devices, payments                      |
 
 ### 2.1. Mô hình nhận diện người dùng
 
@@ -212,7 +225,22 @@ User/guest có thể nghe nội dung theo ba trạng thái:
   - POI hiển thị đúng trên bản đồ.
   - User có thể chọn POI và xem thông tin liên quan.
 
-**US 1.7 — Lưu yêu thích và ghi nhận lịch sử nghe**
+**US 1.7 — Khám phá theo tour**
+
+> Là một user/guest, tôi muốn xem các tour tham quan được sắp sẵn để khám phá nhiều POI theo đúng thứ tự gợi ý.
+
+- **Functional Requirements**
+  - PWA có route `/tours` để hiển thị danh sách tour đã publish.
+  - Backend cung cấp `GET /api/tours` và `GET /api/tours/{tourId}`.
+  - Mỗi tour gồm tên, mô tả, ảnh cover, số lượng POI và danh sách POI theo `sort_order`.
+  - PWA có thể mở `map` ở chế độ tour qua query `tourId`, tính quãng đường ước lượng và hỗ trợ theo dõi tour trên bản đồ.
+  - Tour chỉ hiển thị khi đang publish và còn ít nhất một POI hợp lệ, đã approved, thuộc owner còn active.
+- **Acceptance Criteria**
+  - User xem được danh sách tour đã phát hành.
+  - Thứ tự các POI trong tour hiển thị đúng như admin cấu hình.
+  - User có thể đi từ màn hình tour sang bản đồ chế độ tour mà không phải tự chọn lại từng POI.
+
+**US 1.8 — Lưu yêu thích và ghi nhận lịch sử nghe**
 
 > Là một user/guest, tôi muốn lưu lại các địa điểm yêu thích và xem lại lịch sử đã nghe.
 
@@ -225,7 +253,7 @@ User/guest có thể nghe nội dung theo ba trạng thái:
   - Favorite được thêm/xóa đúng theo thao tác.
   - Lịch sử nghe được lưu và hiển thị lại đúng theo thiết bị.
 
-**US 1.8 — Đánh giá POI**
+**US 1.9 — Đánh giá POI**
 
 > Là một user/guest, tôi muốn đánh giá chất lượng trải nghiệm của một POI.
 
@@ -280,10 +308,12 @@ User/guest có thể nghe nội dung theo ba trạng thái:
 > Là một seller/owner, tôi muốn tải ảnh lên để làm nội dung minh họa cho POI.
 
 - **Functional Requirements**
-  - Upload ảnh qua route upload trong `OwnerPoisController`.
-  - Ảnh được lưu và gắn với POI theo thứ tự hiển thị.
+  - Upload ảnh qua `POST /api/owner/pois/uploads/images`.
+  - Upload sử dụng `MediaStorageService`, ưu tiên **Cloudinary** nếu có cấu hình; nếu không sẽ fallback lưu local trong `wwwroot/images`.
+  - Hệ thống trả về danh sách URL ảnh để seller gắn vào POI theo thứ tự hiển thị.
 - **Acceptance Criteria**
   - Seller upload được nhiều ảnh.
+  - URL ảnh hợp lệ dùng lại được ở seller web, admin web và PWA.
   - Ảnh xuất hiện đúng trong chi tiết POI.
 
 **US 2.5 — Quản lý audio**
@@ -382,7 +412,23 @@ User/guest có thể nghe nội dung theo ba trạng thái:
   - Thiết bị hoạt động được cập nhật heartbeat.
   - Thiết bị vi phạm có thể bị vô hiệu hóa khỏi hệ thống.
 
-**US 3.5 — Quản lý gói dịch vụ**
+**US 3.5 — Quản lý tour**
+
+> Là admin, tôi muốn tạo và điều phối tour để user có thể khám phá nhiều POI theo hành trình đã sắp sẵn.
+
+- **Functional Requirements**
+  - Admin portal có trang `/tours`.
+  - Backend hỗ trợ `GET /api/admin/tours`, `POST /api/admin/tours`, `PUT /api/admin/tours/{tourId}`, `DELETE /api/admin/tours/{tourId}`.
+  - Admin upload ảnh cover qua `POST /api/admin/tours/uploads/cover`.
+  - Tour bắt buộc có tên, ảnh cover và ít nhất một POI đã approved.
+  - Admin chọn thứ tự POI trong tour; hệ thống lưu liên kết qua bảng `tour_pois`.
+  - Tour có cờ `is_published` để quyết định có hiển thị trên PWA hay không.
+- **Acceptance Criteria**
+  - Admin tạo, sửa, xóa tour thành công.
+  - Tour publish sẽ xuất hiện ở PWA nếu còn POI hợp lệ.
+  - Tour ẩn hoặc thiếu POI hợp lệ sẽ không hiển thị cho user cuối.
+
+**US 3.6 — Quản lý gói dịch vụ**
 
 > Là admin, tôi muốn tạo và điều chỉnh các gói người dùng có thể mua.
 
@@ -396,7 +442,7 @@ User/guest có thể nghe nội dung theo ba trạng thái:
   - Gói được tạo, cập nhật và xóa thành công.
   - PWA lấy được danh sách gói đang bán.
 
-**US 3.6 — Giám sát thanh toán và vận hành**
+**US 3.7 — Giám sát thanh toán và vận hành**
 
 > Là admin, tôi muốn theo dõi giao dịch thanh toán để xử lý sự cố và đối soát.
 
@@ -414,11 +460,12 @@ User/guest có thể nghe nội dung theo ba trạng thái:
 | Tiêu chí              | Mô tả                                                                                                                                |
 | :-------------------- | :----------------------------------------------------------------------------------------------------------------------------------- |
 | **Bảo mật**           | Seller và admin được phân quyền theo role. Thiết bị không hợp lệ hoặc bị khóa sẽ bị chặn ở backend.                                  |
-| **Hiệu năng**         | Các màn danh sách chính phải phản hồi đủ nhanh để dùng thực tế trên web.                                                             |
+| **Hiệu năng**         | Các màn danh sách chính như POI, tour, QR, payments phải phản hồi đủ nhanh để dùng thực tế trên web và mobile.                       |
 | **Khả dụng**          | PWA phải hoạt động tốt trên mobile browser và có thể dùng như web app cài lên màn hình chính.                                        |
-| **Khả năng mở rộng**  | Cấu trúc backend tách theo controller nghiệp vụ: auth, devices, payments, owner, admin, profiles, pois.                              |
-| **Đa ngôn ngữ**       | Hệ thống hiện hỗ trợ các mã ngôn ngữ `vi`, `en`, `ja`, `ko`, `zh`.                                                                   |
-| **Khả năng theo dõi** | QR logs, listen logs, payment states và subscription states cần được lưu để phục vụ phân tích và vận hành.                           |
+| **Khả năng mở rộng**  | Cấu trúc backend tách theo controller nghiệp vụ: auth, devices, payments, owner, admin, profiles, pois, tours, media.                |
+| **Đa ngôn ngữ**       | Hệ thống hiện hỗ trợ các mã ngôn ngữ `vi`, `en`, `ja`, `ko`, `zh` cho nội dung và nhãn UI chính.                                     |
+| **Khả năng theo dõi** | QR logs, listen logs, payment states, subscription states và dữ liệu quét/duyệt vận hành cần được lưu để phục vụ phân tích.          |
+| **Media storage**     | Ảnh upload phải dùng chung một abstraction lưu trữ; ưu tiên Cloudinary, fallback local nếu môi trường chưa cấu hình.                 |
 | **Triển khai**        | `services/api` và PostgreSQL hiện triển khai trên Railway. `apps/pwa`, `apps/seller-web` và `apps/admin-web` triển khai trên Vercel. |
 
 ---
@@ -427,14 +474,17 @@ User/guest có thể nghe nội dung theo ba trạng thái:
 
 ### 5.1. Technology Stack
 
-| Thành phần      | Công nghệ chính                                               |
-| :-------------- | :------------------------------------------------------------ |
-| **Backend API** | ASP.NET Core, Entity Framework Core                           |
-| **Database**    | PostgreSQL (Railway)                                          |
-| **PWA**         | Next.js 14, React 18, TypeScript, TailwindCSS, Zustand, Axios |
-| **Seller Web**  | Next.js 14, React 18, TypeScript, TailwindCSS, Zustand, Axios |
-| **Admin Web**   | Next.js 14, React 18, TypeScript, TailwindCSS, Zustand, Axios |
-| **Thanh toán**  | Chuyển khoản qua Sepay QR                                     |
+| Thành phần         | Công nghệ chính                                               |
+| :----------------- | :------------------------------------------------------------ |
+| **Backend API**    | ASP.NET Core, Entity Framework Core, HttpClient               |
+| **Database**       | PostgreSQL (Railway)                                          |
+| **PWA**            | Next.js 14, React 18, TypeScript, TailwindCSS, Zustand, Axios |
+| **Seller Web**     | Next.js 14, React 18, TypeScript, TailwindCSS, Zustand, Axios |
+| **Admin Web**      | Next.js 14, React 18, TypeScript, TailwindCSS, Zustand, Axios |
+| **Bản đồ / Route** | OpenStreetMap, Leaflet, OSRM                                  |
+| **Media storage**  | Cloudinary hoặc local static files (`wwwroot/images`)         |
+| **Dịch nội dung**  | Google Translate HTTP fallback cho thao tác hỗ trợ seller     |
+| **Thanh toán**     | Chuyển khoản qua Sepay QR                                     |
 
 ### 5.2. Kiến trúc hệ thống tổng quan
 
@@ -444,8 +494,10 @@ User/guest có thể nghe nội dung theo ba trạng thái:
   - `apps/admin-web`
 - **Backend layer**
   - `services/api`
+  - `MediaStorageService` dùng chung cho upload ảnh POI và cover tour
 - **Database layer**
   - PostgreSQL thông qua `AppDbContext`
+  - Các bảng nghiệp vụ chính gồm POI, QR, payments, subscriptions, tours và tour_pois
 
 ### 5.3. Hạ tầng triển khai
 
@@ -461,9 +513,11 @@ User/guest có thể nghe nội dung theo ba trạng thái:
 
 1. User truy cập PWA.
 2. PWA tự động đăng ký thiết bị với backend ở nền.
-3. User quét QR hoặc truy cập danh sách POI.
+3. User quét QR, truy cập danh sách POI hoặc mở danh sách tour.
 4. Backend kiểm tra quyền theo QR, free listen hoặc gói sử dụng.
-5. Seller và admin thao tác trên các portal riêng để cập nhật dữ liệu hệ thống.
+5. PWA hiển thị nội dung theo POI đơn lẻ hoặc theo route tour đã được publish.
+6. Seller quản lý POI, ảnh, audio, QR và giao dịch nâng cấp trên seller portal.
+7. Admin kiểm duyệt nội dung, quản lý tour, plans, devices và payments trên admin portal.
 
 ---
 
@@ -478,6 +532,7 @@ Theo `AppDbContext`, hệ thống hiện có các nhóm dữ liệu chính sau:
 | **Người dùng và phân quyền**  | `users`                                                  |
 | **Thiết bị và truy cập**      | `devices`, `device_entry_grants`, `subscriptions`        |
 | **Nội dung POI**              | `pois`, `poi_images`, `poi_translations`, `audio_guides` |
+| **Tour và tuyến tham quan**   | `tours`, `tour_pois`                                     |
 | **Tương tác người dùng**      | `favorites`, `listen_logs`, `ratings`                    |
 | **QR và nhật ký quét**        | `qr_entries`, `qr_logs`                                  |
 | **Thương mại và gói dịch vụ** | `plans`, `payments`                                      |
@@ -486,7 +541,8 @@ Theo `AppDbContext`, hệ thống hiện có các nhóm dữ liệu chính sau:
 
 - Một **owner** có thể sở hữu nhiều **POI**.
 - Một **POI** có thể có nhiều **ảnh**, **bản dịch** và **audio guide**.
-- Một **device** có thể có nhiều **favorite**, **listen log**, **payment** và **subscription** liên quan.
+- Một **tour** có thể chứa nhiều **POI** và một **POI** có thể xuất hiện trong nhiều **tour** thông qua bảng nối `tour_pois`.
+- Một **device** có thể có nhiều **favorite**, **listen log**, **payment** liên quan và có thể có một **subscription** đang hiệu lực.
 - Một **QR entry** gắn với một **POI** và phát sinh nhiều **QR log**.
 - Một **payment** có thể dùng để kích hoạt **user plan** hoặc **POI upgrade**.
 
@@ -494,6 +550,8 @@ Theo `AppDbContext`, hệ thống hiện có các nhóm dữ liệu chính sau:
 
 - `favorites` có unique index theo cặp `(DeviceId, PoiId)` để tránh trùng favorite.
 - POI trên PWA chỉ hiển thị nếu đã được duyệt và owner còn hoạt động.
+- Tour trên PWA chỉ hiển thị nếu `is_published = true` và còn ít nhất một POI approved, hợp lệ.
+- `tour_pois` có unique index theo cặp `(tour_id, poi_id)` và lưu thứ tự qua `sort_order`.
 - QR có trạng thái nghiệp vụ như `active`, `inactive`, `expired`, `admin_suspended`, `seller_deleted`.
 
 ---
@@ -525,6 +583,8 @@ Theo `AppDbContext`, hệ thống hiện có các nhóm dữ liệu chính sau:
 
 - `GET /api/pois`
 - `GET /api/pois/{id}`
+- `GET /api/tours`
+- `GET /api/tours/{tourId}`
 - `POST /api/pois/favorite/{poiId}`
 - `POST /api/pois/listened/{poiId}`
 - `POST /api/ratings`
@@ -538,12 +598,14 @@ Theo `AppDbContext`, hệ thống hiện có các nhóm dữ liệu chính sau:
 - `GET /api/owner/pois/{id}`
 - `POST /api/owner/pois`
 - `POST /api/owner/pois/translate`
+- `POST /api/owner/pois/uploads/images`
 - `GET /api/owner/audio/{poiId}`
 - `POST /api/owner/audio/tts`
 - `PUT /api/owner/audio/{audioId}`
 - `DELETE /api/owner/audio/{audioId}`
 - `GET /api/owner/qr`
 - `GET /api/owner/qr/logs`
+- `GET /api/owner/qr/{id}/logs`
 - `POST /api/owner/qr`
 - `PUT /api/owner/qr/{id}/topup`
 - `PUT /api/owner/qr/{id}/status`
@@ -558,12 +620,27 @@ Theo `AppDbContext`, hệ thống hiện có các nhóm dữ liệu chính sau:
 - `PUT /api/admin/users/{userId}/status`
 - `DELETE /api/admin/users/{userId}`
 - `GET /api/admin/pois`
+- `PUT /api/admin/pois/{id}/approve`
+- `PUT /api/admin/pois/{id}/reject`
+- `DELETE /api/admin/pois/{id}`
+- `PUT /api/admin/audio/{audioId}/approve`
+- `PUT /api/admin/audio/{audioId}/reject`
+- `GET /api/admin/devices`
+- `GET /api/admin/devices/{deviceId}/detail`
+- `PUT /api/admin/devices/{deviceId}/status`
+- `DELETE /api/admin/devices/{deviceId}`
+- `GET /api/admin/analytics/dashboard`
 - `GET /api/admin/qr`
 - `GET /api/admin/qr/logs`
 - `GET /api/admin/qr/{id}/logs`
 - `PUT /api/admin/qr/{id}/status`
 - `POST /api/admin/qr/{id}/activation-request/reject`
 - `DELETE /api/admin/qr/{id}/hard`
+- `GET /api/admin/tours`
+- `POST /api/admin/tours`
+- `PUT /api/admin/tours/{tourId}`
+- `DELETE /api/admin/tours/{tourId}`
+- `POST /api/admin/tours/uploads/cover`
 
 ### 7.7. Nhóm Plans Và Payments
 
@@ -572,11 +649,19 @@ Theo `AppDbContext`, hệ thống hiện có các nhóm dữ liệu chính sau:
 - `POST /api/plans`
 - `PUT /api/plans/{id}`
 - `DELETE /api/plans/{id}`
-- Các route trong `PaymentsController` phục vụ:
-  - tạo giao dịch
-  - lấy trạng thái giao dịch
-  - webhook cập nhật thanh toán
-  - kích hoạt gói hoặc nâng cấp POI sau thanh toán
+- `POST /api/payments/create`
+- `POST /api/payments/submit`
+- `GET /api/payments/status`
+- `GET /api/payments/check`
+- `GET /api/payments/history`
+- `POST /api/payments/sepay/webhook`
+- `GET /api/owner/payments`
+- `GET /api/owner/payments/status`
+- `POST /api/owner/payments/prepare-poi-upgrade`
+- `POST /api/owner/payments/submit`
+- `GET /api/admin/payments`
+- `PUT /api/admin/payments/{id}/status`
+- `GET /api/payments/sepay/debug-match`
 
 ---
 
@@ -586,7 +671,7 @@ Theo `AppDbContext`, hệ thống hiện có các nhóm dữ liệu chính sau:
 
 | Nhóm màn hình      | Route chính                                        | Mục đích                                                  |
 | :----------------- | :------------------------------------------------- | :-------------------------------------------------------- |
-| **Trang khám phá** | `/`, `/map`, `/detail`                             | Duyệt POI, xem bản đồ, xem chi tiết                       |
+| **Trang khám phá** | `/`, `/map`, `/detail`, `/tours`                   | Duyệt POI, xem bản đồ, xem chi tiết, khám phá theo tour   |
 | **Quyền truy cập** | `/qr/[entryCode]`, `/scan`, `/paywall`, `/payment` | Quét QR, nhận quyền nghe, chuyển sang thanh toán khi cần  |
 | **Hồ sơ cá nhân**  | `/profile`                                         | Xem thông tin thiết bị, lịch sử nghe, danh sách yêu thích |
 
@@ -603,15 +688,18 @@ Theo `AppDbContext`, hệ thống hiện có các nhóm dữ liệu chính sau:
 
 ### 8.3. Admin Web
 
-| Nhóm màn hình                     | Route chính                | Mục đích                               |
-| :-------------------------------- | :------------------------- | :------------------------------------- |
-| **Xác thực**                      | `/auth/login`              | Đăng nhập admin                        |
-| **Điều hành tổng quan**           | `/dashboard`, `/analytics` | Theo dõi số liệu vận hành              |
-| **Quản lý tài khoản và thiết bị** | `/users`, `/devices`       | Quản lý user, seller/owner và thiết bị |
-| **Quản lý nội dung và QR**        | `/pois`, `/qr`             | Kiểm duyệt POI, giám sát QR            |
-| **Gói và giao dịch**              | `/plans`, `/payments`      | Quản lý gói sử dụng và thanh toán      |
+| Nhóm màn hình                     | Route chính                | Mục đích                                             |
+| :-------------------------------- | :------------------------- | :--------------------------------------------------- |
+| **Xác thực**                      | `/auth/login`              | Đăng nhập admin                                      |
+| **Điều hành tổng quan**           | `/dashboard`, `/analytics` | Theo dõi số liệu vận hành                            |
+| **Quản lý tài khoản và thiết bị** | `/users`, `/devices`       | Quản lý user, seller/owner và thiết bị               |
+| **Quản lý nội dung và QR**        | `/pois`, `/qr`             | Kiểm duyệt POI, giám sát QR                          |
+| **Quản lý tour**                  | `/tours`                   | Tạo route tham quan, sắp thứ tự POI, publish/ẩn tour |
+| **Gói và giao dịch**              | `/plans`, `/payments`      | Quản lý gói sử dụng và thanh toán                    |
 
 ---
+
+> Ghi chú đồng bộ tài liệu: các phần mô tả nghiệp vụ, API, dữ liệu, web structure và các sơ đồ chính ở mục 1-12 đã được cập nhật theo code hiện tại. Trong đó, sequence/activity cho `tour` và `media upload` đã được bổ sung lại theo implementation mới; các sơ đồ cũ khác vẫn giữ vai trò mô tả luồng cốt lõi của hệ thống.
 
 ## 9. Sơ Đồ Use Case
 
@@ -1164,13 +1252,15 @@ sequenceDiagram
     PaymentPage ->> DeviceLib: ensureDeviceReady()
     PaymentPage ->> API: POST /api/payments/create?deviceId=...&planId=...
     API ->> PaymentsCtl: CreatePayment(deviceId, planId)
-    PaymentsCtl ->> DB: Kiểm tra Device và Plan
+    PaymentsCtl ->> PaymentsCtl: GetActiveDeviceAsync(deviceId)
+    PaymentsCtl ->> DB: Find Device + Find Plan
 
     alt Thiết bị hoặc plan không hợp lệ
         PaymentsCtl -->> API: message lỗi
         API -->> PaymentPage: Hiển thị lỗi tạo thanh toán
     else Tạo giao dịch thành công
         PaymentsCtl ->> DB: Tạo Payment(status = pending, paymentType = user_plan, code = SGPAY...)
+        PaymentsCtl ->> PaymentsCtl: ToCheckoutResponse(payment, plan)
         PaymentsCtl -->> API: 200 OK(checkoutResponse)
         API -->> PaymentPage: QR SePay + transfer content + payment code
         PaymentPage -->> User: Hiển thị màn QR thanh toán
@@ -1178,9 +1268,17 @@ sequenceDiagram
         loop Mỗi 3 giây khi payment đang pending
             PaymentPage ->> API: GET /api/payments/status?code=...&deviceId=...
             API ->> PaymentsCtl: GetDevicePaymentStatus(code, deviceId)
+            PaymentsCtl ->> PaymentsCtl: GetActiveDeviceAsync(deviceId)
+            PaymentsCtl ->> DB: Find Payment(code, deviceId)
             PaymentsCtl ->> PaymentsCtl: TrySyncPaymentFromSepayAsync(payment)
+            PaymentsCtl ->> Sepay: BuildSepayTransactionLookupUrls(...) + GET transactions
+            Sepay -->> PaymentsCtl: Danh sách giao dịch gần đúng
+            PaymentsCtl ->> PaymentsCtl: ExtractSepayTransactions(...) + NormalizePaymentCode(...)
 
             alt Payment đã được xác nhận hoặc đã dùng
+                PaymentsCtl ->> PaymentsCtl: ApplySuccessfulPaymentAsync(...) nếu match được giao dịch
+                PaymentsCtl ->> PaymentsCtl: ActivateUserPlanAsync(payment)
+                PaymentsCtl ->> DB: SaveChangesAsync()
                 PaymentsCtl -->> API: status = used / confirmed
                 API -->> PaymentPage: Giao dịch thành công
                 PaymentPage -->> User: Hiển thị popup thành công
@@ -1191,6 +1289,7 @@ sequenceDiagram
                 API -->> PaymentPage: Đang kiểm tra giao dịch
                 PaymentPage -->> User: Tiếp tục chờ thanh toán
             else Payment bị từ chối hoặc hết thời gian chờ
+                PaymentsCtl ->> PaymentsCtl: ExpirePaymentIfNeededAsync(payment)
                 PaymentsCtl -->> API: status = rejected
                 API -->> PaymentPage: rejected_reason
                 PaymentPage -->> User: Hiển thị thông báo chưa ghi nhận hoặc đã hết hạn
@@ -1200,7 +1299,11 @@ sequenceDiagram
         opt User bấm "Tôi đã thanh toán"
             PaymentPage ->> API: POST /api/payments/submit?code=...&deviceId=...
             API ->> PaymentsCtl: SubmitDevicePayment(code, deviceId)
-            PaymentsCtl ->> PaymentsCtl: Kiểm tra timeout và đồng bộ giao dịch từ SePay
+            PaymentsCtl ->> PaymentsCtl: GetActiveDeviceAsync(deviceId)
+            PaymentsCtl ->> DB: Find Payment(code, deviceId)
+            PaymentsCtl ->> PaymentsCtl: ExpirePaymentIfNeededAsync(payment)
+            PaymentsCtl ->> DB: Update payment.SubmittedAt, status = pending
+            PaymentsCtl ->> PaymentsCtl: TrySyncPaymentFromSepayAsync(payment)
 
             alt Giao dịch đã được xác nhận
                 PaymentsCtl -->> API: message = đã xác nhận thành công
@@ -1245,21 +1348,22 @@ sequenceDiagram
     participant API as Payment Webhook Endpoint
     participant PaymentsCtl as PaymentsController
     participant DB as PostgreSQL
-    participant PaymentSvc as Payment Application Service
 
     Sepay ->> API: POST /api/payments/sepay/webhook(payload)
     API ->> PaymentsCtl: HandleSepayWebhook(payload)
 
     alt Webhook không hợp lệ
+        PaymentsCtl ->> PaymentsCtl: IsValidSepayWebhook()
         PaymentsCtl -->> API: 401 Unauthorized
         API -->> Sepay: message = webhook không hợp lệ
     else Webhook hợp lệ
         PaymentsCtl ->> PaymentsCtl: ResolvePaymentCode(payload)
+        PaymentsCtl ->> PaymentsCtl: NormalizePaymentCode(paymentCode)
         alt Không trích xuất được mã thanh toán
             PaymentsCtl -->> API: 200 OK(message = không tìm thấy mã thanh toán hợp lệ)
             API -->> Sepay: Bỏ qua payload
         else Trích xuất được paymentCode
-            PaymentsCtl ->> DB: Tìm Payment theo normalized code
+            PaymentsCtl ->> DB: Load Payments và match theo NormalizePaymentCode(x.Code)
 
             alt Không tìm thấy payment tương ứng
                 DB -->> PaymentsCtl: Không có payment
@@ -1273,15 +1377,17 @@ sequenceDiagram
                     PaymentsCtl -->> API: 200 OK(message = số tiền chuyển chưa đủ)
                     API -->> Sepay: Kết thúc webhook
                 else Số tiền hợp lệ
-                    PaymentsCtl ->> PaymentSvc: ApplySuccessfulPaymentAsync(payment, provider info, paidAt)
+                    PaymentsCtl ->> PaymentsCtl: ApplySuccessfulPaymentAsync(payment, provider info, paidAt)
 
                     alt Thanh toán gói người dùng
-                        PaymentSvc ->> DB: Tạo hoặc gia hạn Subscription
+                        PaymentsCtl ->> PaymentsCtl: ActivateUserPlanAsync(payment)
+                        PaymentsCtl ->> DB: Tạo hoặc gia hạn Subscription
                     else Thanh toán nâng cấp POI
-                        PaymentSvc ->> DB: Hoàn tất quy trình nâng cấp POI
+                        PaymentsCtl ->> PaymentsCtl: ConfirmPoiUpgradeAsync(payment)
+                        PaymentsCtl ->> DB: Tạo POI từ draft hoặc đánh dấu upgrade đã dùng
                     end
 
-                    PaymentSvc ->> DB: Cập nhật Payment(status = used)
+                    PaymentsCtl ->> DB: SaveChangesAsync() cho Payment(status = used)
                     DB -->> PaymentsCtl: Lưu thành công
                     PaymentsCtl -->> API: 200 OK(success = true, status = used)
                     API -->> Sepay: Xác nhận webhook đã xử lý
@@ -1314,11 +1420,12 @@ sequenceDiagram
 }}%%
 sequenceDiagram
     participant Seller as Seller
-    participant PoiForm as POI Creation Flow
+    participant PoiForm as Seller PoiForm
     participant API as API Gateway
     participant OwnerCtl as OwnerPoisController
     participant PaymentCtl as PaymentsController
     participant DraftSvc as POI Draft Service
+    participant TranslateApi as Google Translate HTTP API
     participant DB as PostgreSQL
     participant UpgradePage as POI Upgrade Payment Flow
 
@@ -1331,11 +1438,16 @@ sequenceDiagram
         opt Có ngôn ngữ cần dịch
             PoiForm ->> API: POST /api/owner/pois/translate
             API ->> OwnerCtl: Translate(request, ownerId)
+            OwnerCtl ->> DB: Users.FindAsync(ownerId)
 
             alt Dịch thành công
+                OwnerCtl ->> TranslateApi: GET translate.googleapis.com(...)
+                TranslateApi -->> OwnerCtl: translatedText
                 OwnerCtl -->> API: text đã dịch
                 API -->> PoiForm: Cập nhật translations / audios
             else Dịch thất bại
+                OwnerCtl ->> TranslateApi: GET translate.googleapis.com(...)
+                TranslateApi -->> OwnerCtl: error / timeout
                 OwnerCtl -->> API: fallback = true, text gốc
                 API -->> PoiForm: Dùng lại nội dung hiện có
             end
@@ -1345,6 +1457,7 @@ sequenceDiagram
             PoiForm ->> API: POST /api/owner/pois(payload, ownerId)
             API ->> OwnerCtl: CreatePoi(request, ownerId)
             OwnerCtl ->> DraftSvc: Validate(request)
+            OwnerCtl ->> DB: Users.FindAsync(ownerId)
 
             alt Seller không đủ quyền hoặc dữ liệu backend không hợp lệ
                 OwnerCtl -->> API: message lỗi
@@ -1352,6 +1465,7 @@ sequenceDiagram
             else Tạo POI thành công
                 OwnerCtl ->> DraftSvc: CreatePoiFromDraftAsync(request, ownerId)
                 DraftSvc ->> DB: Tạo POI, ảnh, bản dịch, audio
+                OwnerCtl ->> DB: SaveChangesAsync() + Commit transaction
                 DB -->> OwnerCtl: poiId
                 OwnerCtl -->> API: 200 OK(poiId, message)
                 API -->> PoiForm: POI tạo thành công
@@ -1360,6 +1474,7 @@ sequenceDiagram
         else Chế độ tạo mới và có upgradeAmount
             PoiForm ->> API: POST /api/owner/payments/prepare-poi-upgrade(payload + upgrade metadata, ownerId)
             API ->> PaymentCtl: PreparePoiUpgradePayment(request, ownerId)
+            PaymentCtl ->> PaymentCtl: EnsureOwnerAsync(ownerId)
             PaymentCtl ->> DraftSvc: Validate(request)
 
             alt Không đủ quyền hoặc dữ liệu không hợp lệ
@@ -1367,6 +1482,7 @@ sequenceDiagram
                 API -->> PoiForm: Hiển thị lỗi chuẩn bị nâng cấp
             else Chuẩn bị payment nâng cấp thành công
                 PaymentCtl ->> DB: Tạo Payment(paymentType = poi_upgrade, status = pending, draftPayload)
+                PaymentCtl ->> PaymentCtl: ToCheckoutResponse(payment, null, request.Name)
                 PaymentCtl -->> API: 200 OK(checkoutResponse)
                 API -->> PoiForm: payment code
                 PoiForm ->> UpgradePage: Chuyển sang luồng thanh toán nâng cấp POI
@@ -1399,14 +1515,14 @@ sequenceDiagram
 }}%%
 sequenceDiagram
     participant Seller as Seller
-    participant EditFlow as Seller POI Edit Flow
+    participant EditFlow as Seller Poi Edit Page
     participant API as API Gateway
     participant OwnerCtl as OwnerPoisController
     participant DB as PostgreSQL
 
     Seller ->> EditFlow: Mở POI cần chỉnh sửa
     EditFlow ->> API: GET /api/owner/pois/{id}
-    API ->> OwnerCtl: GetPoiById(id, ownerId)
+    API ->> OwnerCtl: GetPoi(id, ownerId)
     OwnerCtl ->> DB: Lấy POI, ảnh, bản dịch và audio hiện tại
     DB -->> OwnerCtl: Dữ liệu POI
     OwnerCtl -->> API: Chi tiết POI
@@ -1416,6 +1532,7 @@ sequenceDiagram
     EditFlow ->> EditFlow: Kiểm tra dữ liệu và chuẩn bị payload
     EditFlow ->> API: PUT /api/owner/pois/{id}(payload, ownerId)
     API ->> OwnerCtl: UpdatePoi(id, request, ownerId)
+    OwnerCtl ->> DB: FirstOrDefaultAsync(Poi by id)
 
     alt POI không tồn tại hoặc không thuộc seller
         OwnerCtl -->> API: message lỗi
@@ -1427,6 +1544,7 @@ sequenceDiagram
         OwnerCtl ->> DB: Cập nhật thông tin POI
         OwnerCtl ->> DB: Đồng bộ ảnh, bản dịch và audio liên quan
         OwnerCtl ->> DB: Đặt status = pending, xóa rejectedReason
+        OwnerCtl ->> DB: SaveChangesAsync()
         DB -->> OwnerCtl: Lưu thành công
         OwnerCtl -->> API: message = POI được cập nhật thành công
         API -->> EditFlow: Hiển thị thông báo đã gửi duyệt lại
@@ -1457,11 +1575,11 @@ sequenceDiagram
 }}%%
 sequenceDiagram
     participant Seller as Seller
-    participant ContentFlow as Seller Audio And Translation Flow
+    participant ContentFlow as Seller Audio Editor
     participant API as API Gateway
     participant OwnerPoisCtl as OwnerPoisController
     participant OwnerAudioCtl as OwnerAudioController
-    participant TranslateSvc as Translation Service
+    participant TranslateSvc as Google Translate HTTP API
     participant DB as PostgreSQL
 
     Seller ->> ContentFlow: Mở form chỉnh sửa nội dung POI
@@ -1542,12 +1660,12 @@ sequenceDiagram
 }}%%
 sequenceDiagram
     participant Seller as Seller
-    participant SellerQrPage as Seller QR Operation Flow
+    participant SellerQrPage as Seller QR Page
     participant API as API Gateway
     participant OwnerQrCtl as OwnerQrController
     participant DB as PostgreSQL
 
-    Seller ->> SellerQrPage: Mở màn quản lý QR
+    Seller ->> SellerQrPage: Truy cập trang quản lý QR
     SellerQrPage ->> API: GET /api/owner/qr?ownerId=...
     API ->> OwnerQrCtl: GetQrEntries(ownerId)
     OwnerQrCtl ->> DB: Lấy QR của seller, POI liên quan và log quét
@@ -1570,7 +1688,7 @@ sequenceDiagram
             API -->> SellerQrPage: Hiển thị QR mới
         end
     else Seller cộng thêm lượt quét
-        Seller ->> SellerQrPage: Chọn "Cộng lượt quét"
+        Seller ->> SellerQrPage: Gửi yêu cầu topup QR
         SellerQrPage ->> API: PUT /api/owner/qr/{id}/topup(additionalScans)
         API ->> OwnerQrCtl: TopUpQrEntry(id, request, ownerId)
 
@@ -1660,7 +1778,7 @@ sequenceDiagram
 }}%%
 sequenceDiagram
     participant Seller as Seller
-    participant QrAnalyticsFlow as Seller QR Log Flow
+    participant QrAnalyticsFlow as Seller QR Logs Page
     participant API as API Gateway
     participant OwnerQrCtl as OwnerQrController
     participant DB as PostgreSQL
@@ -1715,12 +1833,12 @@ sequenceDiagram
 }}%%
 sequenceDiagram
     participant Admin as Admin
-    participant AdminPoisPage as Admin POI Moderation Flow
+    participant AdminPoisPage as Admin POI Moderation Page
     participant API as API Gateway
     participant AdminCtl as AdminController
     participant DB as PostgreSQL
 
-    Admin ->> AdminPoisPage: Mở màn quản lý POI
+    Admin ->> AdminPoisPage: Truy cập trang quản lý POI
     AdminPoisPage ->> API: GET /api/admin/pois?adminId=...&status=...
     API ->> AdminCtl: GetAllPois(adminId, status, q, ownerId)
     AdminCtl ->> DB: Lấy danh sách POI, ảnh, audio và seller liên quan
@@ -1788,12 +1906,12 @@ sequenceDiagram
 }}%%
 sequenceDiagram
     participant Admin as Admin
-    participant AccountFlow as Admin Account Review Flow
+    participant AccountFlow as Admin Users Page
     participant API as API Gateway
     participant AdminCtl as AdminController
     participant DB as PostgreSQL
 
-    Admin ->> AccountFlow: Mở màn quản lý tài khoản
+    Admin ->> AccountFlow: Truy cập trang quản lý tài khoản
     AccountFlow ->> API: GET /api/admin/users?role=...&q=...
     API ->> AdminCtl: GetUsers(adminId, role, q)
     AdminCtl ->> DB: Lấy user, seller và thống kê POI/listen liên quan
@@ -1864,12 +1982,12 @@ sequenceDiagram
 }}%%
 sequenceDiagram
     participant Admin as Admin
-    participant DeviceFlow as Admin Device Control Flow
+    participant DeviceFlow as Admin Devices Page
     participant API as API Gateway
     participant AdminCtl as AdminController
     participant DB as PostgreSQL
 
-    Admin ->> DeviceFlow: Mở màn quản lý thiết bị
+    Admin ->> DeviceFlow: Truy cập trang quản lý thiết bị
     DeviceFlow ->> API: GET /api/admin/devices?status=...&q=...
     API ->> AdminCtl: GetDevices(adminId, status, q)
     AdminCtl ->> DB: Lấy danh sách thiết bị, subscription và thống kê liên quan
@@ -1932,13 +2050,13 @@ sequenceDiagram
     participant Admin as Admin
     participant AdminQrPage as Admin QR Review Flow
     participant Seller as Seller
-    participant SellerQrPage as Seller QR Operation Flow
+    participant SellerQrPage as Seller QR Page
     participant API as API Gateway
     participant AdminQrCtl as AdminQrController
     participant OwnerQrCtl as OwnerQrController
     participant DB as PostgreSQL
 
-    Admin ->> AdminQrPage: Mở màn quản lý QR
+    Admin ->> AdminQrPage: Truy cập trang quản lý QR
     AdminQrPage ->> API: GET /api/admin/qr?adminId=...
     API ->> AdminQrCtl: GetAllQrEntries(adminId)
     AdminQrCtl ->> DB: Lấy danh sách QR, owner, POI, log liên quan
@@ -2035,12 +2153,12 @@ sequenceDiagram
 }}%%
 sequenceDiagram
     participant Admin as Admin
-    participant PlanFlow as Admin Plan Setup Flow
+    participant PlanFlow as Admin Plans Page
     participant API as API Gateway
     participant PlansCtl as PlansController
     participant DB as PostgreSQL
 
-    Admin ->> PlanFlow: Mở màn quản lý gói sử dụng
+    Admin ->> PlanFlow: Truy cập trang quản lý gói sử dụng
     PlanFlow ->> API: GET /api/Plans/admin?adminId=...
     API ->> PlansCtl: GetPlansForAdmin(adminId)
     PlansCtl ->> DB: Lấy danh sách plan
@@ -2093,21 +2211,249 @@ sequenceDiagram
     end
 ```
 
+### 10.20. Sequence Seller Upload Ảnh POI
+
+> Luồng này cập nhật theo implementation hiện tại của `OwnerPoisController.UploadPoiImages(...)` và `MediaStorageService.UploadImageAsync(...)`, bao gồm cả nhánh dùng Cloudinary và nhánh fallback lưu local.
+
+```mermaid
+%%{init: {
+  "theme": "base",
+  "themeVariables": {
+    "primaryColor": "#EAF4FF",
+    "primaryBorderColor": "#2563EB",
+    "primaryTextColor": "#0F172A",
+    "lineColor": "#2563EB",
+    "secondaryColor": "#DBEAFE",
+    "tertiaryColor": "#F8FBFF",
+    "noteBkgColor": "#EFF6FF",
+    "noteBorderColor": "#3B82F6",
+    "activationBorderColor": "#2563EB",
+    "activationBkgColor": "#DBEAFE",
+    "sequenceNumberColor": "#0F172A"
+  }
+}}%%
+sequenceDiagram
+    participant Seller as Seller
+    participant PoiForm as Seller PoiForm
+    participant API as API Gateway
+    participant OwnerCtl as OwnerPoisController
+    participant MediaSvc as MediaStorageService
+    participant Cloudinary as Cloudinary API
+    participant FileStore as Local File Storage
+    participant DB as PostgreSQL
+
+    Seller ->> PoiForm: Chọn nhiều ảnh cho POI
+    PoiForm ->> API: POST /api/owner/pois/uploads/images(form-data files, ownerId)
+    API ->> OwnerCtl: UploadPoiImages(files, ownerId)
+    OwnerCtl ->> DB: Users.FindAsync(ownerId)
+
+    alt Owner không hợp lệ
+        OwnerCtl -->> API: Forbid("Chỉ owner mới có thể upload ảnh")
+        API -->> PoiForm: Hiển thị lỗi quyền truy cập
+    else Không có file hoặc file không hợp lệ
+        OwnerCtl ->> OwnerCtl: Validate extension / size / empty file
+        OwnerCtl -->> API: BadRequest(message)
+        API -->> PoiForm: Hiển thị lỗi upload ảnh
+    else Danh sách file hợp lệ
+        loop Với từng file
+            OwnerCtl ->> MediaSvc: UploadImageAsync(file, "pois", "poi")
+
+            alt Có cấu hình Cloudinary
+                MediaSvc ->> MediaSvc: UseCloudinary()
+                alt Unsigned strategy
+                    MediaSvc ->> Cloudinary: UploadToCloudinaryUnsignedAsync(file, folder)
+                else Signed strategy
+                    MediaSvc ->> Cloudinary: UploadToCloudinarySignedAsync(file, folder, filePrefix)
+                end
+                Cloudinary -->> MediaSvc: secure_url
+            else Chưa có cấu hình Cloudinary
+                MediaSvc ->> FileStore: UploadToLocalStorageAsync(file, folder, filePrefix)
+                FileStore -->> MediaSvc: /images/pois/...
+            end
+
+            MediaSvc -->> OwnerCtl: imageUrl
+        end
+
+        OwnerCtl -->> API: 200 OK(urls[])
+        API -->> PoiForm: Danh sách URL ảnh đã upload
+        PoiForm -->> Seller: Gắn URL vào bản nháp POI
+    end
+```
+
+### 10.21. Sequence Admin Quản Lý Tour
+
+> Luồng này phản ánh `AdminToursController` hiện tại, gồm tải danh sách tour, upload cover, tạo mới, cập nhật thứ tự POI và xóa tour.
+
+```mermaid
+%%{init: {
+  "theme": "base",
+  "themeVariables": {
+    "primaryColor": "#EAF4FF",
+    "primaryBorderColor": "#2563EB",
+    "primaryTextColor": "#0F172A",
+    "lineColor": "#2563EB",
+    "secondaryColor": "#DBEAFE",
+    "tertiaryColor": "#F8FBFF",
+    "noteBkgColor": "#EFF6FF",
+    "noteBorderColor": "#3B82F6",
+    "activationBorderColor": "#2563EB",
+    "activationBkgColor": "#DBEAFE",
+    "sequenceNumberColor": "#0F172A"
+  }
+}}%%
+sequenceDiagram
+    participant Admin as Admin
+    participant ToursPage as Admin Tours Page
+    participant API as API Gateway
+    participant ToursCtl as AdminToursController
+    participant MediaSvc as MediaStorageService
+    participant DB as PostgreSQL
+
+    Admin ->> ToursPage: Mở trang quản lý tour
+    ToursPage ->> API: GET /api/admin/tours?adminId=...
+    API ->> ToursCtl: GetTours(adminId)
+    ToursCtl ->> DB: Users.FindAsync(adminId)
+    ToursCtl ->> DB: Query Tours + TourPois + Pois + PoiImages
+    ToursCtl ->> ToursCtl: BuildAdminTourResponse(...)
+    ToursCtl -->> API: Danh sách tour
+    API -->> ToursPage: Hiển thị tour hiện có
+
+    opt Admin upload ảnh cover
+        Admin ->> ToursPage: Chọn ảnh cover
+        ToursPage ->> API: POST /api/admin/tours/uploads/cover(form-data file, adminId)
+        API ->> ToursCtl: UploadCoverImage(file, adminId)
+        ToursCtl ->> MediaSvc: UploadImageAsync(file, "tours", "tour-cover")
+        MediaSvc -->> ToursCtl: coverImageUrl
+        ToursCtl -->> API: 200 OK(url)
+        API -->> ToursPage: Gắn coverImageUrl vào form tour
+    end
+
+    alt Admin tạo tour mới
+        Admin ->> ToursPage: Nhập tên, mô tả, chọn POI theo thứ tự, bật/tắt publish
+        ToursPage ->> API: POST /api/admin/tours(payload, adminId)
+        API ->> ToursCtl: CreateTour(request, adminId)
+        ToursCtl ->> DB: Validate admin + check approved POIs
+
+        alt Payload không hợp lệ
+            ToursCtl -->> API: BadRequest(message)
+            API -->> ToursPage: Hiển thị lỗi lưu tour
+        else Hợp lệ
+            ToursCtl ->> DB: Insert Tour
+            ToursCtl ->> DB: Insert TourPois(sortOrder)
+            ToursCtl ->> ToursCtl: GetTourDetailInternalAsync(tour.Id)
+            ToursCtl -->> API: Tour vừa tạo
+            API -->> ToursPage: Cập nhật danh sách tour
+        end
+    else Admin cập nhật tour
+        Admin ->> ToursPage: Sửa thông tin hoặc đổi thứ tự POI
+        ToursPage ->> API: PUT /api/admin/tours/{tourId}(payload, adminId)
+        API ->> ToursCtl: UpdateTour(tourId, request, adminId)
+        ToursCtl ->> DB: FindAsync(tourId)
+        ToursCtl ->> DB: Validate approved POIs
+        ToursCtl ->> DB: RemoveRange(existingTourPois)
+        ToursCtl ->> DB: AddRange(new TourPois(sortOrder))
+        ToursCtl ->> ToursCtl: GetTourDetailInternalAsync(tourId)
+        ToursCtl -->> API: Tour đã cập nhật
+        API -->> ToursPage: Làm mới card tour
+    else Admin xóa tour
+        Admin ->> ToursPage: Xác nhận xóa
+        ToursPage ->> API: DELETE /api/admin/tours/{tourId}?adminId=...
+        API ->> ToursCtl: DeleteTour(tourId, adminId)
+        ToursCtl ->> DB: DELETE FROM tour_pois WHERE tour_id = tourId
+        ToursCtl ->> DB: DELETE FROM tours WHERE id = tourId
+        ToursCtl -->> API: message = Đã xóa tour
+        API -->> ToursPage: Gỡ tour khỏi danh sách
+    end
+```
+
+### 10.22. Sequence User Xem Tour Và Mở Bản Đồ
+
+> Luồng này mô tả trải nghiệm mới ở PWA: tải danh sách tour, lấy chi tiết tour, lọc POI hợp lệ và mở bản đồ ở chế độ `tourId`.
+
+```mermaid
+%%{init: {
+  "theme": "base",
+  "themeVariables": {
+    "primaryColor": "#EAF4FF",
+    "primaryBorderColor": "#2563EB",
+    "primaryTextColor": "#0F172A",
+    "lineColor": "#2563EB",
+    "secondaryColor": "#DBEAFE",
+    "tertiaryColor": "#F8FBFF",
+    "noteBkgColor": "#EFF6FF",
+    "noteBorderColor": "#3B82F6",
+    "activationBorderColor": "#2563EB",
+    "activationBkgColor": "#DBEAFE",
+    "sequenceNumberColor": "#0F172A"
+  }
+}}%%
+sequenceDiagram
+    participant User as User
+    participant ToursPage as PWA Tours Page
+    participant MapPage as PWA Map Page
+    participant API as API Gateway
+    participant ToursCtl as ToursController
+    participant AccessCtl as AccessController
+    participant DB as PostgreSQL
+    participant RouteSvc as OSRM / Route Service
+
+    User ->> ToursPage: Mở /tours
+    ToursPage ->> API: GET /api/tours
+    API ->> ToursCtl: GetTours()
+    ToursCtl ->> DB: Query published tours
+    ToursCtl ->> ToursCtl: BuildTourResponsesAsync(tours)
+    ToursCtl ->> DB: Load active owners + tour_pois + approved pois + poi_images
+    ToursCtl -->> API: Danh sách tour hợp lệ
+    API -->> ToursPage: Render card tour
+
+    opt Tính quãng đường ước lượng
+        ToursPage ->> RouteSvc: fetchRoadRoute(points)
+        RouteSvc -->> ToursPage: route geometry
+        ToursPage ->> ToursPage: measureRouteDistanceKm(...) + estimateMotorbikeMinutes(...)
+    end
+
+    User ->> ToursPage: Chọn "Xem tour"
+    ToursPage ->> MapPage: router.push(/map?tourId=...)
+    MapPage ->> API: GET /api/pois?deviceId=...&lang=...
+    MapPage ->> API: GET /api/access/free-listen?deviceId=...
+    MapPage ->> API: GET /api/tours/{tourId}
+    API ->> AccessCtl: GetFreeListenStatus(deviceId)
+    API ->> ToursCtl: GetTourById(tourId)
+    ToursCtl ->> DB: Query published tour by id
+    ToursCtl ->> ToursCtl: BuildTourResponsesAsync([tour])
+    ToursCtl -->> API: Chi tiết tour đã lọc POI hợp lệ
+    AccessCtl -->> API: access state
+    API -->> MapPage: pois + free-listen + activeTour
+
+    alt Không có quyền truy cập nội dung
+        MapPage -->> User: Chuyển sang paywall
+    else Có quyền truy cập
+        MapPage ->> MapPage: Sắp lại POI theo sort_order và đặt map ở chế độ tour
+        MapPage ->> RouteSvc: fetchRoadRoute(points in tour)
+        RouteSvc -->> MapPage: routePath
+        MapPage -->> User: Hiển thị tour overview và bản đồ tuyến tham quan
+    end
+```
+
 ---
 
 ## 11. Sơ Đồ Lớp (Class Diagram)
 
-> Giản lược theo cấu trúc API và các thực thể nghiệp vụ chính của hệ thống, không đi sâu đến toàn bộ mức chi tiết của ERD hoặc schema cơ sở dữ liệu.
+![Class Diagram Tổng Quan](images/class-diagram-manual.svg)
 
-![Class Diagram Tổng Quan](images/class-diagram-smart-guide.png)
+## 12. Sơ Đồ ERD
+
+![ERD](images/erd.png)
 
 ---
 
-## 12. Sơ Đồ Hoạt Động (Activity Diagram)
+## 13. Sơ Đồ Hoạt Động (Activity Diagram)
 
 > **Quy ước ký hiệu:** `(( ● ))` = Bắt đầu · `(( ◉ ))` = Kết thúc · `{ }` = Điều kiện rẽ nhánh · `[ ]` = Hành động xử lý
+>
+> Quy ước cập nhật: activity dưới đây chỉ mô tả `luồng nghiệp vụ`, `thao tác chính`, `điều kiện rẽ nhánh` và `kết quả`. Không đưa tên hàm/method chi tiết vào activity để tránh trùng vai trò với sequence diagram.
 
-### 12.1. Activity Khởi Tạo Thiết Bị Và Truy Cập PWA
+### 13.1. Activity Khởi Tạo Thiết Bị Và Truy Cập PWA
 
 ```mermaid
 flowchart TD
@@ -2143,7 +2489,7 @@ flowchart TD
     style LOAD_INIT fill:#2563EB,color:#fff
 ```
 
-### 12.2. Activity Tìm Kiếm Và Lọc POI
+### 13.2. Activity Tìm Kiếm Và Lọc POI
 
 ```mermaid
 flowchart TD
@@ -2178,7 +2524,7 @@ flowchart TD
     style SHOW_RESULT fill:#2563EB,color:#fff
 ```
 
-### 12.3. Activity User Quét QR Và Nhận Quyền Nghe
+### 13.3. Activity User Quét QR Và Nhận Quyền Nghe
 
 ```mermaid
 flowchart TD
@@ -2219,7 +2565,7 @@ flowchart TD
     style ERR_ENTRY fill:#EF4444,color:#fff
 ```
 
-### 12.4. Activity Kiểm Tra Quyền Truy Cập Và Phát Audio
+### 13.4. Activity Kiểm Tra Quyền Truy Cập Và Phát Audio
 
 ```mermaid
 flowchart TD
@@ -2257,7 +2603,7 @@ flowchart TD
     style ERR_FREE fill:#EF4444,color:#fff
 ```
 
-### 12.5. Activity Theo Dõi Vị Trí Và Tự Động Phát Audio
+### 13.5. Activity Theo Dõi Vị Trí Và Tự Động Phát Audio
 
 ```mermaid
 flowchart TD
@@ -2291,7 +2637,7 @@ flowchart TD
     style STOP_TRACKING fill:#EF4444,color:#fff
 ```
 
-### 12.6. Activity Seller Tạo Và Gửi Duyệt POI
+### 13.6. Activity Seller Tạo Và Gửi Duyệt POI
 
 ```mermaid
 flowchart TD
@@ -2325,7 +2671,7 @@ flowchart TD
     style ERR_PAYMENT fill:#EF4444,color:#fff
 ```
 
-### 12.7. Activity Seller Quản Lý QR
+### 13.7. Activity Seller Quản Lý QR
 
 ```mermaid
 flowchart TD
@@ -2370,7 +2716,7 @@ flowchart TD
     style REQUEST_HINT fill:#EF4444,color:#fff
 ```
 
-### 12.8. Activity Thanh Toán Và Kích Hoạt Gói
+### 13.8. Activity Thanh Toán Và Kích Hoạt Gói
 
 ```mermaid
 flowchart TD
@@ -2382,7 +2728,7 @@ flowchart TD
     CREATE_OK -- Có --> SHOW_QR[Hiển thị QR SePay và nội dung chuyển khoản]
     SHOW_QR --> WAIT_PAY{Giao dịch đã<br/>được ghi nhận?}
 
-    WAIT_PAY -- Chưa --> USER_CONFIRM{User bấm<br/>"Tôi đã thanh toán"?}
+    WAIT_PAY -- Chưa --> USER_CONFIRM{User bấm<br/>Toi da thanh toan?}
     USER_CONFIRM -- Không --> POLL_STATUS[Tiếp tục polling trạng thái payment]
     POLL_STATUS --> TIMEOUT{Payment<br/>hết hạn?}
     TIMEOUT -- Chưa --> WAIT_PAY
@@ -2408,7 +2754,7 @@ flowchart TD
     style EXPIRED fill:#EF4444,color:#fff
 ```
 
-### 12.9. Activity Admin Duyệt POI
+### 13.9. Activity Admin Duyệt POI
 
 ```mermaid
 flowchart TD
@@ -2437,7 +2783,7 @@ flowchart TD
     style REJECT fill:#EF4444,color:#fff
 ```
 
-### 12.10. Activity Admin Xử Lý QR Bị Tạm Ngưng
+### 13.10. Activity Admin Xử Lý QR Bị Tạm Ngưng
 
 ```mermaid
 flowchart TD
@@ -2472,7 +2818,7 @@ flowchart TD
     style KEEP_SUSPEND fill:#EF4444,color:#fff
 ```
 
-### 12.11. Activity Admin Quản Trị Hệ Thống
+### 13.11. Activity Admin Quản Trị Hệ Thống
 
 ```mermaid
 flowchart TD
@@ -2510,9 +2856,126 @@ flowchart TD
     style DASHBOARD fill:#2563EB,color:#fff
 ```
 
+### 13.12. Activity Seller Upload Ảnh POI
+
+```mermaid
+flowchart TD
+    START(( ● )) --> OPEN_UPLOAD[Seller mở khu vực upload ảnh]
+    OPEN_UPLOAD --> PICK_FILES[Chọn một hoặc nhiều ảnh]
+    PICK_FILES --> HAS_FILE{Có file nào<br/>được chọn?}
+
+    HAS_FILE -- Không --> END_CANCEL(( ◉ ))
+    HAS_FILE -- Có --> VALIDATE[Kiểm tra định dạng JPG, PNG, WEBP và giới hạn dung lượng]
+    VALIDATE --> VALID_OK{File hợp lệ?}
+
+    VALID_OK -- Không --> SHOW_ERR[Hiển thị lỗi upload]
+    VALID_OK -- Có --> SEND_API[Gửi form-data đến API upload ảnh]
+    SEND_API --> STORAGE_MODE{Môi trường có<br/>Cloudinary?}
+
+    STORAGE_MODE -- Có --> UP_CLOUD[Upload lên Cloudinary]
+    STORAGE_MODE -- Không --> UP_LOCAL[Lưu vào local storage]
+    UP_CLOUD --> GET_URLS[Nhận secure_url]
+    UP_LOCAL --> GET_URLS[Nhận local image url]
+    GET_URLS --> BIND_FORM[Gắn danh sách URL vào form POI]
+    BIND_FORM --> PREVIEW[Hiển thị preview ảnh]
+    PREVIEW --> END_OK(( ◉ ))
+    SHOW_ERR --> END_FAIL(( ◉ ))
+
+    style START fill:#000,color:#fff,stroke:#000
+    style END_OK fill:#000,color:#fff,stroke:#fff,stroke-width:3px
+    style END_FAIL fill:#000,color:#fff,stroke:#fff,stroke-width:3px
+    style UP_CLOUD fill:#2563EB,color:#fff
+    style UP_LOCAL fill:#2563EB,color:#fff
+    style SHOW_ERR fill:#EF4444,color:#fff
+```
+
+### 13.13. Activity Admin Quản Lý Tour
+
+```mermaid
+flowchart TD
+    START(( ● )) --> OPEN_PAGE[Admin mở trang quản lý tour]
+    OPEN_PAGE --> CHOOSE{Chọn thao tác}
+
+    CHOOSE -- Tạo tour --> OPEN_FORM[Nhập tên, mô tả, chọn POI theo thứ tự]
+    OPEN_FORM --> NEED_COVER{Đã có ảnh cover?}
+    NEED_COVER -- Chưa --> UPLOAD_COVER[Upload ảnh cover]
+    NEED_COVER -- Có --> VALIDATE_TOUR
+    UPLOAD_COVER --> VALIDATE_TOUR{Tên, cover và danh sách POI hợp lệ?}
+    VALIDATE_TOUR -- Không --> SHOW_ERR_CREATE[Hiển thị lỗi form tour]
+    VALIDATE_TOUR -- Có --> CHECK_APPROVED[Kiểm tra các POI đều approved]
+    CHECK_APPROVED --> APPROVED_OK{Tất cả POI hợp lệ?}
+    APPROVED_OK -- Không --> SHOW_ERR_CREATE
+    APPROVED_OK -- Có --> SAVE_TOUR[Tạo tour và tour_pois]
+    SAVE_TOUR --> REFRESH_LIST[Quay lại danh sách tour]
+    REFRESH_LIST --> OPEN_PAGE
+
+    CHOOSE -- Sửa tour --> PICK_TOUR[Chọn tour cần sửa]
+    PICK_TOUR --> EDIT_TOUR[Cập nhật thông tin hoặc đổi thứ tự POI]
+    EDIT_TOUR --> VALIDATE_EDIT{Payload hợp lệ?}
+    VALIDATE_EDIT -- Không --> SHOW_ERR_EDIT[Hiển thị lỗi cập nhật]
+    VALIDATE_EDIT -- Có --> REPLACE_LINKS[Xóa liên kết cũ và tạo lại tour_pois]
+    REPLACE_LINKS --> OPEN_PAGE
+
+    CHOOSE -- Xóa tour --> CONFIRM_DELETE{Xác nhận xóa?}
+    CONFIRM_DELETE -- Không --> OPEN_PAGE
+    CONFIRM_DELETE -- Có --> DELETE_TOUR[Xóa tour và tour_pois]
+    DELETE_TOUR --> OPEN_PAGE
+
+    CHOOSE -- Xem trên bản đồ --> VIEW_ROUTE[Hiển thị các POI theo thứ tự tour]
+    VIEW_ROUTE --> OPEN_PAGE
+
+    CHOOSE -- Thoát --> END_NODE(( ◉ ))
+    SHOW_ERR_CREATE --> OPEN_FORM
+    SHOW_ERR_EDIT --> EDIT_TOUR
+
+    style START fill:#000,color:#fff,stroke:#000
+    style END_NODE fill:#000,color:#fff,stroke:#fff,stroke-width:3px
+    style SAVE_TOUR fill:#2563EB,color:#fff
+    style REPLACE_LINKS fill:#2563EB,color:#fff
+    style DELETE_TOUR fill:#EF4444,color:#fff
+```
+
+### 13.14. Activity User Khám Phá Theo Tour
+
+```mermaid
+flowchart TD
+    START(( ● )) --> OPEN_TOURS[User mở màn hình Tour]
+    OPEN_TOURS --> LOAD_TOURS[Tải danh sách tour đã publish]
+    LOAD_TOURS --> HAS_TOUR{Có tour nào<br/>khả dụng?}
+
+    HAS_TOUR -- Không --> EMPTY[Hiển thị trạng thái chưa có tour]
+    HAS_TOUR -- Có --> CALC_METRICS[Tính quãng đường và thời gian ước lượng]
+    CALC_METRICS --> PICK_TOUR{User chọn tour?}
+
+    PICK_TOUR -- Không --> END_IDLE(( ◉ ))
+    PICK_TOUR -- Có --> OPEN_MAP[Chuyển sang map với tourId]
+    OPEN_MAP --> CHECK_ACCESS[Kiểm tra quyền truy cập nội dung]
+    CHECK_ACCESS --> ACCESS_OK{Được truy cập?}
+
+    ACCESS_OK -- Không --> PAYWALL[Chuyển sang paywall]
+    ACCESS_OK -- Có --> ORDER_POIS[Sắp POI theo sort_order]
+    ORDER_POIS --> DRAW_ROUTE[Vẽ tuyến đường và hiển thị overview]
+    DRAW_ROUTE --> FOLLOW{User bật theo dõi tour?}
+
+    FOLLOW -- Không --> VIEW_ONLY[Xem bản đồ và chọn POI thủ công]
+    FOLLOW -- Có --> TRACK_USER[Theo dõi vị trí hiện tại trên tuyến]
+    TRACK_USER --> PLAY_NEARBY[Tự động phát khi đến gần POI phù hợp]
+    PLAY_NEARBY --> END_OK(( ◉ ))
+    VIEW_ONLY --> END_OK
+    PAYWALL --> END_FAIL(( ◉ ))
+    EMPTY --> END_IDLE
+
+    style START fill:#000,color:#fff,stroke:#000
+    style END_OK fill:#000,color:#fff,stroke:#fff,stroke-width:3px
+    style END_IDLE fill:#000,color:#fff,stroke:#fff,stroke-width:3px
+    style END_FAIL fill:#000,color:#fff,stroke:#fff,stroke-width:3px
+    style DRAW_ROUTE fill:#2563EB,color:#fff
+    style PAYWALL fill:#EF4444,color:#fff
+```
+
 ---
 
-## 13. Phụ Lục: Cấu Trúc Thư Mục Dự Án
+## 14. Phụ Lục: Cấu Trúc Thư Mục Dự Án
 
 > Cây thư mục dưới đây được trình bày ở mức tổng quan để phục vụ việc định vị các thành phần chính của hệ thống, không liệt kê toàn bộ file chi tiết trong từng ứng dụng.
 
