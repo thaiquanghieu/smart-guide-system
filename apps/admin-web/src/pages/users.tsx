@@ -53,31 +53,60 @@ export default function Users() {
     return () => window.clearTimeout(timer)
   }, [query])
 
+  const availableAdminCount = users.filter((user) => user.role === 'admin' && user.isActive && !['paused', 'banned', 'canceled'].includes(user.account_status)).length
+
+  const wouldDisableLastAdmin = (user: User, nextStatus: 'paused' | 'banned' | 'canceled') => {
+    return user.role === 'admin'
+      && user.isActive
+      && !['paused', 'banned', 'canceled'].includes(user.account_status)
+      && availableAdminCount <= 1
+      && ['paused', 'banned', 'canceled'].includes(nextStatus)
+  }
+
   const openDetail = async (userId: number) => {
     const response = await apiClient.get(`/admin/users/${userId}/detail`)
     setSelectedUser(response.data)
   }
 
   const updateStatus = async (userId: number, status: 'active' | 'paused' | 'banned' | 'canceled') => {
-    await apiClient.put(`/admin/users/${userId}/status`, { status })
-    setUsers((prev) => prev.map((user) => (
-      user.id === userId
-        ? { ...user, account_status: status, isActive: !['banned', 'canceled'].includes(status) }
-        : user
-    )))
-    if (selectedUser?.id === userId) {
-      setSelectedUser((prev: any) => ({ ...prev, account_status: status, isActive: !['banned', 'canceled'].includes(status) }))
+    const targetUser = users.find((user) => user.id === userId)
+    if (targetUser && wouldDisableLastAdmin(targetUser, status as 'paused' | 'banned' | 'canceled')) {
+      alert('Không thể tạm ngưng, khóa hoặc hủy admin hoạt động cuối cùng của hệ thống.')
+      return
+    }
+
+    try {
+      await apiClient.put(`/admin/users/${userId}/status`, { status })
+      setUsers((prev) => prev.map((user) => (
+        user.id === userId
+          ? { ...user, account_status: status, isActive: !['banned', 'canceled'].includes(status) }
+          : user
+      )))
+      if (selectedUser?.id === userId) {
+        setSelectedUser((prev: any) => ({ ...prev, account_status: status, isActive: !['banned', 'canceled'].includes(status) }))
+      }
+    } catch (error: any) {
+      alert(error?.response?.data?.message || 'Cập nhật trạng thái tài khoản thất bại')
     }
   }
 
   const bulkCancel = async () => {
     if (!selectedIds.length) return
     if (!confirm(`Cập nhật ${selectedIds.length} tài khoản sang đã hủy?`)) return
-    for (const id of selectedIds) {
-      await apiClient.put(`/admin/users/${id}/status`, { status: 'canceled' })
+    const blockedAdmin = users.find((user) => selectedIds.includes(user.id) && wouldDisableLastAdmin(user, 'canceled'))
+    if (blockedAdmin) {
+      alert('Không thể hủy admin hoạt động cuối cùng của hệ thống.')
+      return
     }
-    setUsers((prev) => prev.map((user) => selectedIds.includes(user.id) ? { ...user, account_status: 'canceled', isActive: false } : user))
-    setSelectedIds([])
+    try {
+      for (const id of selectedIds) {
+        await apiClient.put(`/admin/users/${id}/status`, { status: 'canceled' })
+      }
+      setUsers((prev) => prev.map((user) => selectedIds.includes(user.id) ? { ...user, account_status: 'canceled', isActive: false } : user))
+      setSelectedIds([])
+    } catch (error: any) {
+      alert(error?.response?.data?.message || 'Hủy tài khoản thất bại')
+    }
   }
 
   const filteredUsers = (filter === 'all' ? users : users.filter((user) => user.role === filter))
@@ -160,9 +189,31 @@ export default function Users() {
                         <td className="p-4">
                           <div className="flex justify-end gap-2">
                             {user.account_status !== 'active' && <button onClick={() => void updateStatus(user.id, 'active')} className="rounded-lg bg-green-500/15 px-3 py-2 text-green-300 hover:bg-green-500/25">Mở</button>}
-                            {user.account_status !== 'paused' && <button onClick={() => void updateStatus(user.id, 'paused')} className="rounded-lg bg-yellow-500/15 px-3 py-2 text-yellow-200 hover:bg-yellow-500/25">Tạm nghỉ</button>}
-                            {user.account_status !== 'banned' && <button onClick={() => void updateStatus(user.id, 'banned')} className="rounded-lg bg-red-500/15 px-3 py-2 text-red-300 hover:bg-red-500/25"><Ban size={16} /></button>}
-                            <button onClick={() => void updateStatus(user.id, 'canceled')} className="rounded-lg bg-red-500/15 px-3 py-2 text-red-300 hover:bg-red-500/25"><Trash2 size={16} /></button>
+                            {user.account_status !== 'paused' && (
+                              <button
+                                onClick={() => void updateStatus(user.id, 'paused')}
+                                title={wouldDisableLastAdmin(user, 'paused') ? 'Không thể tạm ngưng admin hoạt động cuối cùng' : 'Tạm nghỉ'}
+                                className={`rounded-lg px-3 py-2 ${wouldDisableLastAdmin(user, 'paused') ? 'bg-yellow-500/10 text-yellow-400/70' : 'bg-yellow-500/15 text-yellow-200 hover:bg-yellow-500/25'}`}
+                              >
+                                Tạm nghỉ
+                              </button>
+                            )}
+                            {user.account_status !== 'banned' && (
+                              <button
+                                onClick={() => void updateStatus(user.id, 'banned')}
+                                title={wouldDisableLastAdmin(user, 'banned') ? 'Không thể khóa admin hoạt động cuối cùng' : 'Khóa tài khoản'}
+                                className={`rounded-lg px-3 py-2 ${wouldDisableLastAdmin(user, 'banned') ? 'bg-red-500/10 text-red-300/70' : 'bg-red-500/15 text-red-300 hover:bg-red-500/25'}`}
+                              >
+                                <Ban size={16} />
+                              </button>
+                            )}
+                            <button
+                              onClick={() => void updateStatus(user.id, 'canceled')}
+                              title={wouldDisableLastAdmin(user, 'canceled') ? 'Không thể hủy admin hoạt động cuối cùng' : 'Hủy tài khoản'}
+                              className={`rounded-lg px-3 py-2 ${wouldDisableLastAdmin(user, 'canceled') ? 'bg-red-500/10 text-red-300/70' : 'bg-red-500/15 text-red-300 hover:bg-red-500/25'}`}
+                            >
+                              <Trash2 size={16} />
+                            </button>
                           </div>
                         </td>
                       </tr>

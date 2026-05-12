@@ -17,6 +17,35 @@ public class AdminController : ControllerBase
         _db = db;
     }
 
+    private static bool IsAvailableAdmin(User user)
+    {
+        return user.Role == "admin"
+               && user.IsActive
+               && user.AccountStatus is not ("banned" or "canceled" or "paused");
+    }
+
+    private async Task<bool> WouldDisableLastAvailableAdminAsync(User user, string nextStatus)
+    {
+        if (user.Role != "admin")
+            return false;
+
+        var nextIsAvailable = nextStatus == "active";
+        if (nextIsAvailable)
+            return false;
+
+        if (!IsAvailableAdmin(user))
+            return false;
+
+        var availableAdminCount = await _db.Users.CountAsync(x =>
+            x.Role == "admin" &&
+            x.IsActive &&
+            x.AccountStatus != "banned" &&
+            x.AccountStatus != "canceled" &&
+            x.AccountStatus != "paused");
+
+        return availableAdminCount <= 1;
+    }
+
     // =========================
     // ACCOUNT MANAGEMENT
     // =========================
@@ -24,6 +53,7 @@ public class AdminController : ControllerBase
     [HttpGet("users")]
     public async Task<IActionResult> GetUsers([FromQuery] int adminId, [FromQuery] string? role = null, [FromQuery] string? q = null)
     {
+        // Admin xem danh sách user và seller kèm thống kê tóm tắt để lọc và rà soát tài khoản.
         var admin = await _db.Users.FindAsync(adminId);
         if (admin == null || admin.Role != "admin")
             return Forbid("Chỉ admin mới có quyền truy cập");
@@ -88,6 +118,7 @@ public class AdminController : ControllerBase
     [HttpGet("users/{userId}/detail")]
     public async Task<IActionResult> GetUserDetail(int userId, [FromQuery] int adminId)
     {
+        // Xem chi tiết một tài khoản và các dữ liệu liên quan như POI, QR, listens.
         var admin = await _db.Users.FindAsync(adminId);
         if (admin == null || admin.Role != "admin")
             return Forbid("Chỉ admin mới có quyền truy cập");
@@ -125,6 +156,7 @@ public class AdminController : ControllerBase
     [HttpPut("users/{userId}/toggle-active")]
     public async Task<IActionResult> ToggleUserActive(int userId, [FromQuery] int adminId)
     {
+        // Bật hoặc tắt nhanh trạng thái hoạt động của tài khoản.
         var admin = await _db.Users.FindAsync(adminId);
         if (admin == null || admin.Role != "admin")
             return Forbid("Chỉ admin mới có quyền");
@@ -132,6 +164,9 @@ public class AdminController : ControllerBase
         var user = await _db.Users.FindAsync(userId);
         if (user == null)
             return NotFound(new { message = "User không tồn tại" });
+
+        if (user.Role == "admin" && user.IsActive && await WouldDisableLastAvailableAdminAsync(user, "canceled"))
+            return BadRequest(new { message = "Không thể vô hiệu hóa admin hoạt động cuối cùng của hệ thống." });
 
         user.IsActive = !user.IsActive;
         _db.Users.Update(user);
@@ -143,6 +178,7 @@ public class AdminController : ControllerBase
     [HttpPut("users/{userId}/status")]
     public async Task<IActionResult> UpdateUserStatus(int userId, [FromBody] UpdateUserStatusRequest request, [FromQuery] int adminId)
     {
+        // Cập nhật trạng thái nghiệp vụ của tài khoản như active, paused, banned hoặc canceled.
         var admin = await _db.Users.FindAsync(adminId);
         if (admin == null || admin.Role != "admin")
             return Forbid("Chỉ admin mới có quyền");
@@ -153,6 +189,9 @@ public class AdminController : ControllerBase
 
         if (request.Status is not ("active" or "paused" or "banned" or "canceled"))
             return BadRequest(new { message = "Trạng thái tài khoản không hợp lệ" });
+
+        if (await WouldDisableLastAvailableAdminAsync(user, request.Status))
+            return BadRequest(new { message = "Không thể tạm ngưng, khóa hoặc hủy admin hoạt động cuối cùng của hệ thống." });
 
         user.AccountStatus = request.Status;
         user.IsActive = request.Status is not ("banned" or "canceled");
@@ -172,6 +211,7 @@ public class AdminController : ControllerBase
     [HttpDelete("users/{userId}")]
     public async Task<IActionResult> DeleteUser(int userId, [FromQuery] int adminId)
     {
+        // Hủy tài khoản ở mức nghiệp vụ thay vì xóa cứng bản ghi user.
         var admin = await _db.Users.FindAsync(adminId);
         if (admin == null || admin.Role != "admin")
             return Forbid("Chỉ admin mới có quyền");
@@ -179,6 +219,9 @@ public class AdminController : ControllerBase
         var user = await _db.Users.FindAsync(userId);
         if (user == null)
             return NotFound(new { message = "User không tồn tại" });
+
+        if (await WouldDisableLastAvailableAdminAsync(user, "canceled"))
+            return BadRequest(new { message = "Không thể hủy admin hoạt động cuối cùng của hệ thống." });
 
         user.AccountStatus = "canceled";
         user.IsActive = false;
@@ -195,6 +238,7 @@ public class AdminController : ControllerBase
     [HttpGet("pois")]
     public async Task<IActionResult> GetAllPois([FromQuery] int adminId, [FromQuery] string? status = null, [FromQuery] string? q = null, [FromQuery] int? ownerId = null)
     {
+        // Admin xem toàn bộ POI để duyệt, lọc theo trạng thái và rà soát theo seller.
         var admin = await _db.Users.FindAsync(adminId);
         if (admin == null || admin.Role != "admin")
             return Forbid("Chỉ admin mới có quyền");
@@ -295,6 +339,7 @@ public class AdminController : ControllerBase
     [HttpPut("pois/{id}/approve")]
     public async Task<IActionResult> ApprovePoi(string id, [FromQuery] int adminId)
     {
+        // Duyệt POI sẽ đồng thời duyệt các audio liên quan để nội dung có thể phát trên PWA.
         var admin = await _db.Users.FindAsync(adminId);
         if (admin == null || admin.Role != "admin")
             return Forbid("Chỉ admin mới có quyền");
@@ -328,6 +373,7 @@ public class AdminController : ControllerBase
     [HttpPut("pois/{id}/reject")]
     public async Task<IActionResult> RejectPoi(string id, [FromBody] RejectPoiRequest request, [FromQuery] int adminId)
     {
+        // Từ chối POI và lưu lại lý do để seller chỉnh sửa rồi gửi duyệt lại.
         var admin = await _db.Users.FindAsync(adminId);
         if (admin == null || admin.Role != "admin")
             return Forbid("Chỉ admin mới có quyền");
@@ -348,6 +394,7 @@ public class AdminController : ControllerBase
     [HttpPut("audio/{audioId}/approve")]
     public async Task<IActionResult> ApproveAudio(string audioId, [FromQuery] int adminId)
     {
+        // Duyệt riêng audio khi admin cần kiểm soát chất lượng nội dung phát.
         var admin = await _db.Users.FindAsync(adminId);
         if (admin == null || admin.Role != "admin")
             return Forbid("Chỉ admin mới có quyền");
@@ -367,6 +414,7 @@ public class AdminController : ControllerBase
     [HttpPut("audio/{audioId}/reject")]
     public async Task<IActionResult> RejectAudio(string audioId, [FromBody] RejectPoiRequest request, [FromQuery] int adminId)
     {
+        // Từ chối audio và lưu lý do để seller cập nhật lại script hoặc voice.
         var admin = await _db.Users.FindAsync(adminId);
         if (admin == null || admin.Role != "admin")
             return Forbid("Chỉ admin mới có quyền");
@@ -386,6 +434,7 @@ public class AdminController : ControllerBase
     [HttpGet("devices")]
     public async Task<IActionResult> GetDevices([FromQuery] int adminId, [FromQuery] string? status = null, [FromQuery] string? q = null)
     {
+        // Admin xem toàn bộ thiết bị, trạng thái online và thông tin subscription liên quan.
         var admin = await _db.Users.FindAsync(adminId);
         if (admin == null || admin.Role != "admin")
             return Forbid("Chỉ admin mới có quyền");
@@ -462,6 +511,7 @@ public class AdminController : ControllerBase
     [HttpGet("devices/{deviceId}/detail")]
     public async Task<IActionResult> GetDeviceDetail(int deviceId, [FromQuery] int adminId)
     {
+        // Xem chi tiết một thiết bị, gồm lịch sử nghe và tình trạng gói đang dùng.
         var admin = await _db.Users.FindAsync(adminId);
         if (admin == null || admin.Role != "admin")
             return Forbid("Chỉ admin mới có quyền");
@@ -507,6 +557,7 @@ public class AdminController : ControllerBase
     [HttpPut("devices/{deviceId}/status")]
     public async Task<IActionResult> UpdateDeviceStatus(int deviceId, [FromBody] UpdateDeviceStatusRequest request, [FromQuery] int adminId)
     {
+        // Đổi trạng thái thiết bị và cắt subscription đang hoạt động khi thiết bị bị banned hoặc user_deleted.
         var admin = await _db.Users.FindAsync(adminId);
         if (admin == null || admin.Role != "admin")
             return Forbid("Chỉ admin mới có quyền");
@@ -544,6 +595,7 @@ public class AdminController : ControllerBase
     [HttpDelete("devices/{deviceId}")]
     public async Task<IActionResult> DeleteDevice(int deviceId, [FromQuery] int adminId)
     {
+        // Xóa cứng thiết bị và dọn toàn bộ dữ liệu phụ thuộc để tránh lỗi ràng buộc.
         var admin = await _db.Users.FindAsync(adminId);
         if (admin == null || admin.Role != "admin")
             return Forbid("Chỉ admin mới có quyền");
@@ -590,6 +642,7 @@ public class AdminController : ControllerBase
     [HttpDelete("pois/{id}")]
     public async Task<IActionResult> DeletePoi(string id, [FromQuery] int adminId)
     {
+        // Xóa cứng POI khi admin cần dọn toàn bộ dữ liệu liên quan khỏi hệ thống.
         var admin = await _db.Users.FindAsync(adminId);
         if (admin == null || admin.Role != "admin")
             return Forbid("Chỉ admin mới có quyền");
@@ -634,6 +687,7 @@ public class AdminController : ControllerBase
     [HttpGet("analytics/dashboard")]
     public async Task<IActionResult> GetAnalytics([FromQuery] int adminId)
     {
+        // Tổng hợp số liệu vận hành toàn hệ thống cho dashboard admin.
         var admin = await _db.Users.FindAsync(adminId);
         if (admin == null || admin.Role != "admin")
             return Forbid("Chỉ admin mới có quyền");
