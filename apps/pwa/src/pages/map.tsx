@@ -840,12 +840,24 @@ export default function MapPage() {
                 };
                 setUserLocation(currentLocation);
 
-                const candidatePoi = getTrackingCandidatePoi(currentLocation, Date.now());
+                const now = Date.now();
+                const trackingModeConfig = getTrackingModeConfig();
+                const trackingResult = resolveTrackingTick({
+                  pois: enrichedPois,
+                  currentLocation,
+                  nowMs: now,
+                  targetPoiId: qrTargetPoiRef.current,
+                  lastPlayedAtByPoiId: lastPlayedAtRef.current,
+                  previousCandidateState: candidateRef.current,
+                  requiredStableHits: trackingModeConfig.requiredStableHits,
+                  activePlayingPoiId: playingPoiIdRef.current,
+                });
+                const candidatePoi = trackingResult.selectedCandidate;
+
                 if (!candidatePoi || playingPoiIdRef.current) {
                   return;
                 }
 
-                const trackingModeConfig = getTrackingModeConfig();
                 candidateRef.current = {
                   poiId: candidatePoi.id,
                   hits: trackingModeConfig.requiredStableHits,
@@ -853,7 +865,7 @@ export default function MapPage() {
                 lastTrackingAutoPoiIdRef.current = candidatePoi.id;
                 setSelectedPoiId(candidatePoi.id);
                 setMapCenter({ latitude: candidatePoi.latitude, longitude: candidatePoi.longitude });
-                lastPlayedAtRef.current[candidatePoi.id] = Date.now();
+                lastPlayedAtRef.current[candidatePoi.id] = now;
 
                 try {
                   await playMapPoi(candidatePoi, { optimisticCount: false });
