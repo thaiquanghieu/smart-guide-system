@@ -1,0 +1,20 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "CommonJS",
+    "moduleResolution": "node",
+    "lib": ["ES2020", "DOM"],
+    "outDir": ".logrunner-dist",
+    "rootDir": "src/lib",
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "strict": false,
+    "skipLibCheck": true,
+    "noEmit": false
+  },
+  "include": [
+    "src/lib/location.ts",
+    "src/lib/poiQueue.ts",
+    "src/lib/poiQueueRunner.ts"
+  ]
+}

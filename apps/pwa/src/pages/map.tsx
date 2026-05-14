@@ -27,6 +27,7 @@ import {
   measureRouteDistanceKm,
   type GeoPoint,
 } from "@/lib/location";
+import { resolveTrackingTick } from "@/lib/poiQueue";
 
 type Poi = {
   id: string;
@@ -494,35 +495,6 @@ export default function MapPage() {
     return points;
   }, [activeTour, pois, userLocation]);
 
-  const getTrackingCandidatePoi = (currentLocation: GeoPoint, now: number) => {
-    const poiCooldownMs = 4 * 60 * 1000;
-
-    return [...enrichedPois]
-      .map((poi) => ({
-        ...poi,
-        distanceKm: calculateDistanceKm(currentLocation, { latitude: poi.latitude, longitude: poi.longitude }),
-      }))
-      .filter((poi) => {
-        const poiRadiusKm = Math.max(0.01, Number(poi.radius || 100) / 1000);
-        const poiCooldownUntil = (lastPlayedAtRef.current[poi.id] || 0) + poiCooldownMs;
-        return poi.distanceKm <= poiRadiusKm && now >= poiCooldownUntil;
-      })
-      .sort((left, right) => {
-        const targetPoiId = qrTargetPoiRef.current;
-        if (targetPoiId) {
-          if (left.id === targetPoiId && right.id !== targetPoiId) return -1;
-          if (right.id === targetPoiId && left.id !== targetPoiId) return 1;
-        }
-        const priorityDiff = Number(right.priority || 0) - Number(left.priority || 0);
-        if (priorityDiff !== 0) return priorityDiff;
-        const distanceDiff = left.distanceKm - right.distanceKm;
-        if (Math.abs(distanceDiff) > 0.001) return distanceDiff;
-        const listenedDiff = Number(left.listened_count || 0) - Number(right.listened_count || 0);
-        if (listenedDiff !== 0) return listenedDiff;
-        return left.id.localeCompare(right.id);
-      })[0];
-  };
-
   const playMapPoi = async (
     targetPoi: Poi,
     options?: {
@@ -609,23 +581,25 @@ export default function MapPage() {
           setUserLocation(currentLocation);
 
           const now = Date.now();
-          const candidatePoi = getTrackingCandidatePoi(currentLocation, now);
+          const trackingResult = resolveTrackingTick({
+            pois: enrichedPois,
+            currentLocation,
+            nowMs: now,
+            targetPoiId: qrTargetPoiRef.current,
+            lastPlayedAtByPoiId: lastPlayedAtRef.current,
+            previousCandidateState: candidateRef.current,
+            requiredStableHits,
+            activePlayingPoiId: playingPoiIdRef.current,
+          });
 
-          if (!candidatePoi) {
-            candidateRef.current = { poiId: "", hits: 0 };
+          candidateRef.current = trackingResult.nextCandidateState;
+
+          if (!trackingResult.selectedCandidate) {
             return;
           }
-
-          if (candidateRef.current.poiId === candidatePoi.id) {
-            candidateRef.current = { poiId: candidatePoi.id, hits: candidateRef.current.hits + 1 };
-          } else {
-            candidateRef.current = { poiId: candidatePoi.id, hits: 1 };
-          }
-
+          const candidatePoi = trackingResult.selectedCandidate;
           const activePlayingPoiId = playingPoiIdRef.current;
-          const canAutoPlay =
-            candidateRef.current.hits >= requiredStableHits &&
-            !activePlayingPoiId;
+          const canAutoPlay = trackingResult.shouldAutoPlay;
 
           const selectedTrackingPoi =
             (activePlayingPoiId ? enrichedPois.find((poi) => poi.id === activePlayingPoiId) : null) ||

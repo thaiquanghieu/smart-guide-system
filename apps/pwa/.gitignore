@@ -10,6 +10,8 @@ coverage/
 out/
 .next/
 dist/
+.logrunner-dist/
+logs/
 
 # Misc
 .DS_Store
